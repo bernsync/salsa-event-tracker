@@ -49,9 +49,15 @@ window.eventLinks = {
     website: "https://bucharestsalsarevolution.com/",
     instagram: "@bucharestsalsarevolution"
   },
-  "Mambo City": {
+  "5Star Congress": {
     website: "https://5starcongress.com/",
-    instagram: "@mambocity"
+    instagram: "@mambocity",
+    organizer: "Mambo City",
+    venue: "Radisson Blu Hotel London Heathrow",
+    price: "Weekend Marathon Party Pass from GBP 107; Full Pass from GBP 127",
+    currency: "GBP",
+    djs: "Julian The Duke, Javier La Rosa, Julian Summers, Tuli, Rupert Boyle, Erick The Saint, Amanda Hallam",
+    notes: "Annual London salsa congress by Mambo City with workshops, shows, social dancing, and marathon party pass options."
   },
   "Hamburg Salsa Weekend": {
     website: "https://www.hamburgsalsaweekend.com/",

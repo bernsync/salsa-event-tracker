@@ -1,0 +1,3 @@
+display_name: Salsa Festival Auditor
+short_description: Verify and update salsa festival event data from official sources.
+default_prompt: Use the salsa festival auditor skill to verify official festival info, update the tracker data, and list anything still missing.

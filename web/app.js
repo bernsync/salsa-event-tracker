@@ -17,6 +17,7 @@ const scoreCategories = [
 const state = {
   events: [],
   reviews: [],
+  deletedReviewSourceIds: [],
   activeView: localStorage.getItem("salsa-festivals-active-view") || "calendar",
   search: "",
   sort: "date",
@@ -38,8 +39,15 @@ const canonicalEventNames = {
   "salsarave": "SalsaRave by CoBeatParty",
   "salsa rave": "SalsaRave by CoBeatParty",
   "salsarave by cobeatparty": "SalsaRave by CoBeatParty",
-  "mambo city 5 star": "Mambo City",
-  "mambo city 5 star congress": "Mambo City",
+  "mambo city": "5Star Congress",
+  "mambocity 5 star": "5Star Congress",
+  "mambocity 5 star congress": "5Star Congress",
+  "mambocity 5star congress": "5Star Congress",
+  "mambo city 5 star": "5Star Congress",
+  "mambo city 5 star congress": "5Star Congress",
+  "mambo city 5star congress": "5Star Congress",
+  "5 star congress": "5Star Congress",
+  "5star congress": "5Star Congress",
   "mambo marathon": "Mambo Marathonios",
   "m. mambo marathonios": "Mambo Marathonios"
 };
@@ -64,7 +72,9 @@ const eventDateCorrections = {
   "porto salsa weekend|2026-10-02|2026-10-06": ["2026-10-02", "2026-10-04"],
   "pink marathon|2026-10-23|2026-10-26": ["2026-10-23", "2026-10-25"],
   "mambo marathonios|2027-04-23|2027-04-26": ["2027-04-21", "2027-04-26"],
-  "zagreb salsa marathon|2026-04-23|2026-04-27": ["2026-04-30", "2026-05-02"]
+  "zagreb salsa marathon|2026-04-23|2026-04-27": ["2026-04-30", "2026-05-02"],
+  "5star congress|2026-05-01|2026-05-05": ["2026-05-01", "2026-05-04"],
+  "5star congress|2026-05-08|2026-05-11": ["2026-05-01", "2026-05-04"]
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -78,6 +88,8 @@ const elements = {
   nextMonthBtn: $("#nextMonthBtn"),
   calendarGrid: $("#calendarGrid"),
   eventList: $("#eventList"),
+  festivalList: $("#festivalList"),
+  festivalSearchInput: $("#festivalSearchInput"),
   reviewList: $("#reviewList"),
   searchInput: $("#searchInput"),
   sortSelect: $("#sortSelect"),
@@ -106,6 +118,7 @@ function loadState() {
       const saved = JSON.parse(raw);
       state.events = saved.events || [];
       state.reviews = saved.reviews || [];
+      state.deletedReviewSourceIds = saved.deletedReviewSourceIds || [];
       canonicalizeEventNames();
       correctEventDates();
       removeLegacySampleEvents();
@@ -113,6 +126,7 @@ function loadState() {
       mergeSeedEvents();
       deduplicateEvents();
       deduplicateCalendarEditions();
+      mergeHardcodedReviews();
       return;
     } catch {
       localStorage.removeItem(storageKey);
@@ -123,6 +137,7 @@ function loadState() {
   mergeSeedEvents();
   deduplicateEvents();
   deduplicateCalendarEditions();
+  mergeHardcodedReviews();
 }
 
 function canonicalizeEventNames() {
@@ -319,6 +334,45 @@ function mergeSeedEvents() {
   }
 }
 
+function mergeHardcodedReviews() {
+  if (!Array.isArray(window.hardcodedReviews)) return;
+
+  let changed = false;
+  window.hardcodedReviews.forEach((sourceReview) => {
+    if (state.deletedReviewSourceIds.includes(sourceReview.sourceId)) return;
+    const event = state.events.find((item) => (
+      eventFamilyKey(item) === normalizeText(sourceReview.eventName)
+      && item.startDate === sourceReview.eventStartDate
+      && item.endDate === sourceReview.eventEndDate
+    ));
+    if (!event) return;
+
+    const existing = state.reviews.find((review) => review.sourceId === sourceReview.sourceId);
+    const nextReview = {
+      sourceId: sourceReview.sourceId,
+      eventId: event.id,
+      scores: sourceReview.scores,
+      categoryComments: sourceReview.categoryComments || {},
+      topReason: sourceReview.topReason || "",
+      notes: sourceReview.notes || "",
+      reviewedAt: sourceReview.reviewedAt || new Date().toISOString(),
+      isPublished: true
+    };
+
+    if (existing) {
+      if (existing.userModified) return;
+      Object.assign(existing, nextReview, { id: existing.id, updatedAt: new Date().toISOString() });
+    } else {
+      state.reviews.push({ id: crypto.randomUUID(), ...nextReview });
+    }
+    changed = true;
+  });
+
+  if (changed) {
+    saveState();
+  }
+}
+
 function updateMissingEventFields(event, source) {
   const fields = ["venue", "organizer", "website", "instagram", "facebook", "price", "currency", "djs", "artists", "notes"];
   let changed = false;
@@ -369,7 +423,8 @@ function normalizeText(value) {
 function saveState() {
   localStorage.setItem(storageKey, JSON.stringify({
     events: state.events,
-    reviews: state.reviews
+    reviews: state.reviews,
+    deletedReviewSourceIds: state.deletedReviewSourceIds
   }));
 }
 
@@ -495,7 +550,6 @@ function escapeHtml(value) {
 
 function renderEventCard(event) {
   const score = reviewScoreForEvent(event);
-  const canReview = isHistorical(event);
   const card = document.createElement("article");
   card.className = "event-card";
   card.innerHTML = `
@@ -523,9 +577,7 @@ function renderEventCard(event) {
       ${sourceLink("Website", event.website)}
       ${sourceLink("Instagram", event.instagram)}
       ${sourceLink("Facebook", event.facebook)}
-      ${canReview ? `<button class="review-button" type="button" data-action="review" data-id="${event.id}">Review</button>` : `<span class="event-status">Upcoming</span>`}
-      <button type="button" data-action="edit" data-id="${event.id}">Edit</button>
-      <button type="button" data-action="delete" data-id="${event.id}">Delete</button>
+      <span class="event-status">${isHistorical(event) ? "Past event" : "Upcoming"}</span>
     </div>
   `;
   return card;
@@ -561,8 +613,6 @@ function renderCalendar() {
       const button = document.createElement("button");
       button.className = "calendar-event";
       button.type = "button";
-      button.dataset.action = "edit";
-      button.dataset.id = event.id;
       button.innerHTML = calendarEventMarkup(event);
       day.append(button);
     });
@@ -604,12 +654,99 @@ function renderEvents() {
   events.forEach((event) => elements.eventList.append(renderEventCard(event)));
 }
 
+function renderFestivalList() {
+  elements.festivalList.innerHTML = "";
+  const search = elements.festivalSearchInput.value.trim().toLowerCase();
+  const groups = uniqueFestivalGroups().filter((group) => {
+    const haystack = [
+      group.name,
+      group.locations.join(" "),
+      group.organizers.join(" ")
+    ].join(" ").toLowerCase();
+    return !search || haystack.includes(search);
+  });
+
+  if (!groups.length) {
+    elements.festivalList.append(emptyState("No matching festivals", "Adjust search or add another event."));
+    return;
+  }
+
+  groups.forEach((group) => {
+    const card = document.createElement("article");
+    card.className = "event-card";
+    const nextEdition = group.upcoming[0];
+    const reviewScore = nextEdition ? reviewScoreForEvent(nextEdition) : null;
+    card.innerHTML = `
+      <div class="event-card-header">
+        <div>
+          <h3>${escapeHtml(group.name)}</h3>
+          <p class="muted">${escapeHtml(group.locations.join(" | "))}</p>
+        </div>
+        ${reviewScore ? `<span class="pill score-pill">${reviewScore.average.toFixed(1)} prior</span>` : ""}
+      </div>
+      <div class="event-meta">
+        <span class="pill">${group.editions.length} edition${group.editions.length === 1 ? "" : "s"}</span>
+        ${nextEdition ? `<span class="pill">Next: ${escapeHtml(dateRange(nextEdition))}</span>` : "<span class=\"pill\">No upcoming editions</span>"}
+        ${group.organizers.map((organizer) => `<span class="pill">${escapeHtml(organizer)}</span>`).join("")}
+      </div>
+      <div class="event-detail">
+        ${nextEdition?.venue ? `<div><strong>Next venue:</strong> ${escapeHtml(nextEdition.venue)}</div>` : ""}
+        ${nextEdition?.djs ? `<div><strong>DJs:</strong> ${escapeHtml(nextEdition.djs)}</div>` : ""}
+        ${nextEdition?.artists ? `<div><strong>Artists:</strong> ${escapeHtml(nextEdition.artists)}</div>` : ""}
+      </div>
+      <div class="event-actions">
+        ${sourceLink("Website", group.website)}
+        ${sourceLink("Instagram", group.instagram)}
+        ${sourceLink("Facebook", group.facebook)}
+      </div>
+    `;
+    elements.festivalList.append(card);
+  });
+}
+
+function uniqueFestivalGroups() {
+  const groups = new Map();
+  state.events.forEach((event) => {
+    const key = eventFamilyKey(event);
+    if (!groups.has(key)) {
+      groups.set(key, { name: event.name, editions: [] });
+    }
+    groups.get(key).editions.push(event);
+  });
+
+  return [...groups.values()]
+    .map((group) => {
+      const editions = group.editions.sort((a, b) => a.startDate.localeCompare(b.startDate));
+      const upcoming = editions.filter((event) => !isHistorical(event));
+      const source = upcoming[0] || editions[editions.length - 1];
+      return {
+        ...group,
+        editions,
+        upcoming,
+        locations: uniqueValues(editions.map(eventLocation).filter(Boolean)),
+        organizers: uniqueValues(editions.map((event) => event.organizer).filter(Boolean)),
+        website: source.website,
+        instagram: source.instagram,
+        facebook: source.facebook
+      };
+    })
+    .sort((a, b) => {
+      const aDate = a.upcoming[0]?.startDate || "9999-12-31";
+      const bDate = b.upcoming[0]?.startDate || "9999-12-31";
+      return aDate.localeCompare(bDate) || a.name.localeCompare(b.name);
+    });
+}
+
+function uniqueValues(values) {
+  return [...new Set(values)];
+}
+
 function renderReviews() {
   elements.reviewList.innerHTML = "";
   const reviews = [...state.reviews].sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt));
 
   if (!reviews.length) {
-    elements.reviewList.append(emptyState("No reviews yet", "Open an event and add your first review."));
+    elements.reviewList.append(emptyState("No reviews yet", "Reviews are added through the repo so they publish consistently."));
     return;
   }
 
@@ -630,18 +767,31 @@ function renderReviews() {
       <div class="event-meta">
         ${scoreCategories.map(([key, label]) => `<span class="pill">${label}: ${review.scores[key]}</span>`).join("")}
       </div>
-      <div class="event-actions">
-        <button type="button" data-action="edit-review" data-id="${review.id}">Edit Review</button>
-        <button type="button" data-action="delete-review" data-id="${review.id}">Delete Review</button>
-      </div>
+      ${renderCategoryComments(review)}
     `;
     elements.reviewList.append(card);
   });
 }
 
+function renderCategoryComments(review) {
+  const comments = review.categoryComments || {};
+  const rows = scoreCategories
+    .filter(([key]) => comments[key])
+    .map(([key, label]) => `
+      <div class="review-comment">
+        <strong>${escapeHtml(label)}</strong>
+        <p>${escapeHtml(comments[key])}</p>
+      </div>
+    `)
+    .join("");
+
+  return rows ? `<div class="review-comments">${rows}</div>` : "";
+}
+
 function render() {
   renderCalendar();
   renderEvents();
+  renderFestivalList();
   renderReviews();
 }
 
@@ -724,6 +874,7 @@ function buildScoreFields() {
       <span>${label}</span>
       <span class="score-value" id="${key}Value">5</span>
       <input data-score="${key}" type="range" min="1" max="10" value="5">
+      <textarea data-comment="${key}" rows="2" placeholder="${label} comments"></textarea>
     `;
     elements.scoreFields.append(row);
   });
@@ -735,6 +886,12 @@ function setScoreFieldValues(scores) {
     input.value = value;
   });
   updateLiveScore();
+}
+
+function setCommentFieldValues(comments = {}) {
+  document.querySelectorAll("[data-comment]").forEach((textarea) => {
+    textarea.value = comments[textarea.dataset.comment] || "";
+  });
 }
 
 function updateLiveScore() {
@@ -760,6 +917,7 @@ function openReviewDialog(eventId) {
   elements.reviewNotes.value = "";
   buildScoreFields();
   setScoreFieldValues();
+  setCommentFieldValues();
   elements.saveReviewBtn.textContent = "Save review";
   elements.reviewDialog.showModal();
 }
@@ -775,6 +933,7 @@ function openReviewEditor(reviewId) {
   elements.reviewNotes.value = review.notes || "";
   buildScoreFields();
   setScoreFieldValues(review.scores);
+  setCommentFieldValues(review.categoryComments);
   elements.saveReviewBtn.textContent = "Update review";
   elements.reviewDialog.showModal();
 }
@@ -784,19 +943,29 @@ function saveReview() {
   document.querySelectorAll("[data-score]").forEach((input) => {
     scores[input.dataset.score] = Number(input.value);
   });
+  const categoryComments = {};
+  document.querySelectorAll("[data-comment]").forEach((textarea) => {
+    const value = textarea.value.trim();
+    if (value) {
+      categoryComments[textarea.dataset.comment] = value;
+    }
+  });
 
   const reviewId = elements.reviewId.value;
   const existing = state.reviews.find((review) => review.id === reviewId);
   if (existing) {
     existing.scores = scores;
+    existing.categoryComments = categoryComments;
     existing.topReason = elements.topReason.value.trim();
     existing.notes = elements.reviewNotes.value.trim();
+    existing.userModified = Boolean(existing.sourceId);
     existing.updatedAt = new Date().toISOString();
   } else {
     state.reviews.push({
       id: crypto.randomUUID(),
       eventId: elements.reviewEventId.value,
       scores,
+      categoryComments,
       topReason: elements.topReason.value.trim(),
       notes: elements.reviewNotes.value.trim(),
       reviewedAt: new Date().toISOString()
@@ -815,6 +984,9 @@ function deleteReview(reviewId) {
   const event = state.events.find((item) => item.id === review.eventId);
   const confirmed = window.confirm(`Delete review for ${event?.name || "this event"}?`);
   if (!confirmed) return;
+  if (review.sourceId && !state.deletedReviewSourceIds.includes(review.sourceId)) {
+    state.deletedReviewSourceIds.push(review.sourceId);
+  }
   state.reviews = state.reviews.filter((item) => item.id !== reviewId);
   saveState();
   render();
@@ -836,22 +1008,18 @@ function handleAction(event) {
   if (!target) return;
   const { action, id } = target.dataset;
   if (action === "edit") openEventDialog(id);
-  if (action === "review") openReviewDialog(id);
   if (action === "delete") deleteEvent(id);
-  if (action === "edit-review") openReviewEditor(id);
-  if (action === "delete-review") deleteReview(id);
 }
 
 function bindEvents() {
-  elements.addEventBtn.addEventListener("click", () => openEventDialog());
-  elements.saveEventBtn.addEventListener("click", saveEvent);
-  elements.deleteEventBtn.addEventListener("click", () => {
+  elements.saveEventBtn?.addEventListener("click", saveEvent);
+  elements.deleteEventBtn?.addEventListener("click", () => {
     const eventId = $("#eventId").value;
     if (!eventId) return;
     elements.eventDialog.close();
     deleteEvent(eventId);
   });
-  elements.saveReviewBtn.addEventListener("click", saveReview);
+  elements.saveReviewBtn?.addEventListener("click", saveReview);
   elements.calendarGrid.addEventListener("click", handleAction);
   elements.eventList.addEventListener("click", handleAction);
   elements.reviewList.addEventListener("click", handleAction);
@@ -865,6 +1033,7 @@ function bindEvents() {
     state.search = event.target.value;
     renderEvents();
   });
+  elements.festivalSearchInput.addEventListener("input", renderFestivalList);
   elements.sortSelect.addEventListener("change", (event) => {
     state.sort = event.target.value;
     renderEvents();

@@ -12,20 +12,20 @@
         <p class="eyebrow">Europe salsa festivals</p>
         <h1>Salsa Festivals Tracker</h1>
       </div>
-      <button class="primary-action" id="addEventBtn" type="button">Add event</button>
     </header>
 
     <main class="app-shell">
       <nav class="tabs" aria-label="Main views">
-        <button class="tab is-active" data-view="calendar" type="button">Calendar</button>
-        <button class="tab" data-view="events" type="button">List</button>
+        <button class="tab is-active" data-view="calendar" type="button">Event Calendar</button>
+        <button class="tab" data-view="events" type="button">Calendar List</button>
+        <button class="tab" data-view="festivalList" type="button">Event List</button>
         <button class="tab" data-view="reviews" type="button">Reviews</button>
       </nav>
 
       <section class="view is-active" id="calendarView" aria-labelledby="calendarTitle">
         <div class="toolbar">
           <div>
-            <h2 id="calendarTitle">Calendar</h2>
+            <h2 id="calendarTitle">Event Calendar</h2>
             <p class="muted">Browse festivals by month.</p>
           </div>
           <div class="month-controls" aria-label="Calendar month controls">
@@ -52,7 +52,7 @@
       <section class="view" id="eventsView" aria-labelledby="eventsTitle">
         <div class="toolbar">
           <div>
-            <h2 id="eventsTitle">Events</h2>
+            <h2 id="eventsTitle">Calendar List</h2>
             <p class="muted">Search, sort, and keep source links together.</p>
           </div>
           <div class="toolbar-controls">
@@ -76,6 +76,20 @@
           </div>
         </div>
         <div id="eventList" class="event-list"></div>
+      </section>
+
+      <section class="view" id="festivalListView" aria-labelledby="festivalListTitle">
+        <div class="toolbar">
+          <div>
+            <h2 id="festivalListTitle">Event List</h2>
+            <p class="muted">One row per festival, with upcoming and past editions grouped together.</p>
+          </div>
+          <label class="search-box">
+            <span class="sr-only">Search festivals</span>
+            <input id="festivalSearchInput" type="search" placeholder="Search festival, city, country">
+          </label>
+        </div>
+        <div id="festivalList" class="event-list"></div>
       </section>
 
       <section class="view" id="reviewsView" aria-labelledby="reviewsTitle">
@@ -214,6 +228,7 @@
 
     <script src="seed-events.js"></script>
     <script src="event-links.js"></script>
+    <script src="hardcoded-reviews.js"></script>
     <script src="app.js"></script>
   </body>
 </html>
