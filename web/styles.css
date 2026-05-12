@@ -333,6 +333,27 @@ button {
   letter-spacing: 0;
 }
 
+.review-comments {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.review-comment {
+  border-left: 3px solid #e7d49b;
+  padding-left: 10px;
+}
+
+.review-comment strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.review-comment p {
+  margin: 0;
+  color: var(--muted);
+}
+
 .event-meta {
   display: flex;
   flex-wrap: wrap;
@@ -481,6 +502,15 @@ button {
 .score-row input {
   grid-column: 1 / -1;
   accent-color: var(--accent);
+}
+
+.score-row textarea {
+  grid-column: 1 / -1;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 11px;
+  resize: vertical;
 }
 
 .score-value {
