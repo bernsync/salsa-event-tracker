@@ -3,14 +3,13 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Salsa Festivals Tracker</title>
+    <title>Salsa Festival Tracker</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <header class="app-header">
       <div>
-        <p class="eyebrow">Europe salsa festivals</p>
-        <h1>Salsa Festivals Tracker</h1>
+        <h1>Salsa Festival Tracker</h1>
       </div>
     </header>
 
@@ -19,6 +18,7 @@
         <button class="tab is-active" data-view="calendar" type="button">Event Calendar</button>
         <button class="tab" data-view="events" type="button">Calendar List</button>
         <button class="tab" data-view="festivalList" type="button">Event List</button>
+        <button class="tab" data-view="dataGaps" type="button">Data Gaps</button>
         <button class="tab" data-view="reviews" type="button">Reviews</button>
       </nav>
 
@@ -92,6 +92,17 @@
         <div id="festivalList" class="event-list"></div>
       </section>
 
+      <section class="view" id="dataGapsView" aria-labelledby="dataGapsTitle">
+        <div class="toolbar">
+          <div>
+            <h2 id="dataGapsTitle">Data Gaps</h2>
+            <p class="muted">Blank source and edition fields across tracked festival editions.</p>
+          </div>
+        </div>
+        <div id="dataGapSummary" class="data-gap-summary"></div>
+        <div id="dataGapsList" class="event-list"></div>
+      </section>
+
       <section class="view" id="reviewsView" aria-labelledby="reviewsTitle">
         <div class="toolbar">
           <div>
@@ -103,118 +114,20 @@
       </section>
     </main>
 
-    <dialog id="eventDialog" class="modal">
-      <form id="eventForm" method="dialog">
-        <div class="modal-header">
-          <h2 id="eventDialogTitle">Add event</h2>
-          <button class="icon-button" value="cancel" type="submit" aria-label="Close">x</button>
-        </div>
-
-        <input id="eventId" type="hidden">
-
-        <div class="form-grid">
-          <label class="field span-2">
-            <span>Name</span>
-            <input id="eventName" required>
-          </label>
-          <label class="field">
-            <span>Start date</span>
-            <input id="startDate" type="date" required>
-          </label>
-          <label class="field">
-            <span>End date</span>
-            <input id="endDate" type="date" required>
-          </label>
-          <label class="field">
-            <span>City</span>
-            <input id="city">
-          </label>
-          <label class="field">
-            <span>Country</span>
-            <input id="country">
-          </label>
-          <label class="field span-2">
-            <span>Venue</span>
-            <input id="venue">
-          </label>
-          <label class="field span-2">
-            <span>Organizer</span>
-            <input id="organizer">
-          </label>
-          <label class="field">
-            <span>Website</span>
-            <input id="website" type="url" placeholder="https://">
-          </label>
-          <label class="field">
-            <span>Instagram</span>
-            <input id="instagram" placeholder="@eventhandle">
-          </label>
-          <label class="field span-2">
-            <span>Facebook</span>
-            <input id="facebook" type="url" placeholder="https://">
-          </label>
-          <label class="field">
-            <span>Price summary</span>
-            <input id="price">
-          </label>
-          <label class="field">
-            <span>Currency</span>
-            <input id="currency" value="EUR">
-          </label>
-          <label class="field span-2">
-            <span>DJs</span>
-            <textarea id="djs" rows="2"></textarea>
-          </label>
-          <label class="field span-2">
-            <span>Artists / instructors</span>
-            <textarea id="artists" rows="2"></textarea>
-          </label>
-          <label class="field span-2">
-            <span>Notes</span>
-            <textarea id="notes" rows="3"></textarea>
-          </label>
-        </div>
-
-        <div class="modal-actions">
-          <button class="danger-action" id="deleteEventBtn" type="button">Delete event</button>
-          <span class="modal-action-spacer"></span>
-          <button class="secondary-action" value="cancel" type="submit">Cancel</button>
-          <button class="primary-action" id="saveEventBtn" type="button">Save event</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog id="reviewDialog" class="modal">
-      <form id="reviewForm" method="dialog">
+    <dialog id="eventDetailsDialog" class="modal">
+      <form method="dialog">
         <div class="modal-header">
           <div>
-            <p class="eyebrow">Review</p>
-            <h2 id="reviewEventName">Festival review</h2>
+            <p class="eyebrow">Event details</p>
+            <h2 id="eventDetailsTitle">Festival</h2>
           </div>
           <button class="icon-button" value="cancel" type="submit" aria-label="Close">x</button>
         </div>
-
-        <input id="reviewEventId" type="hidden">
-        <input id="reviewId" type="hidden">
-        <div class="score-total">
-          <span>Total score</span>
-          <strong id="liveScore">5.0</strong>
-        </div>
-
-        <div id="scoreFields" class="score-grid"></div>
-
-        <label class="field">
-          <span>Top reason to attend</span>
-          <input id="topReason" placeholder="Music, dancers, city, artists...">
-        </label>
-        <label class="field">
-          <span>Review notes</span>
-          <textarea id="reviewNotes" rows="3"></textarea>
-        </label>
-
+        <div id="eventDetailsMeta" class="event-meta"></div>
+        <div id="eventDetailsBody" class="event-detail"></div>
+        <div id="eventDetailsLinks" class="event-actions"></div>
         <div class="modal-actions">
-          <button class="secondary-action" value="cancel" type="submit">Cancel</button>
-          <button class="primary-action" id="saveReviewBtn" type="button">Save review</button>
+          <button class="secondary-action" value="cancel" type="submit">Close</button>
         </div>
       </form>
     </dialog>

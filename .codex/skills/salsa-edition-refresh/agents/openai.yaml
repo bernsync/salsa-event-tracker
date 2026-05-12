@@ -1,0 +1,3 @@
+display_name: Salsa Edition Refresh
+short_description: Review weekly audit findings and add verified next festival editions without duplicates.
+default_prompt: Use the salsa edition refresh skill to review recent festival editions, verify next editions from official sources, avoid duplicates, and update the tracker data.
