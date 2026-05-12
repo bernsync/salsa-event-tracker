@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Salsa Festivals Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Europe salsa festivals</p>
+        <h1>Salsa Festivals Tracker</h1>
+      </div>
+      <button class="primary-action" id="addEventBtn" type="button">Add event</button>
+    </header>
+
+    <main class="app-shell">
+      <nav class="tabs" aria-label="Main views">
+        <button class="tab is-active" data-view="calendar" type="button">Calendar</button>
+        <button class="tab" data-view="events" type="button">List</button>
+        <button class="tab" data-view="reviews" type="button">Reviews</button>
+      </nav>
+
+      <section class="view is-active" id="calendarView" aria-labelledby="calendarTitle">
+        <div class="toolbar">
+          <div>
+            <h2 id="calendarTitle">Calendar</h2>
+            <p class="muted">Browse festivals by month.</p>
+          </div>
+          <div class="month-controls" aria-label="Calendar month controls">
+            <button class="icon-button" id="prevMonthBtn" type="button" aria-label="Previous month">&lt;</button>
+            <label class="field compact">
+              <span>Month</span>
+              <input id="monthPicker" type="month">
+            </label>
+            <button class="icon-button" id="nextMonthBtn" type="button" aria-label="Next month">&gt;</button>
+          </div>
+        </div>
+        <div class="calendar-weekdays" aria-hidden="true">
+          <span>Sun</span>
+          <span>Mon</span>
+          <span>Tue</span>
+          <span>Wed</span>
+          <span>Thu</span>
+          <span>Fri</span>
+          <span>Sat</span>
+        </div>
+        <div id="calendarGrid" class="calendar-grid"></div>
+      </section>
+
+      <section class="view" id="eventsView" aria-labelledby="eventsTitle">
+        <div class="toolbar">
+          <div>
+            <h2 id="eventsTitle">Events</h2>
+            <p class="muted">Search, sort, and keep source links together.</p>
+          </div>
+          <div class="toolbar-controls">
+            <label class="field compact">
+              <span>Sort</span>
+              <select id="sortSelect">
+                <option value="date">Date</option>
+                <option value="name">Name</option>
+                <option value="country">Country</option>
+                <option value="score">Score</option>
+              </select>
+            </label>
+            <label class="toggle-field">
+              <input id="historyToggle" type="checkbox">
+              <span>Show historical</span>
+            </label>
+            <label class="search-box">
+              <span class="sr-only">Search events</span>
+              <input id="searchInput" type="search" placeholder="Search events, city, country">
+            </label>
+          </div>
+        </div>
+        <div id="eventList" class="event-list"></div>
+      </section>
+
+      <section class="view" id="reviewsView" aria-labelledby="reviewsTitle">
+        <div class="toolbar">
+          <div>
+            <h2 id="reviewsTitle">Reviews</h2>
+            <p class="muted">Your personal ranking system for festivals you attended.</p>
+          </div>
+        </div>
+        <div id="reviewList" class="review-list"></div>
+      </section>
+    </main>
+
+    <dialog id="eventDialog" class="modal">
+      <form id="eventForm" method="dialog">
+        <div class="modal-header">
+          <h2 id="eventDialogTitle">Add event</h2>
+          <button class="icon-button" value="cancel" type="submit" aria-label="Close">x</button>
+        </div>
+
+        <input id="eventId" type="hidden">
+
+        <div class="form-grid">
+          <label class="field span-2">
+            <span>Name</span>
+            <input id="eventName" required>
+          </label>
+          <label class="field">
+            <span>Start date</span>
+            <input id="startDate" type="date" required>
+          </label>
+          <label class="field">
+            <span>End date</span>
+            <input id="endDate" type="date" required>
+          </label>
+          <label class="field">
+            <span>City</span>
+            <input id="city">
+          </label>
+          <label class="field">
+            <span>Country</span>
+            <input id="country">
+          </label>
+          <label class="field span-2">
+            <span>Venue</span>
+            <input id="venue">
+          </label>
+          <label class="field span-2">
+            <span>Organizer</span>
+            <input id="organizer">
+          </label>
+          <label class="field">
+            <span>Website</span>
+            <input id="website" type="url" placeholder="https://">
+          </label>
+          <label class="field">
+            <span>Instagram</span>
+            <input id="instagram" placeholder="@eventhandle">
+          </label>
+          <label class="field span-2">
+            <span>Facebook</span>
+            <input id="facebook" type="url" placeholder="https://">
+          </label>
+          <label class="field">
+            <span>Price summary</span>
+            <input id="price">
+          </label>
+          <label class="field">
+            <span>Currency</span>
+            <input id="currency" value="EUR">
+          </label>
+          <label class="field span-2">
+            <span>DJs</span>
+            <textarea id="djs" rows="2"></textarea>
+          </label>
+          <label class="field span-2">
+            <span>Artists / instructors</span>
+            <textarea id="artists" rows="2"></textarea>
+          </label>
+          <label class="field span-2">
+            <span>Notes</span>
+            <textarea id="notes" rows="3"></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="danger-action" id="deleteEventBtn" type="button">Delete event</button>
+          <span class="modal-action-spacer"></span>
+          <button class="secondary-action" value="cancel" type="submit">Cancel</button>
+          <button class="primary-action" id="saveEventBtn" type="button">Save event</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="reviewDialog" class="modal">
+      <form id="reviewForm" method="dialog">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Review</p>
+            <h2 id="reviewEventName">Festival review</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="submit" aria-label="Close">x</button>
+        </div>
+
+        <input id="reviewEventId" type="hidden">
+        <input id="reviewId" type="hidden">
+        <div class="score-total">
+          <span>Total score</span>
+          <strong id="liveScore">5.0</strong>
+        </div>
+
+        <div id="scoreFields" class="score-grid"></div>
+
+        <label class="field">
+          <span>Top reason to attend</span>
+          <input id="topReason" placeholder="Music, dancers, city, artists...">
+        </label>
+        <label class="field">
+          <span>Review notes</span>
+          <textarea id="reviewNotes" rows="3"></textarea>
+        </label>
+
+        <div class="modal-actions">
+          <button class="secondary-action" value="cancel" type="submit">Cancel</button>
+          <button class="primary-action" id="saveReviewBtn" type="button">Save review</button>
+        </div>
+      </form>
+    </dialog>
+
+    <template id="emptyStateTemplate">
+      <div class="empty-state">
+        <strong>No festivals yet</strong>
+        <p>Add your first festival to start building your tracker.</p>
+      </div>
+    </template>
+
+    <script src="seed-events.js"></script>
+    <script src="event-links.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
