@@ -22,7 +22,10 @@ const state = {
   search: "",
   sort: "date",
   selectedMonth: localDateString(new Date()).slice(0, 7),
-  showHistorical: false
+  showHistorical: false,
+  festivalYear: localStorage.getItem("salsa-festivals-event-list-year") || String(new Date().getFullYear()),
+  festivalCountry: "",
+  festivalSize: ""
 };
 
 const canonicalEventNames = {
@@ -116,6 +119,9 @@ const elements = {
   eventList: $("#eventList"),
   festivalList: $("#festivalList"),
   festivalSearchInput: $("#festivalSearchInput"),
+  festivalYearSelect: $("#festivalYearSelect"),
+  festivalCountrySelect: $("#festivalCountrySelect"),
+  festivalSizeSelect: $("#festivalSizeSelect"),
   recentlyAddedList: $("#recentlyAddedList"),
   eventDetailsDialog: $("#eventDetailsDialog"),
   eventDetailsTitle: $("#eventDetailsTitle"),
@@ -172,6 +178,137 @@ function loadState() {
   deduplicateEvents();
   deduplicateCalendarEditions();
   mergeHardcodedReviews();
+}
+
+async function loadSupabaseEvents() {
+  const config = window.supabaseConfig;
+  if (!config?.url || !config?.publishableKey) return [];
+
+  const endpoint = `${config.url}/rest/v1/events?select=*,event_editions(*)&visibility=eq.public&order=name.asc`;
+  try {
+    const response = await fetch(endpoint, {
+      headers: {
+        apikey: config.publishableKey,
+        Authorization: `Bearer ${config.publishableKey}`
+      }
+    });
+    if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
+    const rows = await response.json();
+    return mapSupabaseEvents(rows);
+  } catch (error) {
+    console.warn("Supabase public events unavailable; using repo seed data.", error);
+    return [];
+  }
+}
+
+function mapSupabaseEvents(rows) {
+  return rows.flatMap((event) => {
+    const editions = Array.isArray(event.event_editions) ? event.event_editions : [];
+    return editions
+      .filter((edition) => edition.visibility === "public")
+      .map((edition) => ({
+        id: edition.id,
+        name: canonicalNameFor(event.name),
+        startDate: edition.start_date || "",
+        endDate: edition.end_date || edition.start_date || "",
+        city: edition.city || "",
+        country: edition.country || "",
+        venue: edition.venue || "",
+        organizer: event.organizer || "",
+        website: event.website || "",
+        instagram: event.instagram || "",
+        facebook: event.facebook || "",
+        tickets: edition.tickets || "",
+        price: edition.price || "",
+        currency: edition.currency || "",
+        djs: edition.djs || "",
+        artists: edition.artists || "",
+        eventSize: edition.event_size || "",
+        travel: edition.travel || "",
+        addedOn: edition.added_on || "",
+        notes: edition.notes || "",
+        createdAt: edition.created_at || event.created_at || new Date().toISOString(),
+        updatedAt: edition.updated_at || event.updated_at || edition.created_at || event.created_at || new Date().toISOString()
+      }));
+  });
+}
+
+async function loadSupabaseReviews() {
+  const config = window.supabaseConfig;
+  if (!config?.url || !config?.publishableKey) return [];
+
+  const endpoint = `${config.url}/rest/v1/reviews?select=*&visibility=eq.public&order=reviewed_at.desc`;
+  try {
+    const response = await fetch(endpoint, {
+      headers: {
+        apikey: config.publishableKey,
+        Authorization: `Bearer ${config.publishableKey}`
+      }
+    });
+    if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
+    const rows = await response.json();
+    return rows.map(mapSupabaseReview).filter((review) => state.events.some((event) => event.id === review.eventId));
+  } catch (error) {
+    console.warn("Supabase public reviews unavailable; using repo review data.", error);
+    return [];
+  }
+}
+
+function mapSupabaseReview(review) {
+  return {
+    id: review.id,
+    eventId: review.event_edition_id,
+    reviewedAt: review.reviewed_at || review.created_at || new Date().toISOString(),
+    scores: {
+      music: review.music_score,
+      dancingLevel: review.dancing_level_score,
+      stageImpact: review.stage_impact_score,
+      floor: review.floor_score,
+      vibe: review.vibe_score,
+      eventCost: review.event_cost_score,
+      servicesProvided: review.services_score,
+      eventHours: review.event_hours_score,
+      hostCity: review.host_city_score,
+      eventSize: review.event_size_score,
+      travelToEvent: review.travel_score
+    },
+    categoryComments: {
+      music: review.music_comment,
+      dancingLevel: review.dancing_level_comment,
+      stageImpact: review.stage_impact_comment,
+      floor: review.floor_comment,
+      vibe: review.vibe_comment,
+      eventCost: review.event_cost_comment,
+      servicesProvided: review.services_comment,
+      eventHours: review.event_hours_comment,
+      hostCity: review.host_city_comment,
+      eventSize: review.event_size_comment,
+      travelToEvent: review.travel_comment
+    },
+    topReason: review.top_reason || "",
+    notes: review.notes || "",
+    isPublished: review.visibility === "public",
+    sourceId: `supabase-${review.id}`
+  };
+}
+
+async function refreshPublicEventsFromSupabase() {
+  const supabaseEvents = await loadSupabaseEvents();
+  if (!supabaseEvents.length) return;
+
+  state.events = supabaseEvents;
+  canonicalizeEventNames();
+  correctEventDates();
+  removeLegacySampleEvents();
+  deduplicateEvents();
+  deduplicateCalendarEditions();
+  const supabaseReviews = await loadSupabaseReviews();
+  if (supabaseReviews.length) {
+    state.reviews = supabaseReviews;
+  } else {
+    mergeHardcodedReviews();
+  }
+  render();
 }
 
 function canonicalizeEventNames() {
@@ -778,55 +915,146 @@ function renderEvents() {
   events.forEach((event) => elements.eventList.append(renderEventCard(event)));
 }
 
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
+];
+
+function eventYear(event) {
+  return event.startDate.slice(0, 4);
+}
+
+function eventMonthIndex(event) {
+  return Number(event.startDate.slice(5, 7)) - 1;
+}
+
+function availableFestivalYears() {
+  return uniqueValues(state.events.map(eventYear).filter(Boolean)).sort();
+}
+
+function ensureFestivalYear(years) {
+  if (years.includes(state.festivalYear)) return;
+
+  const currentYear = String(new Date().getFullYear());
+  state.festivalYear = years.includes(currentYear)
+    ? currentYear
+    : years.find((year) => year >= currentYear) || years[0] || currentYear;
+  localStorage.setItem("salsa-festivals-event-list-year", state.festivalYear);
+}
+
+function setSelectOptions(select, options, selectedValue) {
+  if (!select) return;
+  const markup = options
+    .map((option) => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`)
+    .join("");
+  if (select.innerHTML !== markup) {
+    select.innerHTML = markup;
+  }
+  select.value = selectedValue;
+}
+
+function populateFestivalFilters() {
+  const years = availableFestivalYears();
+  ensureFestivalYear(years);
+
+  setSelectOptions(
+    elements.festivalYearSelect,
+    years.map((year) => ({ value: year, label: year })),
+    state.festivalYear
+  );
+
+  const countries = uniqueValues(
+    state.events
+      .filter((event) => eventYear(event) === state.festivalYear)
+      .map((event) => event.country)
+      .filter(Boolean)
+  ).sort((a, b) => a.localeCompare(b));
+  if (state.festivalCountry && !countries.includes(state.festivalCountry)) {
+    state.festivalCountry = "";
+  }
+
+  setSelectOptions(
+    elements.festivalCountrySelect,
+    [{ value: "", label: "All countries" }, ...countries.map((country) => ({ value: country, label: country }))],
+    state.festivalCountry
+  );
+
+  setSelectOptions(
+    elements.festivalSizeSelect,
+    [
+      { value: "", label: "All sizes" },
+      { value: "small", label: "Small" },
+      { value: "medium", label: "Medium" },
+      { value: "large", label: "Large" },
+      { value: "extra large", label: "Extra large" }
+    ],
+    state.festivalSize
+  );
+}
+
+function filteredFestivalEditions() {
+  const search = elements.festivalSearchInput.value.trim().toLowerCase();
+  const country = state.festivalCountry;
+  const size = normalizeText(state.festivalSize);
+
+  return state.events
+    .filter((event) => {
+      const haystack = [
+        event.name,
+        event.city,
+        event.country,
+        event.venue,
+        event.organizer,
+        event.djs,
+        event.artists,
+        event.notes
+      ].join(" ").toLowerCase();
+      const matchesYear = eventYear(event) === state.festivalYear;
+      const matchesSearch = !search || haystack.includes(search);
+      const matchesCountry = !country || event.country === country;
+      const matchesSize = !size || normalizeText(event.eventSize) === size;
+      return matchesYear && matchesSearch && matchesCountry && matchesSize;
+    })
+    .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
+}
+
 function renderFestivalList() {
   elements.festivalList.innerHTML = "";
-  const search = elements.festivalSearchInput.value.trim().toLowerCase();
-  const groups = uniqueFestivalGroups().filter((group) => {
-    const haystack = [
-      group.name,
-      group.locations.join(" "),
-      group.organizers.join(" ")
-    ].join(" ").toLowerCase();
-    return !search || haystack.includes(search);
-  });
+  populateFestivalFilters();
+  const events = filteredFestivalEditions();
 
-  if (!groups.length) {
-    elements.festivalList.append(emptyState("No matching festivals", "Adjust search or add another event."));
+  if (!events.length) {
+    elements.festivalList.append(emptyState("No matching festivals", "Adjust the year, country, size, or search filters."));
     return;
   }
 
-  groups.forEach((group) => {
-    const card = document.createElement("article");
-    card.className = "event-card";
-    const nextEdition = group.upcoming[0];
-    const lastEdition = group.past[group.past.length - 1];
-    const reviewScore = nextEdition ? reviewScoreForEvent(nextEdition) : null;
-    card.innerHTML = `
-      <div class="event-card-header">
-        <div>
-          <h3>${escapeHtml(group.name)}</h3>
-          <p class="muted">${escapeHtml(group.locations.join(" | "))}</p>
-        </div>
-        ${reviewScore ? `<span class="pill score-pill">${reviewScore.average.toFixed(1)} prior</span>` : ""}
-      </div>
-      <div class="event-meta">
-        ${nextEdition ? `<span class="pill">Next: ${escapeHtml(dateRange(nextEdition))}</span>` : "<span class=\"pill\">No upcoming editions</span>"}
-        ${lastEdition ? `<span class="pill">Last: ${escapeHtml(dateRange(lastEdition))}</span>` : "<span class=\"pill\">No past editions</span>"}
-        ${group.organizers.map((organizer) => `<span class="pill">${escapeHtml(organizer)}</span>`).join("")}
-      </div>
-      <div class="event-detail">
-        ${nextEdition?.venue ? `<div><strong>Next venue:</strong> ${escapeHtml(nextEdition.venue)}</div>` : ""}
-        ${nextEdition?.djs ? `<div><strong>DJs:</strong> ${escapeHtml(nextEdition.djs)}</div>` : ""}
-        ${nextEdition?.artists ? `<div><strong>Artists:</strong> ${escapeHtml(nextEdition.artists)}</div>` : ""}
-      </div>
-      <div class="event-actions">
-        ${sourceLink("Website", group.website)}
-        ${sourceLink("Instagram", group.instagram)}
-        ${sourceLink("Facebook", group.facebook)}
-        ${sourceLink("Tickets", group.tickets)}
+  monthNames.forEach((monthName, index) => {
+    const monthEvents = events.filter((event) => eventMonthIndex(event) === index);
+    if (!monthEvents.length) return;
+
+    const section = document.createElement("section");
+    section.className = "month-section";
+    section.innerHTML = `
+      <div class="month-heading">
+        <h3>${monthName}</h3>
+        <span class="pill">${monthEvents.length} ${monthEvents.length === 1 ? "event" : "events"}</span>
       </div>
     `;
-    elements.festivalList.append(card);
+    const list = document.createElement("div");
+    list.className = "event-list";
+    monthEvents.forEach((event) => list.append(renderEventCard(event)));
+    section.append(list);
+    elements.festivalList.append(section);
   });
 }
 
@@ -894,7 +1122,7 @@ function renderReviews() {
   const reviews = [...state.reviews].sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt));
 
   if (!reviews.length) {
-    elements.reviewList.append(emptyState("No reviews yet", "Reviews are added through the repo so they publish consistently."));
+    elements.reviewList.append(emptyState("No reviews yet", "Public reviews will show here once they are added to Supabase."));
     return;
   }
 
@@ -1216,6 +1444,7 @@ function bindEvents() {
   elements.saveReviewBtn?.addEventListener("click", saveReview);
   elements.calendarGrid.addEventListener("click", handleAction);
   elements.eventList.addEventListener("click", handleAction);
+  elements.festivalList.addEventListener("click", handleAction);
   elements.recentlyAddedList.addEventListener("click", handleAction);
   elements.reviewList.addEventListener("click", handleAction);
   elements.monthPicker.addEventListener("change", (event) => {
@@ -1229,6 +1458,20 @@ function bindEvents() {
     renderEvents();
   });
   elements.festivalSearchInput.addEventListener("input", renderFestivalList);
+  elements.festivalYearSelect.addEventListener("change", (event) => {
+    state.festivalYear = event.target.value;
+    state.festivalCountry = "";
+    localStorage.setItem("salsa-festivals-event-list-year", state.festivalYear);
+    renderFestivalList();
+  });
+  elements.festivalCountrySelect.addEventListener("change", (event) => {
+    state.festivalCountry = event.target.value;
+    renderFestivalList();
+  });
+  elements.festivalSizeSelect.addEventListener("change", (event) => {
+    state.festivalSize = event.target.value;
+    renderFestivalList();
+  });
   elements.sortSelect.addEventListener("change", (event) => {
     state.sort = event.target.value;
     renderEvents();
@@ -1243,7 +1486,12 @@ function bindEvents() {
   elements.scoreFields?.addEventListener("input", updateLiveScore);
 }
 
-loadState();
-bindEvents();
-render();
-switchView(state.activeView);
+async function init() {
+  loadState();
+  bindEvents();
+  render();
+  switchView(state.activeView);
+  await refreshPublicEventsFromSupabase();
+}
+
+init();
