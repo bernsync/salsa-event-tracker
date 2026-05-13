@@ -239,7 +239,8 @@ async function sendSignInLink(email) {
     throw new Error("Supabase is not configured.");
   }
 
-  const response = await fetch(`${config.url}/auth/v1/otp`, {
+  const redirectTo = config.redirectUrl || `${location.origin}${location.pathname}`;
+  const response = await fetch(`${config.url}/auth/v1/magiclink`, {
     method: "POST",
     headers: {
       apikey: config.publishableKey,
@@ -247,9 +248,8 @@ async function sendSignInLink(email) {
     },
     body: JSON.stringify({
       email,
-      create_user: true,
       options: {
-        email_redirect_to: `${location.origin}${location.pathname}`
+        redirectTo
       }
     })
   });
