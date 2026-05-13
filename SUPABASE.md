@@ -25,4 +25,6 @@ The generated SQL deletes existing public `events` and `event_editions` rows bef
 1. Load local repo seed data immediately so the app works offline and while Supabase is empty.
 2. Request public events and editions from Supabase.
 3. If Supabase returns public rows, replace the local seed event list with Supabase data.
-4. Private reviews/trips are not connected yet. That should be the next phase after public data is imported.
+4. Request public reviews from Supabase and attach them to the matching event edition rows.
+5. If Supabase reviews are unavailable or empty, keep the repo hardcoded reviews as a fallback.
+6. Private trips are not connected yet. That should be the next phase after public event and review data are imported.

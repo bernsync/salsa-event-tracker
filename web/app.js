@@ -233,6 +233,65 @@ function mapSupabaseEvents(rows) {
   });
 }
 
+async function loadSupabaseReviews() {
+  const config = window.supabaseConfig;
+  if (!config?.url || !config?.publishableKey) return [];
+
+  const endpoint = `${config.url}/rest/v1/reviews?select=*&visibility=eq.public&order=reviewed_at.desc`;
+  try {
+    const response = await fetch(endpoint, {
+      headers: {
+        apikey: config.publishableKey,
+        Authorization: `Bearer ${config.publishableKey}`
+      }
+    });
+    if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
+    const rows = await response.json();
+    return rows.map(mapSupabaseReview).filter((review) => state.events.some((event) => event.id === review.eventId));
+  } catch (error) {
+    console.warn("Supabase public reviews unavailable; using repo review data.", error);
+    return [];
+  }
+}
+
+function mapSupabaseReview(review) {
+  return {
+    id: review.id,
+    eventId: review.event_edition_id,
+    reviewedAt: review.reviewed_at || review.created_at || new Date().toISOString(),
+    scores: {
+      music: review.music_score,
+      dancingLevel: review.dancing_level_score,
+      stageImpact: review.stage_impact_score,
+      floor: review.floor_score,
+      vibe: review.vibe_score,
+      eventCost: review.event_cost_score,
+      servicesProvided: review.services_score,
+      eventHours: review.event_hours_score,
+      hostCity: review.host_city_score,
+      eventSize: review.event_size_score,
+      travelToEvent: review.travel_score
+    },
+    categoryComments: {
+      music: review.music_comment,
+      dancingLevel: review.dancing_level_comment,
+      stageImpact: review.stage_impact_comment,
+      floor: review.floor_comment,
+      vibe: review.vibe_comment,
+      eventCost: review.event_cost_comment,
+      servicesProvided: review.services_comment,
+      eventHours: review.event_hours_comment,
+      hostCity: review.host_city_comment,
+      eventSize: review.event_size_comment,
+      travelToEvent: review.travel_comment
+    },
+    topReason: review.top_reason || "",
+    notes: review.notes || "",
+    isPublished: review.visibility === "public",
+    sourceId: `supabase-${review.id}`
+  };
+}
+
 async function refreshPublicEventsFromSupabase() {
   const supabaseEvents = await loadSupabaseEvents();
   if (!supabaseEvents.length) return;
@@ -243,7 +302,12 @@ async function refreshPublicEventsFromSupabase() {
   removeLegacySampleEvents();
   deduplicateEvents();
   deduplicateCalendarEditions();
-  mergeHardcodedReviews();
+  const supabaseReviews = await loadSupabaseReviews();
+  if (supabaseReviews.length) {
+    state.reviews = supabaseReviews;
+  } else {
+    mergeHardcodedReviews();
+  }
   render();
 }
 
@@ -1058,7 +1122,7 @@ function renderReviews() {
   const reviews = [...state.reviews].sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt));
 
   if (!reviews.length) {
-    elements.reviewList.append(emptyState("No reviews yet", "Reviews are added through the repo so they publish consistently."));
+    elements.reviewList.append(emptyState("No reviews yet", "Public reviews will show here once they are added to Supabase."));
     return;
   }
 
