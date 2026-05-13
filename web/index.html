@@ -135,14 +135,18 @@
         <div class="auth-panel" id="reviewAuthPanel">
           <div>
             <h3>Sign in to view reviews</h3>
-            <p class="muted">Reviews are private and require a Supabase login.</p>
+            <p class="muted">Reviews are private and require your Supabase account.</p>
           </div>
           <form class="auth-form" id="authForm">
             <label class="field">
               <span>Email</span>
               <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
             </label>
-            <button class="primary-action" type="submit">Send sign-in link</button>
+            <label class="field">
+              <span>Password</span>
+              <input id="authPassword" type="password" autocomplete="current-password" required>
+            </label>
+            <button class="primary-action" type="submit">Sign in</button>
           </form>
           <p class="muted" id="authMessage"></p>
         </div>
