@@ -3,8 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta http-equiv="refresh" content="0; url=web/">
     <title>Salsa Festivals Tracker</title>
+    <script>
+      const appPath = `${location.pathname.replace(/\/?$/, "/")}web/`;
+      location.replace(`${location.origin}${appPath}${location.search}${location.hash}`);
+    </script>
   </head>
   <body>
     <p><a href="web/">Open Salsa Festivals Tracker</a></p>
