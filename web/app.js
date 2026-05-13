@@ -115,6 +115,7 @@ const elements = {
   tabs: document.querySelectorAll(".tab"),
   views: document.querySelectorAll(".view"),
   authStatus: $("#authStatus"),
+  authDialog: $("#authDialog"),
   authForm: $("#authForm"),
   authEmail: $("#authEmail"),
   authPassword: $("#authPassword"),
@@ -280,9 +281,25 @@ function signOut() {
   state.authSession = null;
   state.reviews = [];
   localStorage.removeItem(authStorageKey);
+  closeAuthDialog();
   renderAuth();
   render();
   switchView("calendar");
+}
+
+function openAuthDialog() {
+  elements.authMessage.textContent = "";
+  elements.authPassword.value = "";
+  if (elements.authDialog?.showModal) {
+    elements.authDialog.showModal();
+  }
+  elements.authEmail.focus();
+}
+
+function closeAuthDialog() {
+  if (elements.authDialog?.open) {
+    elements.authDialog.close();
+  }
 }
 
 async function loadSupabaseEvents() {
@@ -1250,8 +1267,8 @@ function uniqueValues(values) {
 function renderAuth() {
   if (elements.authStatus) {
     elements.authStatus.innerHTML = isSignedIn()
-      ? "<button class=\"secondary-action\" type=\"button\" data-auth-action=\"signout\">Sign out</button>"
-      : "";
+      ? "<span class=\"auth-label\">Signed in</span><button class=\"secondary-action\" type=\"button\" data-auth-action=\"signout\">Sign out</button>"
+      : "<button class=\"secondary-action\" type=\"button\" data-auth-action=\"signin\">Sign in</button>";
   }
 
   if (elements.reviewAuthPanel) {
@@ -1595,6 +1612,7 @@ async function handleAuthSubmit(event) {
     localStorage.setItem(authStorageKey, JSON.stringify(state.authSession));
     elements.authForm.reset();
     elements.authMessage.textContent = "";
+    closeAuthDialog();
     renderAuth();
     await refreshReviews();
   } catch (error) {
@@ -1613,6 +1631,15 @@ async function refreshReviews() {
   render();
 }
 
+function handleAuthAction(event) {
+  const target = event.target.closest("[data-auth-action]");
+  if (!target) return;
+  const action = target.dataset.authAction;
+  if (action === "signin") openAuthDialog();
+  if (action === "signout") signOut();
+  if (action === "close") closeAuthDialog();
+}
+
 function bindEvents() {
   elements.saveEventBtn?.addEventListener("click", saveEvent);
   elements.deleteEventBtn?.addEventListener("click", () => {
@@ -1623,9 +1650,7 @@ function bindEvents() {
   });
   elements.saveReviewBtn?.addEventListener("click", saveReview);
   elements.authForm?.addEventListener("submit", handleAuthSubmit);
-  elements.authStatus?.addEventListener("click", (event) => {
-    if (event.target.closest("[data-auth-action='signout']")) signOut();
-  });
+  document.addEventListener("click", handleAuthAction);
   elements.calendarGrid.addEventListener("click", handleAction);
   elements.eventList.addEventListener("click", handleAction);
   elements.festivalList.addEventListener("click", handleAction);
