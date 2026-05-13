@@ -117,6 +117,7 @@ const elements = {
   authStatus: $("#authStatus"),
   authForm: $("#authForm"),
   authEmail: $("#authEmail"),
+  authPassword: $("#authPassword"),
   authMessage: $("#authMessage"),
   reviewAuthPanel: $("#reviewAuthPanel"),
   monthPicker: $("#monthPicker"),
@@ -233,14 +234,22 @@ function authHeaders() {
   };
 }
 
-async function sendSignInLink(email) {
+function normalizeAuthSession(payload) {
+  return {
+    accessToken: payload.access_token,
+    refreshToken: payload.refresh_token || "",
+    expiresAt: Number(payload.expires_at || Math.floor(Date.now() / 1000) + (payload.expires_in || 3600)),
+    tokenType: payload.token_type || "bearer"
+  };
+}
+
+async function signInWithPassword(email, password) {
   const config = window.supabaseConfig;
   if (!config?.url || !config?.publishableKey) {
     throw new Error("Supabase is not configured.");
   }
 
-  const redirectTo = config.redirectUrl || `${location.origin}${location.pathname}`;
-  const response = await fetch(`${config.url}/auth/v1/magiclink`, {
+  const response = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
     method: "POST",
     headers: {
       apikey: config.publishableKey,
@@ -248,9 +257,7 @@ async function sendSignInLink(email) {
     },
     body: JSON.stringify({
       email,
-      options: {
-        redirectTo
-      }
+      password
     })
   });
 
@@ -265,6 +272,8 @@ async function sendSignInLink(email) {
     }
     throw new Error(message);
   }
+
+  return normalizeAuthSession(await response.json());
 }
 
 function signOut() {
@@ -1577,15 +1586,19 @@ function handleAction(event) {
 async function handleAuthSubmit(event) {
   event.preventDefault();
   const email = elements.authEmail.value.trim();
-  if (!email) return;
+  const password = elements.authPassword.value;
+  if (!email || !password) return;
 
-  elements.authMessage.textContent = "Sending sign-in link...";
+  elements.authMessage.textContent = "Signing in...";
   try {
-    await sendSignInLink(email);
-    elements.authMessage.textContent = "Check your email for the sign-in link.";
+    state.authSession = await signInWithPassword(email, password);
+    localStorage.setItem(authStorageKey, JSON.stringify(state.authSession));
     elements.authForm.reset();
+    elements.authMessage.textContent = "";
+    renderAuth();
+    await refreshReviews();
   } catch (error) {
-    elements.authMessage.textContent = `Could not send sign-in link: ${error.message}`;
+    elements.authMessage.textContent = `Could not sign in: ${error.message}`;
     console.warn(error);
   }
 }
