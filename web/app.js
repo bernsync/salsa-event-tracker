@@ -59,6 +59,8 @@ const canonicalEventNames = {
   "5 star congress": "5Star Congress",
   "5star congress": "5Star Congress",
   "amsterdam salsa weekender": "Amsterdam Salsa Weekend",
+  "beat passion mambo": "Beats Passion Mambo",
+  "beats passion mambo": "Beats Passion Mambo",
   "mambo marathon": "Mambo Marathonios",
   "m. mambo marathonios": "Mambo Marathonios"
 };
@@ -74,24 +76,13 @@ const removedEventNames = new Set([
   "sf sbk",
   "sfsbkz",
   "world salsa festival",
-  "live 2 mambo: 2 weekends"
+  "live 2 mambo: 2 weekends",
+  "super mario birthday"
 ]);
 
 const sharedEventFields = ["organizer", "website", "instagram", "facebook"];
-const editionSpecificEventFields = ["venue", "tickets", "price", "currency", "djs", "artists", "notes"];
+const editionSpecificEventFields = ["venue", "tickets", "price", "currency", "djs", "artists", "eventSize", "travel", "addedOn", "notes"];
 const eventMetadataFields = [...sharedEventFields, ...editionSpecificEventFields];
-const dataGapFields = [
-  { label: "City", missing: (event) => !event.city },
-  { label: "Country", missing: (event) => !event.country },
-  { label: "Organizer", missing: (event) => !event.organizer },
-  { label: "Website", missing: (event) => !event.website },
-  { label: "Instagram", missing: (event) => !event.instagram },
-  { label: "Facebook", missing: (event) => !event.facebook },
-  { label: "Venue", missing: (event) => !event.venue },
-  { label: "Ticket link", missing: (event) => !event.tickets },
-  { label: "Price", missing: (event) => !event.price },
-  { label: "DJs / artists", missing: (event) => !event.djs && !event.artists }
-];
 
 const eventDateCorrections = {
   "prague salsa marathon|2026-05-09|2026-05-11": ["2026-05-07", "2026-05-11"],
@@ -105,7 +96,11 @@ const eventDateCorrections = {
   "zagreb salsa marathon|2026-04-24|2026-04-27": ["2026-04-24", "2026-04-26"],
   "zagreb salsa marathon|2026-04-30|2026-05-02": ["2026-04-24", "2026-04-26"],
   "5star congress|2026-05-01|2026-05-05": ["2026-05-01", "2026-05-04"],
-  "5star congress|2026-05-08|2026-05-11": ["2026-05-01", "2026-05-04"]
+  "5star congress|2026-05-08|2026-05-11": ["2026-05-01", "2026-05-04"],
+  "berlin salsa congress|2026-08-28|2026-08-31": ["2026-08-27", "2026-08-30"],
+  "brussels salsa marathon|2026-12-06|2026-12-09": ["2026-12-04", "2026-12-07"],
+  "magic slovenian salsa festival|2026-01-16|2026-01-20": ["2026-01-15", "2026-01-18"],
+  "agozar|2026-12-19|2026-12-21": ["2026-12-18", "2026-12-20"]
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -121,8 +116,7 @@ const elements = {
   eventList: $("#eventList"),
   festivalList: $("#festivalList"),
   festivalSearchInput: $("#festivalSearchInput"),
-  dataGapSummary: $("#dataGapSummary"),
-  dataGapsList: $("#dataGapsList"),
+  recentlyAddedList: $("#recentlyAddedList"),
   eventDetailsDialog: $("#eventDetailsDialog"),
   eventDetailsTitle: $("#eventDetailsTitle"),
   eventDetailsMeta: $("#eventDetailsMeta"),
@@ -317,7 +311,7 @@ function calendarEditionKey(event) {
 }
 
 function mergeEventDetails(target, source) {
-  ["city", "country", "venue", "organizer", "website", "instagram", "facebook", "tickets", "price", "currency", "djs", "artists", "notes"].forEach((field) => {
+  ["city", "country", "venue", "organizer", "website", "instagram", "facebook", "tickets", "price", "currency", "djs", "artists", "eventSize", "travel", "addedOn", "notes"].forEach((field) => {
     if (!target[field] && source[field]) {
       target[field] = source[field];
     }
@@ -329,7 +323,7 @@ function richerEvent(first, second) {
 }
 
 function eventDetailScore(event) {
-  return ["city", "country", "venue", "organizer", "website", "instagram", "facebook", "tickets", "price", "currency", "djs", "artists", "notes"]
+  return ["city", "country", "venue", "organizer", "website", "instagram", "facebook", "tickets", "price", "currency", "djs", "artists", "eventSize", "travel", "addedOn", "notes"]
     .reduce((score, field) => score + (event[field] ? String(event[field]).length : 0), 0);
 }
 
@@ -394,6 +388,9 @@ function mergeSeedEvents() {
       currency: hydratedSeed.currency || "",
       djs: hydratedSeed.djs || "",
       artists: hydratedSeed.artists || "",
+      eventSize: hydratedSeed.eventSize || "",
+      travel: hydratedSeed.travel || "",
+      addedOn: hydratedSeed.addedOn || "",
       notes: hydratedSeed.notes || "",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -549,6 +546,19 @@ function dateRange(event) {
   return `${formatDate(event.startDate)} - ${formatDate(event.endDate)}`;
 }
 
+function formatEventSize(value) {
+  const size = normalizeText(value);
+  if (!size) return "";
+  const labels = {
+    small: "Small (under 200)",
+    medium: "Medium (200-500)",
+    large: "Large (500-999)",
+    "extra large": "Extra large (1000+)",
+    xl: "Extra large (1000+)"
+  };
+  return labels[size] || value;
+}
+
 function eventLocation(event) {
   return [event.city, event.country].filter(Boolean).join(", ");
 }
@@ -642,6 +652,10 @@ function sourceLink(label, value) {
   return `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${label}</a>`;
 }
 
+function recentAddedDate(event) {
+  return event.addedOn || "";
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replaceAll("&", "&amp;")
@@ -665,15 +679,17 @@ function renderEventCard(event) {
     </div>
     <div class="event-meta">
       ${eventLocation(event) ? `<span class="pill">${escapeHtml(eventLocation(event))}</span>` : ""}
-      ${event.organizer ? `<span class="pill">${escapeHtml(event.organizer)}</span>` : ""}
+      ${event.eventSize ? `<span class="pill">${escapeHtml(formatEventSize(event.eventSize))}</span>` : ""}
       ${event.price ? `<span class="pill">${escapeHtml(event.price)}</span>` : ""}
       ${event.price && event.currency ? `<span class="pill">${escapeHtml(event.currency)}</span>` : ""}
     </div>
     <div class="event-detail">
-      ${event.venue ? `<div><strong>Venue:</strong> ${escapeHtml(event.venue)}</div>` : ""}
       ${event.organizer ? `<div><strong>Organizer:</strong> ${escapeHtml(event.organizer)}</div>` : ""}
+      ${event.venue ? `<div><strong>Venue:</strong> ${escapeHtml(event.venue)}</div>` : ""}
+      ${event.eventSize ? `<div><strong>Event size:</strong> ${escapeHtml(formatEventSize(event.eventSize))}</div>` : ""}
       ${event.djs ? `<div><strong>DJs:</strong> ${escapeHtml(event.djs)}</div>` : ""}
       ${event.artists ? `<div><strong>Artists:</strong> ${escapeHtml(event.artists)}</div>` : ""}
+      ${event.travel ? `<div><strong>Travel planning:</strong> ${escapeHtml(event.travel)}</div>` : ""}
       ${event.notes ? `<div><strong>Notes:</strong> ${escapeHtml(event.notes)}</div>` : ""}
     </div>
     <div class="event-actions">
@@ -814,6 +830,25 @@ function renderFestivalList() {
   });
 }
 
+function renderRecentlyAdded() {
+  elements.recentlyAddedList.innerHTML = "";
+  const events = state.events
+    .filter((event) => recentAddedDate(event))
+    .sort((a, b) => recentAddedDate(b).localeCompare(recentAddedDate(a)) || a.startDate.localeCompare(b.startDate));
+
+  if (!events.length) {
+    elements.recentlyAddedList.append(emptyState("No recently added events", "Newly added event editions will show here once they are marked in the repo."));
+    return;
+  }
+
+  events.forEach((event) => {
+    const card = renderEventCard(event);
+    const header = card.querySelector(".event-card-header");
+    header?.insertAdjacentHTML("beforeend", `<span class="pill">Added ${escapeHtml(formatDate(recentAddedDate(event)))}</span>`);
+    elements.recentlyAddedList.append(card);
+  });
+}
+
 function uniqueFestivalGroups() {
   const groups = new Map();
   state.events.forEach((event) => {
@@ -854,82 +889,6 @@ function uniqueValues(values) {
   return [...new Set(values)];
 }
 
-function missingFieldsForEvent(event) {
-  return dataGapFields.filter((field) => field.missing(event)).map((field) => field.label);
-}
-
-function dataGapRows() {
-  return state.events
-    .map((event) => ({ event, missing: missingFieldsForEvent(event) }))
-    .filter((row) => row.missing.length)
-    .sort((a, b) => {
-      const statusSort = Number(isHistorical(a.event)) - Number(isHistorical(b.event));
-      if (statusSort) return statusSort;
-      return b.missing.length - a.missing.length || a.event.startDate.localeCompare(b.event.startDate) || a.event.name.localeCompare(b.event.name);
-    });
-}
-
-function renderDataGaps() {
-  elements.dataGapsList.innerHTML = "";
-  const rows = dataGapRows();
-  const completeCount = state.events.length - rows.length;
-  const upcomingGapCount = rows.filter((row) => !isHistorical(row.event)).length;
-  const fieldCounts = dataGapFields
-    .map((field) => ({
-      label: field.label,
-      count: state.events.filter((event) => field.missing(event)).length
-    }))
-    .filter((field) => field.count)
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
-  const topField = fieldCounts[0];
-
-  elements.dataGapSummary.innerHTML = `
-    <article class="data-stat">
-      <span>Total editions</span>
-      <strong>${state.events.length}</strong>
-    </article>
-    <article class="data-stat">
-      <span>Complete records</span>
-      <strong>${completeCount}</strong>
-    </article>
-    <article class="data-stat">
-      <span>Upcoming with gaps</span>
-      <strong>${upcomingGapCount}</strong>
-    </article>
-    <article class="data-stat">
-      <span>Most missing</span>
-      <strong>${topField ? `${escapeHtml(topField.label)} (${topField.count})` : "None"}</strong>
-    </article>
-  `;
-
-  if (!rows.length) {
-    elements.dataGapsList.append(emptyState("No tracked gaps", "Every tracked field is filled for each event record."));
-    return;
-  }
-
-  rows.forEach(({ event, missing }) => {
-    const card = document.createElement("article");
-    card.className = "event-card data-gap-card";
-    card.innerHTML = `
-      <div class="event-card-header">
-        <div>
-          <h3>${escapeHtml(event.name)}</h3>
-          <p class="muted">${escapeHtml(dateRange(event))}${eventLocation(event) ? ` | ${escapeHtml(eventLocation(event))}` : ""}</p>
-        </div>
-        <span class="pill gap-count-pill">${missing.length} missing</span>
-      </div>
-      <div class="data-gap-list">
-        ${missing.map((label) => `<span class="gap-pill">${escapeHtml(label)}</span>`).join("")}
-      </div>
-      <div class="event-actions">
-        <button type="button" data-action="details" data-id="${event.id}">Details</button>
-        <span class="event-status">${isHistorical(event) ? "Past event" : "Upcoming"}</span>
-      </div>
-    `;
-    elements.dataGapsList.append(card);
-  });
-}
-
 function renderReviews() {
   elements.reviewList.innerHTML = "";
   const reviews = [...state.reviews].sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt));
@@ -941,13 +900,17 @@ function renderReviews() {
 
   reviews.forEach((review) => {
     const event = state.events.find((item) => item.id === review.eventId);
+    const reviewDate = new Date(review.reviewedAt).toLocaleDateString();
     const card = document.createElement("article");
     card.className = "review-card";
     card.innerHTML = `
       <div class="event-card-header">
         <div>
           <h3>${escapeHtml(event?.name || "Deleted event")}</h3>
-          <p class="muted">${escapeHtml(new Date(review.reviewedAt).toLocaleDateString())}</p>
+          <p class="muted">
+            ${event ? `Edition: ${escapeHtml(dateRange(event))}${eventLocation(event) ? ` | ${escapeHtml(eventLocation(event))}` : ""}` : "Edition: deleted event"}
+          </p>
+          <p class="muted">Review date: ${escapeHtml(reviewDate)}</p>
         </div>
         <span class="pill score-pill">${totalScore(review).toFixed(1)}</span>
       </div>
@@ -980,15 +943,16 @@ function render() {
   renderCalendar();
   renderEvents();
   renderFestivalList();
-  renderDataGaps();
+  renderRecentlyAdded();
   renderReviews();
 }
 
 function switchView(view) {
-  state.activeView = view;
-  localStorage.setItem("salsa-festivals-active-view", view);
-  elements.tabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.view === view));
-  elements.views.forEach((section) => section.classList.toggle("is-active", section.id === `${view}View`));
+  const nextView = [...elements.tabs].some((tab) => tab.dataset.view === view) ? view : "calendar";
+  state.activeView = nextView;
+  localStorage.setItem("salsa-festivals-active-view", nextView);
+  elements.tabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.view === nextView));
+  elements.views.forEach((section) => section.classList.toggle("is-active", section.id === `${nextView}View`));
 }
 
 function openEventDetails(eventId) {
@@ -1001,6 +965,7 @@ function openEventDetails(eventId) {
     `<span class="pill">${escapeHtml(dateRange(event))}</span>`,
     eventLocation(event) ? `<span class="pill">${escapeHtml(eventLocation(event))}</span>` : "",
     event.organizer ? `<span class="pill">${escapeHtml(event.organizer)}</span>` : "",
+    event.eventSize ? `<span class="pill">${escapeHtml(formatEventSize(event.eventSize))}</span>` : "",
     event.price ? `<span class="pill">${escapeHtml(event.price)}</span>` : "",
     event.price && event.currency ? `<span class="pill">${escapeHtml(event.currency)}</span>` : "",
     score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : "",
@@ -1010,9 +975,11 @@ function openEventDetails(eventId) {
   const detailRows = [
     ["Venue", event.venue],
     ["Organizer", event.organizer],
+    ["Event size", formatEventSize(event.eventSize)],
     ["DJs", event.djs],
     ["Artists", event.artists],
     ["Price", event.price],
+    ["Travel planning", event.travel],
     ["Notes", event.notes]
   ].filter(([, value]) => value);
 
@@ -1249,7 +1216,7 @@ function bindEvents() {
   elements.saveReviewBtn?.addEventListener("click", saveReview);
   elements.calendarGrid.addEventListener("click", handleAction);
   elements.eventList.addEventListener("click", handleAction);
-  elements.dataGapsList.addEventListener("click", handleAction);
+  elements.recentlyAddedList.addEventListener("click", handleAction);
   elements.reviewList.addEventListener("click", handleAction);
   elements.monthPicker.addEventListener("change", (event) => {
     state.selectedMonth = event.target.value;
