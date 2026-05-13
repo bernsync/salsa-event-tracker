@@ -18,7 +18,7 @@
         <button class="tab is-active" data-view="calendar" type="button">Event Calendar</button>
         <button class="tab" data-view="events" type="button">Calendar List</button>
         <button class="tab" data-view="festivalList" type="button">Event List</button>
-        <button class="tab" data-view="dataGaps" type="button">Data Gaps</button>
+        <button class="tab" data-view="recentlyAdded" type="button">Recently Added</button>
         <button class="tab" data-view="reviews" type="button">Reviews</button>
       </nav>
 
@@ -92,15 +92,14 @@
         <div id="festivalList" class="event-list"></div>
       </section>
 
-      <section class="view" id="dataGapsView" aria-labelledby="dataGapsTitle">
+      <section class="view" id="recentlyAddedView" aria-labelledby="recentlyAddedTitle">
         <div class="toolbar">
           <div>
-            <h2 id="dataGapsTitle">Data Gaps</h2>
-            <p class="muted">Blank source and edition fields across tracked festival editions.</p>
+            <h2 id="recentlyAddedTitle">Recently Added</h2>
+            <p class="muted">New festival editions added to the tracker.</p>
           </div>
         </div>
-        <div id="dataGapSummary" class="data-gap-summary"></div>
-        <div id="dataGapsList" class="event-list"></div>
+        <div id="recentlyAddedList" class="event-list"></div>
       </section>
 
       <section class="view" id="reviewsView" aria-labelledby="reviewsTitle">
