@@ -25,6 +25,10 @@ const eventLinks = context.window.eventLinks || {};
 const eventEditionDetails = context.window.eventEditionDetails || {};
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "";
+const knownFutureNotAnnounced = new Set([
+  "5star congress",
+  "bucharest salsa revolution"
+]);
 
 const monthNames = {
   january: 1,
@@ -55,6 +59,10 @@ const monthNames = {
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function compact(value) {
+  return normalize(value).replace(/[^a-z0-9]+/g, "");
 }
 
 function toDate(value) {
@@ -205,9 +213,15 @@ function isPlausibleEditionRange(startDate, endDate) {
   return days >= 2 && days <= 10 && toDate(startDate) > today;
 }
 
-function addRange(ranges, startDate, endDate) {
+function contextAround(text, index, length) {
+  const start = Math.max(0, index - 180);
+  const end = Math.min(text.length, index + length + 180);
+  return text.slice(start, end);
+}
+
+function addRange(ranges, startDate, endDate, context = "") {
   if (!startDate || !endDate || !isPlausibleEditionRange(startDate, endDate)) return;
-  ranges.set(`${startDate}|${endDate}`, { startDate, endDate });
+  ranges.set(`${startDate}|${endDate}`, { startDate, endDate, context });
 }
 
 function extractDateCandidates(text) {
@@ -232,7 +246,7 @@ function extractDateCandidates(text) {
     if (match[3]) {
       const endDate = rangeEndDate(startDate, match[3]);
       found.add(endDate);
-      addRange(ranges, startDate, endDate);
+      addRange(ranges, startDate, endDate, contextAround(text, match.index, match[0].length));
     }
   }
 
@@ -242,7 +256,7 @@ function extractDateCandidates(text) {
     const endDate = rangeEndDate(startDate, match[2]);
     found.add(startDate);
     found.add(endDate);
-    addRange(ranges, startDate, endDate);
+    addRange(ranges, startDate, endDate, contextAround(text, match.index, match[0].length));
   }
 
   const dayMonth = new RegExp(`\\b(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?\\s+(${monthPattern})\\s+(20\\d{2})\\b`, "gi");
@@ -281,6 +295,17 @@ function duplicateCandidate(events, event, startDate, endDate = startDate) {
   });
 }
 
+function overlapsOtherFamily(events, event, startDate, endDate) {
+  const candidateStart = toDate(startDate);
+  const candidateEnd = toDate(endDate);
+  return events.some((existing) => {
+    if (eventFamilyKey(existing) === eventFamilyKey(event)) return false;
+    const existingStart = toDate(existing.startDate);
+    const existingEnd = toDate(existing.endDate);
+    return candidateStart <= existingEnd && candidateEnd >= existingStart;
+  });
+}
+
 function recentEvents(events) {
   return events
     .filter((event) => {
@@ -288,6 +313,31 @@ function recentEvents(events) {
       return end >= since && end <= today;
     })
     .sort((a, b) => a.endDate.localeCompare(b.endDate));
+}
+
+function eventAliasGroups(event) {
+  const name = normalize(event.name);
+
+  if (name.startsWith("live 2 mambo")) {
+    if (name.includes("novotel")) return [["live2mambo"], ["novotel"]];
+    if (name.includes("carnival")) return [["live2mambo"], ["carnivaldays", "carnival"]];
+    if (name.includes("new york palace")) return [["live2mambo"], ["newyorkpalace"]];
+  }
+
+  return [[compact(event.name)]];
+}
+
+function rangeMatchesEvent(events, event, range) {
+  const context = compact(range.context);
+  if (!context) return false;
+  const matchesName = eventAliasGroups(event).every((group) => group.some((alias) => context.includes(alias)));
+  if (!matchesName) return false;
+
+  if (overlapsOtherFamily(events, event, range.startDate, range.endDate)) {
+    return context.includes(compact(event.name));
+  }
+
+  return true;
 }
 
 async function auditEvent(events, event) {
@@ -309,7 +359,7 @@ async function auditEvent(events, event) {
     candidates.dateHits
       .filter((date) => toDate(date) > today)
       .forEach((date) => dateHits.add(date));
-    candidates.ranges.forEach((range) => {
+    candidates.ranges.filter((range) => rangeMatchesEvent(events, event, range)).forEach((range) => {
       rangeHits.set(`${range.startDate}|${range.endDate}`, range);
     });
   }
@@ -348,7 +398,10 @@ function renderMarkdown(results, source) {
   lines.push("This report is intentionally conservative. It does not edit Supabase automatically; verify official sources before inserting or updating rows.");
   lines.push("");
 
-  const needsReview = results.filter((result) => !result.alreadyTracked || result.suggestedRanges.length);
+  const needsReview = results.filter((result) => {
+    const knownNotAnnounced = knownFutureNotAnnounced.has(eventFamilyKey(result.event));
+    return result.suggestedRanges.length || (!result.alreadyTracked && !knownNotAnnounced);
+  });
   if (!needsReview.length) {
     lines.push("No missing next-edition candidates were found.");
     lines.push("");
@@ -376,7 +429,13 @@ function renderMarkdown(results, source) {
   lines.push("## All Recent Events Checked");
   lines.push("");
   for (const result of results) {
-    lines.push(`- ${result.event.name} (${result.event.startDate} to ${result.event.endDate}) - ${result.alreadyTracked ? "future edition already tracked" : "no future edition in tracker"}`);
+    const knownNotAnnounced = knownFutureNotAnnounced.has(eventFamilyKey(result.event));
+    const status = result.alreadyTracked
+      ? "future edition already tracked"
+      : knownNotAnnounced
+        ? "future edition not announced yet"
+        : "no future edition in tracker";
+    lines.push(`- ${result.event.name} (${result.event.startDate} to ${result.event.endDate}) - ${status}`);
   }
   lines.push("");
   return lines.join("\n");
@@ -394,7 +453,7 @@ const summary = {
   dataSource: source,
   windowStart: isoDate(since),
   recentEventCount: results.length,
-  needsReviewCount: results.filter((result) => !result.alreadyTracked || result.suggestedRanges.length).length,
+  needsReviewCount: results.filter((result) => result.suggestedRanges.length || (!result.alreadyTracked && !knownFutureNotAnnounced.has(eventFamilyKey(result.event)))).length,
   results
 };
 

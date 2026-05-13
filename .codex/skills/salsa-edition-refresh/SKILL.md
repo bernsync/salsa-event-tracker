@@ -66,6 +66,9 @@ Primary files:
 - Treat Instagram/Facebook snippets as useful leads, not final truth when the official site disagrees.
 - If official sources conflict, prefer the newest official post for date changes and note the conflict in the final answer.
 - If a next edition is already in Supabase, do not add another row. Update missing exact-edition details only when verified.
+- For shared organizer pages, require the date range to appear near the exact event name or a strong edition alias. Do not apply a shared date from The Dance House, Mambo City, Extremos, or another umbrella organizer to every event under that organizer.
+- If a candidate date range overlaps a different tracked festival, require exact event-name evidence before proposing it.
+- If the user has confirmed a future edition is not announced yet, keep it out of Needs Review until a source shows a plausible date range.
 - Weekend events should not include Monday unless official wording clearly includes Monday or the app already has an event-specific exception.
 - Leave uncertain fields blank and list them for the user.
 
