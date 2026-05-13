@@ -13,12 +13,18 @@ const maxSourcesPerEvent = Number(process.env.MAX_SOURCES_PER_EVENT || 4);
 
 const context = { window: {} };
 vm.createContext(context);
-vm.runInContext(fs.readFileSync(path.join(root, "web", "seed-events.js"), "utf8"), context);
-vm.runInContext(fs.readFileSync(path.join(root, "web", "event-links.js"), "utf8"), context);
+for (const file of ["seed-events.js", "event-links.js"]) {
+  const fullPath = path.join(root, "web", file);
+  if (fs.existsSync(fullPath)) {
+    vm.runInContext(fs.readFileSync(fullPath, "utf8"), context);
+  }
+}
 
-const seedEvents = Array.isArray(context.window.seedEvents) ? context.window.seedEvents : [];
+const repoSeedEvents = Array.isArray(context.window.seedEvents) ? context.window.seedEvents : [];
 const eventLinks = context.window.eventLinks || {};
 const eventEditionDetails = context.window.eventEditionDetails || {};
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "";
 
 const monthNames = {
   january: 1,
@@ -90,6 +96,10 @@ function sourceLinksFor(event) {
   const links = eventLinks[event.name] || {};
   const edition = eventEditionDetails[editionDetailsKey(event)] || {};
   const raw = [
+    event.website,
+    event.tickets,
+    event.facebook,
+    event.instagram?.startsWith("@") ? `https://www.instagram.com/${event.instagram.slice(1)}/` : event.instagram,
     links.website,
     edition.tickets,
     links.tickets,
@@ -97,6 +107,56 @@ function sourceLinksFor(event) {
     links.instagram?.startsWith("@") ? `https://www.instagram.com/${links.instagram.slice(1)}/` : links.instagram
   ].filter(Boolean);
   return [...new Set(raw)].slice(0, maxSourcesPerEvent);
+}
+
+async function loadSupabaseEvents() {
+  if (!supabaseUrl || !supabaseKey) return [];
+
+  const endpoint = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/events?select=*,event_editions(*)&visibility=eq.public&order=name.asc`;
+  try {
+    const response = await fetch(endpoint, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Supabase returned ${response.status}`);
+    }
+    const rows = await response.json();
+    return rows.flatMap((event) => {
+      const editions = Array.isArray(event.event_editions) ? event.event_editions : [];
+      return editions
+        .filter((edition) => edition.visibility === "public")
+        .map((edition) => ({
+          name: event.name,
+          startDate: edition.start_date || "",
+          endDate: edition.end_date || edition.start_date || "",
+          city: edition.city || "",
+          country: edition.country || "",
+          venue: edition.venue || "",
+          website: event.website || "",
+          instagram: event.instagram || "",
+          facebook: event.facebook || "",
+          tickets: edition.tickets || "",
+          organizer: event.organizer || "",
+          djs: edition.djs || "",
+          artists: edition.artists || "",
+          notes: edition.notes || ""
+        }));
+    });
+  } catch (error) {
+    console.warn(`Supabase event load failed; falling back to repo seed data. ${error.message}`);
+    return [];
+  }
+}
+
+async function loadAuditEvents() {
+  const supabaseEvents = await loadSupabaseEvents();
+  if (supabaseEvents.length) {
+    return { source: "Supabase", events: supabaseEvents };
+  }
+  return { source: "repo seed files", events: repoSeedEvents };
 }
 
 async function fetchText(url) {
@@ -164,16 +224,16 @@ function extractDates(text) {
   return [...found].filter(Boolean).sort();
 }
 
-function hasExistingFutureEdition(event) {
-  return seedEvents
+function hasExistingFutureEdition(events, event) {
+  return events
     .filter((candidate) => eventFamilyKey(candidate) === eventFamilyKey(event))
     .some((candidate) => toDate(candidate.startDate) > toDate(event.endDate));
 }
 
-function duplicateCandidate(event, startDate, endDate = startDate) {
+function duplicateCandidate(events, event, startDate, endDate = startDate) {
   const candidateStart = toDate(startDate);
   const candidateEnd = toDate(endDate);
-  return seedEvents.some((existing) => {
+  return events.some((existing) => {
     if (eventFamilyKey(existing) !== eventFamilyKey(event)) return false;
     const existingStart = toDate(existing.startDate);
     const existingEnd = toDate(existing.endDate);
@@ -181,8 +241,8 @@ function duplicateCandidate(event, startDate, endDate = startDate) {
   });
 }
 
-function recentEvents() {
-  return seedEvents
+function recentEvents(events) {
+  return events
     .filter((event) => {
       const end = toDate(event.endDate);
       return end >= since && end <= today;
@@ -190,7 +250,7 @@ function recentEvents() {
     .sort((a, b) => a.endDate.localeCompare(b.endDate));
 }
 
-async function auditEvent(event) {
+async function auditEvent(events, event) {
   const sources = sourceLinksFor(event);
   const fetched = [];
   const dateHits = new Set();
@@ -210,12 +270,12 @@ async function auditEvent(event) {
   }
 
   const futureDates = [...dateHits].sort();
-  const nonDuplicateDates = futureDates.filter((date) => !duplicateCandidate(event, date));
+  const nonDuplicateDates = futureDates.filter((date) => !duplicateCandidate(events, event, date));
 
   return {
     event,
     location: eventLocation(event),
-    alreadyTracked: hasExistingFutureEdition(event),
+    alreadyTracked: hasExistingFutureEdition(events, event),
     sources,
     fetched,
     futureDates,
@@ -230,14 +290,15 @@ async function auditEvent(event) {
   };
 }
 
-function renderMarkdown(results) {
+function renderMarkdown(results, source) {
   const lines = [];
   lines.push("# Weekly Event Edition Refresh");
   lines.push("");
   lines.push(`Run date: ${isoDate(today)}`);
+  lines.push(`Data source: ${source}.`);
   lines.push(`Reviewing events that ended from ${isoDate(since)} through ${isoDate(today)}.`);
   lines.push("");
-  lines.push("This report is intentionally conservative. It does not edit app data automatically; verify official sources before adding rows.");
+  lines.push("This report is intentionally conservative. It does not edit Supabase automatically; verify official sources before inserting or updating rows.");
   lines.push("");
 
   const needsReview = results.filter((result) => !result.alreadyTracked || result.suggestedDates.length);
@@ -256,9 +317,9 @@ function renderMarkdown(results) {
       lines.push(`- Non-duplicate suggested dates: ${result.suggestedDates.length ? result.suggestedDates.join(", ") : "none"}`);
       lines.push(`- Sources checked: ${result.sources.length ? result.sources.join(", ") : "none"}`);
       if (result.proposedSeedRows.length) {
-        lines.push("- Candidate seed rows, verify before using:");
+        lines.push("- Candidate Supabase edition rows, verify before using:");
         for (const row of result.proposedSeedRows) {
-          lines.push(`  - { city: "${row.city}", country: "${row.country}", name: "${row.name}", startDate: "${row.startDate}", endDate: "${row.endDate}" }`);
+          lines.push(`  - event: "${row.name}", city: "${row.city}", country: "${row.country}", start_date: "${row.startDate}", end_date: "${row.endDate}"`);
         }
       }
       lines.push("");
@@ -275,13 +336,15 @@ function renderMarkdown(results) {
 }
 
 fs.mkdirSync(outputDir, { recursive: true });
+const { source, events } = await loadAuditEvents();
 const results = [];
-for (const event of recentEvents()) {
-  results.push(await auditEvent(event));
+for (const event of recentEvents(events)) {
+  results.push(await auditEvent(events, event));
 }
 
 const summary = {
   runDate: isoDate(today),
+  dataSource: source,
   windowStart: isoDate(since),
   recentEventCount: results.length,
   needsReviewCount: results.filter((result) => !result.alreadyTracked || result.suggestedDates.length).length,
@@ -289,5 +352,5 @@ const summary = {
 };
 
 fs.writeFileSync(path.join(outputDir, "event-edition-refresh.json"), `${JSON.stringify(summary, null, 2)}\n`);
-fs.writeFileSync(path.join(outputDir, "event-edition-refresh.md"), renderMarkdown(results));
-console.log(`Checked ${summary.recentEventCount} recent events; ${summary.needsReviewCount} need review.`);
+fs.writeFileSync(path.join(outputDir, "event-edition-refresh.md"), renderMarkdown(results, source));
+console.log(`Checked ${summary.recentEventCount} recent events from ${source}; ${summary.needsReviewCount} need review.`);

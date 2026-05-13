@@ -5,7 +5,7 @@ description: Find recent salsa festival editions from the Salsa Festival Tracker
 
 # Salsa Edition Refresh
 
-Use this skill to turn weekly audit findings into clean event data updates for the Salsa Festival Tracker.
+Use this skill to turn weekly audit findings into clean Supabase event data updates for the Salsa Festival Tracker.
 
 ## Repo Files
 
@@ -13,8 +13,12 @@ Default repo path:
 `C:\Users\noamb\OneDrive\Documents\salsa-event-tracker`
 
 Primary files:
-- `web/seed-events.js`: one row per festival edition.
-- `web/event-links.js`: stable source links by festival name and exact edition details in `window.eventEditionDetails`.
+- Supabase `events`: one row per festival brand.
+- Supabase `event_editions`: one row per festival edition.
+- Supabase `reviews`: public reviews.
+- Supabase `personal_trips`: private trip rows, do not touch unless the user explicitly asks.
+- `web/seed-events.js`: legacy fallback data, not the primary source of truth.
+- `web/event-links.js`: legacy fallback source links, not the primary source of truth.
 - `web/app.js`: canonical aliases, date corrections, duplicate cleanup.
 - `scripts/refresh-event-editions.mjs`: weekly audit script.
 - `.github/workflows/weekly-event-edition-refresh.yml`: weekly GitHub Actions cron.
@@ -27,27 +31,41 @@ Primary files:
    - official Instagram/Facebook page
    - organizer page
 3. Confirm the next edition dates, city/country, and official event name.
-4. Before adding anything, search local data for duplicates:
+4. Before adding anything, search Supabase data for duplicates:
    - exact same canonical event name and start/end date
    - same official website with overlapping dates
    - older aliases in `canonicalEventNames`
-5. Add only verified editions to `web/seed-events.js`.
-6. Put only stable source fields in `window.eventLinks`:
+5. Add only verified festival brands to Supabase `events`.
+6. Add only verified editions to Supabase `event_editions`.
+7. Put stable source fields on `events`:
    - website
    - Instagram
    - Facebook
    - organizer, when stable
-7. Put edition-specific details in `window.eventEditionDetails` keyed as:
-   - `normalized event name|YYYY-MM-DD start date`
-   - Example: `"prague salsa marathon|2026-05-07"`
-8. Do not copy venue, DJs, prices, ticket links, or detailed notes across editions unless official sources confirm they apply to that exact edition.
+8. Put edition-specific details on `event_editions`:
+   - venue
+   - tickets
+   - price/currency
+   - DJs/artists
+   - event size
+   - travel notes
+   - edition notes
+9. Do not copy venue, DJs, prices, ticket links, or detailed notes across editions unless official sources confirm they apply to that exact edition.
+
+## Supabase Rules
+
+- Use the public app key only in frontend files.
+- Use `SUPABASE_SERVICE_ROLE_KEY` only in GitHub Actions secrets or local private environment variables.
+- Never commit the service role key, database password, or user private trip data.
+- Prefer SQL snippets for the user to review and run unless they explicitly ask you to update Supabase directly.
+- Weekly cron is audit-only. It should not insert or update rows automatically.
 
 ## Data Rules
 
 - Do not invent or infer DJs, venue, price, artists, ticket links, or dates.
 - Treat Instagram/Facebook snippets as useful leads, not final truth when the official site disagrees.
 - If official sources conflict, prefer the newest official post for date changes and note the conflict in the final answer.
-- If a next edition is already in `web/seed-events.js`, do not add another row. Update missing exact-edition details only when verified.
+- If a next edition is already in Supabase, do not add another row. Update missing exact-edition details only when verified.
 - Weekend events should not include Monday unless official wording clearly includes Monday or the app already has an event-specific exception.
 - Leave uncertain fields blank and list them for the user.
 
@@ -57,8 +75,7 @@ After edits, run:
 
 ```powershell
 node --check web\app.js
-node --check web\seed-events.js
-node --check web\event-links.js
+node --check scripts\refresh-event-editions.mjs
 & 'C:\Users\noamb\AppData\Local\GitHubDesktop\app-3.5.8\resources\app\git\cmd\git.exe' diff --check
 ```
 
