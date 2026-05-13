@@ -82,12 +82,34 @@
         <div class="toolbar">
           <div>
             <h2 id="festivalListTitle">Event List</h2>
-            <p class="muted">One row per festival, with upcoming and past editions grouped together.</p>
+            <p class="muted">All tracked editions for the selected year, sorted January to December.</p>
           </div>
-          <label class="search-box">
-            <span class="sr-only">Search festivals</span>
-            <input id="festivalSearchInput" type="search" placeholder="Search festival, city, country">
-          </label>
+          <div class="toolbar-controls">
+            <label class="field compact">
+              <span>Year</span>
+              <select id="festivalYearSelect"></select>
+            </label>
+            <label class="field compact">
+              <span>Country</span>
+              <select id="festivalCountrySelect">
+                <option value="">All countries</option>
+              </select>
+            </label>
+            <label class="field compact">
+              <span>Size</span>
+              <select id="festivalSizeSelect">
+                <option value="">All sizes</option>
+                <option value="small">Small</option>
+                <option value="medium">Medium</option>
+                <option value="large">Large</option>
+                <option value="extra large">Extra large</option>
+              </select>
+            </label>
+            <label class="search-box">
+              <span class="sr-only">Search festivals</span>
+              <input id="festivalSearchInput" type="search" placeholder="Search festival, city, country">
+            </label>
+          </div>
         </div>
         <div id="festivalList" class="event-list"></div>
       </section>
@@ -141,6 +163,7 @@
     <script src="seed-events.js"></script>
     <script src="event-links.js"></script>
     <script src="hardcoded-reviews.js"></script>
+    <script src="supabase-config.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

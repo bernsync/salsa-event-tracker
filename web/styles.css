@@ -259,6 +259,25 @@ select:focus-visible {
   gap: 12px;
 }
 
+.month-section {
+  display: grid;
+  gap: 10px;
+}
+
+.month-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 2px 10px;
+}
+
+.month-heading h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .event-grid {
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
