@@ -188,8 +188,31 @@ function makeDate(year, month, day) {
   return isoDate(date);
 }
 
-function extractDates(text) {
+function rangeEndDate(startDate, endDay) {
+  const start = toDate(startDate);
+  const end = new Date(start);
+  end.setUTCDate(Number(endDay));
+  if (end < start) end.setUTCMonth(end.getUTCMonth() + 1);
+  return isoDate(end);
+}
+
+function daySpan(startDate, endDate) {
+  return Math.round((toDate(endDate) - toDate(startDate)) / 86400000) + 1;
+}
+
+function isPlausibleEditionRange(startDate, endDate) {
+  const days = daySpan(startDate, endDate);
+  return days >= 2 && days <= 10 && toDate(startDate) > today;
+}
+
+function addRange(ranges, startDate, endDate) {
+  if (!startDate || !endDate || !isPlausibleEditionRange(startDate, endDate)) return;
+  ranges.set(`${startDate}|${endDate}`, { startDate, endDate });
+}
+
+function extractDateCandidates(text) {
   const found = new Set();
+  const ranges = new Map();
   const currentYear = today.getUTCFullYear();
 
   for (const match of text.matchAll(/\b(20\d{2})[-/.](0?[1-9]|1[0-2])[-/.](0?[1-9]|[12]\d|3[01])\b/g)) {
@@ -204,8 +227,22 @@ function extractDates(text) {
   const monthDay = new RegExp(`\\b(${monthPattern})\\s+(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?(?:\\s*[-–]\\s*(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?)?,?\\s*(20\\d{2})\\b`, "gi");
   for (const match of text.matchAll(monthDay)) {
     const month = monthNames[match[1].toLowerCase()];
-    found.add(makeDate(match[4], month, match[2]));
-    if (match[3]) found.add(makeDate(match[4], month, match[3]));
+    const startDate = makeDate(match[4], month, match[2]);
+    found.add(startDate);
+    if (match[3]) {
+      const endDate = rangeEndDate(startDate, match[3]);
+      found.add(endDate);
+      addRange(ranges, startDate, endDate);
+    }
+  }
+
+  const dayMonthRange = new RegExp(`\\b(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?\\s*[-–]\\s*(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?\\s+(${monthPattern})\\s+(20\\d{2})\\b`, "gi");
+  for (const match of text.matchAll(dayMonthRange)) {
+    const startDate = makeDate(match[4], monthNames[match[3].toLowerCase()], match[1]);
+    const endDate = rangeEndDate(startDate, match[2]);
+    found.add(startDate);
+    found.add(endDate);
+    addRange(ranges, startDate, endDate);
   }
 
   const dayMonth = new RegExp(`\\b(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?\\s+(${monthPattern})\\s+(20\\d{2})\\b`, "gi");
@@ -221,7 +258,10 @@ function extractDates(text) {
     if (nextYearCandidate && toDate(nextYearCandidate) > today) found.add(nextYearCandidate);
   }
 
-  return [...found].filter(Boolean).sort();
+  return {
+    dateHits: [...found].filter(Boolean).sort(),
+    ranges: [...ranges.values()].sort((a, b) => a.startDate.localeCompare(b.startDate))
+  };
 }
 
 function hasExistingFutureEdition(events, event) {
@@ -254,6 +294,7 @@ async function auditEvent(events, event) {
   const sources = sourceLinksFor(event);
   const fetched = [];
   const dateHits = new Set();
+  const rangeHits = new Map();
 
   for (const source of sources) {
     const result = await fetchText(source);
@@ -264,13 +305,19 @@ async function auditEvent(events, event) {
       error: result.error
     });
     if (!result.ok) continue;
-    extractDates(result.text)
+    const candidates = extractDateCandidates(result.text);
+    candidates.dateHits
       .filter((date) => toDate(date) > today)
       .forEach((date) => dateHits.add(date));
+    candidates.ranges.forEach((range) => {
+      rangeHits.set(`${range.startDate}|${range.endDate}`, range);
+    });
   }
 
   const futureDates = [...dateHits].sort();
-  const nonDuplicateDates = futureDates.filter((date) => !duplicateCandidate(events, event, date));
+  const suggestedRanges = [...rangeHits.values()]
+    .filter((range) => !duplicateCandidate(events, event, range.startDate, range.endDate))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
   return {
     event,
@@ -279,13 +326,13 @@ async function auditEvent(events, event) {
     sources,
     fetched,
     futureDates,
-    suggestedDates: nonDuplicateDates,
-    proposedSeedRows: nonDuplicateDates.map((date) => ({
+    suggestedRanges,
+    proposedSeedRows: suggestedRanges.map((range) => ({
       city: event.city || "",
       country: event.country || "",
       name: event.name,
-      startDate: date,
-      endDate: date
+      startDate: range.startDate,
+      endDate: range.endDate
     }))
   };
 }
@@ -301,7 +348,7 @@ function renderMarkdown(results, source) {
   lines.push("This report is intentionally conservative. It does not edit Supabase automatically; verify official sources before inserting or updating rows.");
   lines.push("");
 
-  const needsReview = results.filter((result) => !result.alreadyTracked || result.suggestedDates.length);
+  const needsReview = results.filter((result) => !result.alreadyTracked || result.suggestedRanges.length);
   if (!needsReview.length) {
     lines.push("No missing next-edition candidates were found.");
     lines.push("");
@@ -313,8 +360,8 @@ function renderMarkdown(results, source) {
       lines.push("");
       lines.push(`- Location: ${result.location || "Unknown"}`);
       lines.push(`- Future edition already in tracker: ${result.alreadyTracked ? "yes" : "no"}`);
-      lines.push(`- Future dates seen in sources: ${result.futureDates.length ? result.futureDates.join(", ") : "none"}`);
-      lines.push(`- Non-duplicate suggested dates: ${result.suggestedDates.length ? result.suggestedDates.join(", ") : "none"}`);
+      lines.push(`- Future date mentions seen in sources: ${result.futureDates.length ? result.futureDates.join(", ") : "none"}`);
+      lines.push(`- Non-duplicate suggested ranges: ${result.suggestedRanges.length ? result.suggestedRanges.map((range) => `${range.startDate} to ${range.endDate}`).join(", ") : "none"}`);
       lines.push(`- Sources checked: ${result.sources.length ? result.sources.join(", ") : "none"}`);
       if (result.proposedSeedRows.length) {
         lines.push("- Candidate Supabase edition rows, verify before using:");
@@ -347,7 +394,7 @@ const summary = {
   dataSource: source,
   windowStart: isoDate(since),
   recentEventCount: results.length,
-  needsReviewCount: results.filter((result) => !result.alreadyTracked || result.suggestedDates.length).length,
+  needsReviewCount: results.filter((result) => !result.alreadyTracked || result.suggestedRanges.length).length,
   results
 };
 
