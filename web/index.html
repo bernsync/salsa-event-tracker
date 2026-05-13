@@ -137,22 +137,36 @@
             <h3>Sign in to view reviews</h3>
             <p class="muted">Reviews are private and require your Supabase account.</p>
           </div>
-          <form class="auth-form" id="authForm">
-            <label class="field">
-              <span>Email</span>
-              <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
-            </label>
-            <label class="field">
-              <span>Password</span>
-              <input id="authPassword" type="password" autocomplete="current-password" required>
-            </label>
-            <button class="primary-action" type="submit">Sign in</button>
-          </form>
-          <p class="muted" id="authMessage"></p>
+          <button class="primary-action" type="button" data-auth-action="signin">Sign in</button>
         </div>
         <div id="reviewList" class="review-list"></div>
       </section>
     </main>
+
+    <dialog id="authDialog" class="modal auth-modal">
+      <form id="authForm">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Private access</p>
+            <h2>Sign in</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close" data-auth-action="close">x</button>
+        </div>
+        <label class="field">
+          <span>Email</span>
+          <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input id="authPassword" type="password" autocomplete="current-password" required>
+        </label>
+        <p class="muted" id="authMessage"></p>
+        <div class="modal-actions">
+          <button class="secondary-action" type="button" data-auth-action="close">Cancel</button>
+          <button class="primary-action" type="submit">Sign in</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog id="eventDetailsDialog" class="modal">
       <form method="dialog">
