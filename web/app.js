@@ -254,7 +254,17 @@ async function sendSignInLink(email) {
     })
   });
 
-  if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
+  if (!response.ok) {
+    let message = `Supabase returned ${response.status}`;
+    try {
+      const payload = await response.json();
+      message = payload.msg || payload.message || payload.error_description || payload.error || message;
+    } catch {
+      const text = await response.text();
+      if (text) message = text;
+    }
+    throw new Error(message);
+  }
 }
 
 function signOut() {
@@ -1566,7 +1576,7 @@ async function handleAuthSubmit(event) {
     elements.authMessage.textContent = "Check your email for the sign-in link.";
     elements.authForm.reset();
   } catch (error) {
-    elements.authMessage.textContent = "Could not send sign-in link. Check Supabase Auth settings and try again.";
+    elements.authMessage.textContent = `Could not send sign-in link: ${error.message}`;
     console.warn(error);
   }
 }
