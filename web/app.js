@@ -1125,7 +1125,16 @@ function renderFestivalList() {
   populateFestivalFilters();
   const filteredEditions = filteredFestivalEditions();
   const visibleKeys = new Set(filteredEditions.map(eventFamilyKey));
-  const groups = uniqueFestivalGroups().filter((group) => visibleKeys.has(normalizeText(group.name)));
+  const yearDateByKey = new Map(
+    filteredEditions.map((event) => [eventFamilyKey(event), event.startDate])
+  );
+  const groups = uniqueFestivalGroups()
+    .filter((group) => visibleKeys.has(normalizeText(group.name)))
+    .sort((a, b) => {
+      const aDate = yearDateByKey.get(normalizeText(a.name)) || "9999-12-31";
+      const bDate = yearDateByKey.get(normalizeText(b.name)) || "9999-12-31";
+      return aDate.localeCompare(bDate) || a.name.localeCompare(b.name);
+    });
 
   if (!groups.length) {
     elements.festivalList.append(emptyState("No matching festivals", "Adjust the year, country, size, or search filters."));
