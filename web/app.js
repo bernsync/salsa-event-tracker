@@ -1,4 +1,5 @@
 const storageKey = "salsa-festivals-tracker-v1";
+const authStorageKey = "salsa-festivals-auth-session-v1";
 
 const scoreCategories = [
   ["music", "Music"],
@@ -17,6 +18,7 @@ const scoreCategories = [
 const state = {
   events: [],
   reviews: [],
+  authSession: null,
   deletedReviewSourceIds: [],
   activeView: localStorage.getItem("salsa-festivals-active-view") || "calendar",
   search: "",
@@ -112,6 +114,11 @@ const elements = {
   addEventBtn: $("#addEventBtn"),
   tabs: document.querySelectorAll(".tab"),
   views: document.querySelectorAll(".view"),
+  authStatus: $("#authStatus"),
+  authForm: $("#authForm"),
+  authEmail: $("#authEmail"),
+  authMessage: $("#authMessage"),
+  reviewAuthPanel: $("#reviewAuthPanel"),
   monthPicker: $("#monthPicker"),
   prevMonthBtn: $("#prevMonthBtn"),
   nextMonthBtn: $("#nextMonthBtn"),
@@ -180,6 +187,85 @@ function loadState() {
   mergeHardcodedReviews();
 }
 
+function loadAuthSession() {
+  const urlSession = authSessionFromUrl();
+  if (urlSession) {
+    state.authSession = urlSession;
+    localStorage.setItem(authStorageKey, JSON.stringify(urlSession));
+    history.replaceState(null, "", `${location.pathname}${location.search}`);
+    return;
+  }
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(authStorageKey) || "null");
+    if (saved?.accessToken && (!saved.expiresAt || saved.expiresAt * 1000 > Date.now())) {
+      state.authSession = saved;
+    } else {
+      localStorage.removeItem(authStorageKey);
+    }
+  } catch {
+    localStorage.removeItem(authStorageKey);
+  }
+}
+
+function authSessionFromUrl() {
+  const params = new URLSearchParams(location.hash.slice(1));
+  const accessToken = params.get("access_token");
+  if (!accessToken) return null;
+  return {
+    accessToken,
+    refreshToken: params.get("refresh_token") || "",
+    expiresAt: Number(params.get("expires_at") || 0),
+    tokenType: params.get("token_type") || "bearer"
+  };
+}
+
+function isSignedIn() {
+  return Boolean(state.authSession?.accessToken);
+}
+
+function authHeaders() {
+  const config = window.supabaseConfig;
+  return {
+    apikey: config.publishableKey,
+    Authorization: `Bearer ${state.authSession.accessToken}`,
+    "Content-Type": "application/json"
+  };
+}
+
+async function sendSignInLink(email) {
+  const config = window.supabaseConfig;
+  if (!config?.url || !config?.publishableKey) {
+    throw new Error("Supabase is not configured.");
+  }
+
+  const response = await fetch(`${config.url}/auth/v1/otp`, {
+    method: "POST",
+    headers: {
+      apikey: config.publishableKey,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      email,
+      create_user: true,
+      options: {
+        email_redirect_to: `${location.origin}${location.pathname}`
+      }
+    })
+  });
+
+  if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
+}
+
+function signOut() {
+  state.authSession = null;
+  state.reviews = [];
+  localStorage.removeItem(authStorageKey);
+  renderAuth();
+  render();
+  switchView("calendar");
+}
+
 async function loadSupabaseEvents() {
   const config = window.supabaseConfig;
   if (!config?.url || !config?.publishableKey) return [];
@@ -235,15 +321,12 @@ function mapSupabaseEvents(rows) {
 
 async function loadSupabaseReviews() {
   const config = window.supabaseConfig;
-  if (!config?.url || !config?.publishableKey) return [];
+  if (!config?.url || !config?.publishableKey || !isSignedIn()) return [];
 
   const endpoint = `${config.url}/rest/v1/reviews?select=*&visibility=eq.public&order=reviewed_at.desc`;
   try {
     const response = await fetch(endpoint, {
-      headers: {
-        apikey: config.publishableKey,
-        Authorization: `Bearer ${config.publishableKey}`
-      }
+      headers: authHeaders()
     });
     if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
     const rows = await response.json();
@@ -302,11 +385,10 @@ async function refreshPublicEventsFromSupabase() {
   removeLegacySampleEvents();
   deduplicateEvents();
   deduplicateCalendarEditions();
-  const supabaseReviews = await loadSupabaseReviews();
-  if (supabaseReviews.length) {
-    state.reviews = supabaseReviews;
+  if (isSignedIn()) {
+    state.reviews = await loadSupabaseReviews();
   } else {
-    mergeHardcodedReviews();
+    state.reviews = [];
   }
   render();
 }
@@ -1031,30 +1113,50 @@ function filteredFestivalEditions() {
 function renderFestivalList() {
   elements.festivalList.innerHTML = "";
   populateFestivalFilters();
-  const events = filteredFestivalEditions();
+  const filteredEditions = filteredFestivalEditions();
+  const visibleKeys = new Set(filteredEditions.map(eventFamilyKey));
+  const groups = uniqueFestivalGroups().filter((group) => visibleKeys.has(normalizeText(group.name)));
 
-  if (!events.length) {
+  if (!groups.length) {
     elements.festivalList.append(emptyState("No matching festivals", "Adjust the year, country, size, or search filters."));
     return;
   }
 
-  monthNames.forEach((monthName, index) => {
-    const monthEvents = events.filter((event) => eventMonthIndex(event) === index);
-    if (!monthEvents.length) return;
+  groups.forEach((group) => {
+    const card = document.createElement("article");
+    card.className = "event-card";
+    const nextEdition = group.upcoming[0];
+    const lastEdition = group.past[group.past.length - 1];
+    const detailsTarget = nextEdition || lastEdition || group.editions[group.editions.length - 1];
+    const score = nextEdition ? reviewScoreForEvent(nextEdition) : null;
 
-    const section = document.createElement("section");
-    section.className = "month-section";
-    section.innerHTML = `
-      <div class="month-heading">
-        <h3>${monthName}</h3>
-        <span class="pill">${monthEvents.length} ${monthEvents.length === 1 ? "event" : "events"}</span>
+    card.innerHTML = `
+      <div class="event-card-header">
+        <div>
+          <h3>${escapeHtml(group.name)}</h3>
+          <p class="muted">${escapeHtml(group.locations.join(" | "))}</p>
+        </div>
+        ${score ? `<span class="pill score-pill">${score.average.toFixed(1)} prior</span>` : ""}
+      </div>
+      <div class="event-meta">
+        ${nextEdition ? `<span class="pill">Next edition: ${escapeHtml(dateRange(nextEdition))}</span>` : "<span class=\"pill\">No upcoming edition</span>"}
+        ${lastEdition ? `<span class="pill">Last edition: ${escapeHtml(dateRange(lastEdition))}</span>` : "<span class=\"pill\">No past edition</span>"}
+        ${group.organizers.map((organizer) => `<span class="pill">${escapeHtml(organizer)}</span>`).join("")}
+      </div>
+      <div class="event-detail">
+        ${nextEdition?.venue ? `<div><strong>Next venue:</strong> ${escapeHtml(nextEdition.venue)}</div>` : ""}
+        ${nextEdition?.djs ? `<div><strong>DJs:</strong> ${escapeHtml(nextEdition.djs)}</div>` : ""}
+        ${nextEdition?.artists ? `<div><strong>Artists:</strong> ${escapeHtml(nextEdition.artists)}</div>` : ""}
+      </div>
+      <div class="event-actions">
+        ${detailsTarget ? `<button type="button" data-action="details" data-id="${detailsTarget.id}">Details</button>` : ""}
+        ${sourceLink("Website", group.website)}
+        ${sourceLink("Instagram", group.instagram)}
+        ${sourceLink("Facebook", group.facebook)}
+        ${sourceLink("Tickets", group.tickets)}
       </div>
     `;
-    const list = document.createElement("div");
-    list.className = "event-list";
-    monthEvents.forEach((event) => list.append(renderEventCard(event)));
-    section.append(list);
-    elements.festivalList.append(section);
+    elements.festivalList.append(card);
   });
 }
 
@@ -1117,8 +1219,27 @@ function uniqueValues(values) {
   return [...new Set(values)];
 }
 
+function renderAuth() {
+  if (elements.authStatus) {
+    elements.authStatus.innerHTML = isSignedIn()
+      ? "<button class=\"secondary-action\" type=\"button\" data-auth-action=\"signout\">Sign out</button>"
+      : "";
+  }
+
+  if (elements.reviewAuthPanel) {
+    elements.reviewAuthPanel.hidden = isSignedIn();
+  }
+  if (elements.reviewList) {
+    elements.reviewList.hidden = !isSignedIn();
+  }
+}
+
 function renderReviews() {
   elements.reviewList.innerHTML = "";
+  if (!isSignedIn()) {
+    return;
+  }
+
   const reviews = [...state.reviews].sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt));
 
   if (!reviews.length) {
@@ -1168,6 +1289,7 @@ function renderCategoryComments(review) {
 }
 
 function render() {
+  renderAuth();
   renderCalendar();
   renderEvents();
   renderFestivalList();
@@ -1433,6 +1555,32 @@ function handleAction(event) {
   if (action === "details") openEventDetails(id);
 }
 
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  const email = elements.authEmail.value.trim();
+  if (!email) return;
+
+  elements.authMessage.textContent = "Sending sign-in link...";
+  try {
+    await sendSignInLink(email);
+    elements.authMessage.textContent = "Check your email for the sign-in link.";
+    elements.authForm.reset();
+  } catch (error) {
+    elements.authMessage.textContent = "Could not send sign-in link. Check Supabase Auth settings and try again.";
+    console.warn(error);
+  }
+}
+
+async function refreshReviews() {
+  if (!isSignedIn()) {
+    state.reviews = [];
+    render();
+    return;
+  }
+  state.reviews = await loadSupabaseReviews();
+  render();
+}
+
 function bindEvents() {
   elements.saveEventBtn?.addEventListener("click", saveEvent);
   elements.deleteEventBtn?.addEventListener("click", () => {
@@ -1442,6 +1590,10 @@ function bindEvents() {
     deleteEvent(eventId);
   });
   elements.saveReviewBtn?.addEventListener("click", saveReview);
+  elements.authForm?.addEventListener("submit", handleAuthSubmit);
+  elements.authStatus?.addEventListener("click", (event) => {
+    if (event.target.closest("[data-auth-action='signout']")) signOut();
+  });
   elements.calendarGrid.addEventListener("click", handleAction);
   elements.eventList.addEventListener("click", handleAction);
   elements.festivalList.addEventListener("click", handleAction);
@@ -1487,11 +1639,18 @@ function bindEvents() {
 }
 
 async function init() {
+  loadAuthSession();
   loadState();
+  if (!isSignedIn()) {
+    state.reviews = [];
+  }
   bindEvents();
   render();
   switchView(state.activeView);
   await refreshPublicEventsFromSupabase();
+  if (isSignedIn()) {
+    await refreshReviews();
+  }
 }
 
 init();

@@ -11,6 +11,7 @@
       <div>
         <h1>Salsa Festival Tracker</h1>
       </div>
+      <div class="auth-status" id="authStatus"></div>
     </header>
 
     <main class="app-shell">
@@ -82,7 +83,7 @@
         <div class="toolbar">
           <div>
             <h2 id="festivalListTitle">Event List</h2>
-            <p class="muted">All tracked editions for the selected year, sorted January to December.</p>
+            <p class="muted">One row per festival, with next and last edition dates.</p>
           </div>
           <div class="toolbar-controls">
             <label class="field compact">
@@ -130,6 +131,20 @@
             <h2 id="reviewsTitle">Reviews</h2>
             <p class="muted">Your personal ranking system for festivals you attended.</p>
           </div>
+        </div>
+        <div class="auth-panel" id="reviewAuthPanel">
+          <div>
+            <h3>Sign in to view reviews</h3>
+            <p class="muted">Reviews are private and require a Supabase login.</p>
+          </div>
+          <form class="auth-form" id="authForm">
+            <label class="field">
+              <span>Email</span>
+              <input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email" required>
+            </label>
+            <button class="primary-action" type="submit">Send sign-in link</button>
+          </form>
+          <p class="muted" id="authMessage"></p>
         </div>
         <div id="reviewList" class="review-list"></div>
       </section>
