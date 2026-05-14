@@ -275,9 +275,34 @@ select:focus-visible {
 
 .event-grid,
 .event-list,
-.review-list {
+.review-list,
+.summary-grid {
   display: grid;
   gap: 12px;
+}
+
+.summary-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-bottom: 12px;
+}
+
+.summary-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 14px;
+  box-shadow: 0 1px 2px rgba(31, 41, 51, 0.04);
+}
+
+.summary-card strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 1.7rem;
+}
+
+.summary-card.is-danger {
+  border-color: #f2b9c1;
+  background: #fff1f3;
 }
 
 .month-section {
@@ -536,6 +561,67 @@ select:focus-visible {
   margin-top: 14px;
 }
 
+.trip-place-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.trip-place {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.9fr) minmax(180px, 1.2fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 9px 10px;
+}
+
+.trip-place-editor {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+.trip-place-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.trip-place-editor-header h3 {
+  margin: 0;
+}
+
+.trip-place-row {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 12px;
+}
+
+.form-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trip-place-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.wide-modal {
+  width: min(920px, calc(100vw - 28px));
+}
+
 .edition-block {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -765,6 +851,8 @@ select:focus-visible {
   }
 
   .form-grid,
+  .trip-place-grid,
+  .trip-place,
   .score-grid,
   .detail-row,
   .festival-editions {

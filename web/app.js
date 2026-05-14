@@ -33,7 +33,8 @@ const state = {
   listMonth: "",
   festivalMonth: "",
   festivalCountry: "",
-  festivalSize: ""
+  festivalSize: "",
+  schengenCheckDate: localDateString(new Date())
 };
 
 const canonicalEventNames = {
@@ -118,6 +119,7 @@ const elements = {
   tabs: document.querySelectorAll(".tab"),
   views: document.querySelectorAll(".view"),
   reviewTab: document.querySelector('[data-view="reviews"]'),
+  tripsTab: document.querySelector('[data-view="trips"]'),
   authStatus: $("#authStatus"),
   authDialog: $("#authDialog"),
   authForm: $("#authForm"),
@@ -125,6 +127,7 @@ const elements = {
   authPassword: $("#authPassword"),
   authMessage: $("#authMessage"),
   reviewAuthPanel: $("#reviewAuthPanel"),
+  tripsAuthPanel: $("#tripsAuthPanel"),
   monthPicker: $("#monthPicker"),
   prevMonthBtn: $("#prevMonthBtn"),
   nextMonthBtn: $("#nextMonthBtn"),
@@ -136,6 +139,23 @@ const elements = {
   festivalCountrySelect: $("#festivalCountrySelect"),
   festivalSizeSelect: $("#festivalSizeSelect"),
   recentlyAddedList: $("#recentlyAddedList"),
+  tripsView: $("#tripsView"),
+  tripList: $("#tripList"),
+  schengenSummary: $("#schengenSummary"),
+  schengenCheckDate: $("#schengenCheckDate"),
+  addTripBtn: $("#addTripBtn"),
+  tripDialog: $("#tripDialog"),
+  tripForm: $("#tripForm"),
+  tripDialogTitle: $("#tripDialogTitle"),
+  tripId: $("#tripId"),
+  tripLabel: $("#tripLabel"),
+  tripStartDate: $("#tripStartDate"),
+  tripEndDate: $("#tripEndDate"),
+  tripNotes: $("#tripNotes"),
+  tripPlacesEditor: $("#tripPlacesEditor"),
+  addTripPlaceBtn: $("#addTripPlaceBtn"),
+  deleteTripBtn: $("#deleteTripBtn"),
+  saveTripBtn: $("#saveTripBtn"),
   reviewsView: $("#reviewsView"),
   eventDetailsDialog: $("#eventDetailsDialog"),
   eventDetailsTitle: $("#eventDetailsTitle"),
@@ -250,6 +270,30 @@ function normalizeAuthSession(payload) {
     expiresAt: Number(payload.expires_at || Math.floor(Date.now() / 1000) + (payload.expires_in || 3600)),
     tokenType: payload.token_type || "bearer"
   };
+}
+
+function currentUserId() {
+  if (!state.authSession?.accessToken) return "";
+  try {
+    const [, payload] = state.authSession.accessToken.split(".");
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
+    const decoded = JSON.parse(atob(normalized));
+    return decoded.sub || "";
+  } catch {
+    return "";
+  }
+}
+
+function currentUserEmail() {
+  if (!state.authSession?.accessToken) return "";
+  try {
+    const [, payload] = state.authSession.accessToken.split(".");
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
+    const decoded = JSON.parse(atob(normalized));
+    return decoded.email || "";
+  } catch {
+    return "";
+  }
 }
 
 async function signInWithPassword(email, password) {
@@ -390,6 +434,28 @@ async function loadSupabaseTable(table, { requiresAuth = false } = {}) {
   }
 }
 
+async function supabaseRequest(path, { method = "GET", body, requiresAuth = false } = {}) {
+  const config = window.supabaseConfig;
+  if (!config?.url || !config?.publishableKey) {
+    throw new Error("Supabase is not configured.");
+  }
+  const headers = requiresAuth ? authHeaders() : publicSupabaseHeaders();
+  const response = await fetch(`${config.url}/rest/v1/${path}`, {
+    method,
+    headers: {
+      ...headers,
+      Prefer: method === "POST" || method === "PATCH" ? "return=representation" : "return=minimal"
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Supabase returned ${response.status}${text ? `: ${text}` : ""}`);
+  }
+  if (response.status === 204) return null;
+  return response.json();
+}
+
 function mapSupabaseEvents(rows) {
   return rows.flatMap((event) => {
     const editions = Array.isArray(event.event_editions) ? event.event_editions : [];
@@ -420,6 +486,63 @@ function mapSupabaseEvents(rows) {
         updatedAt: edition.updated_at || event.updated_at || edition.created_at || event.created_at || new Date().toISOString()
       }));
   });
+}
+
+async function loadSupabasePersonalTrips() {
+  if (!isSignedIn()) {
+    setSupabaseLoadStatus("personal_trips", "signed-out");
+    setSupabaseLoadStatus("personal_trip_places", "signed-out");
+    return [];
+  }
+
+  const endpoint = "personal_trips?select=*,personal_trip_places(*)&order=start_date.asc";
+  try {
+    const rows = await supabaseRequest(endpoint, { requiresAuth: true });
+    setSupabaseLoadStatus("personal_trips", "loaded", rows.length);
+    setSupabaseLoadStatus(
+      "personal_trip_places",
+      "loaded",
+      rows.reduce((total, row) => total + (Array.isArray(row.personal_trip_places) ? row.personal_trip_places.length : 0), 0)
+    );
+    return rows.map(mapSupabaseTrip);
+  } catch (error) {
+    console.warn("Supabase private trips unavailable.", error);
+    setSupabaseLoadStatus("personal_trips", "error");
+    setSupabaseLoadStatus("personal_trip_places", "error");
+    return [];
+  }
+}
+
+function mapSupabaseTrip(row) {
+  const places = Array.isArray(row.personal_trip_places) ? row.personal_trip_places : [];
+  return {
+    id: row.id,
+    ownerId: row.owner_id,
+    label: row.label || "",
+    startDate: row.start_date || "",
+    endDate: row.end_date || row.start_date || "",
+    notes: row.notes || "",
+    createdAt: row.created_at || "",
+    updatedAt: row.updated_at || "",
+    places: places
+      .map(mapSupabaseTripPlace)
+      .sort((a, b) => a.sequence - b.sequence || a.startDate.localeCompare(b.startDate) || a.city.localeCompare(b.city))
+  };
+}
+
+function mapSupabaseTripPlace(row) {
+  return {
+    id: row.id,
+    tripId: row.trip_id,
+    eventId: row.event_edition_id || "",
+    startDate: row.start_date || "",
+    endDate: row.end_date || row.start_date || "",
+    city: row.city || "",
+    country: row.country || "",
+    role: row.travel_role || "stay",
+    sequence: Number(row.sequence || 0),
+    notes: row.notes || ""
+  };
 }
 
 async function loadSupabaseReviews() {
@@ -459,7 +582,7 @@ async function refreshPrivateTablesFromSupabase() {
   const [reviews, trips, personalTrips] = await Promise.all([
     loadSupabaseReviews(),
     loadSupabaseTable("trips", { requiresAuth: true }),
-    loadSupabaseTable("personal_trips", { requiresAuth: true })
+    loadSupabasePersonalTrips()
   ]);
 
   state.reviews = reviews;
@@ -1367,6 +1490,136 @@ function uniqueValues(values) {
   return [...new Set(values)];
 }
 
+function addDays(dateValue, offset) {
+  const date = new Date(`${dateValue}T12:00:00`);
+  date.setDate(date.getDate() + offset);
+  return localDateString(date);
+}
+
+function eachDate(startDate, endDate) {
+  const dates = [];
+  for (let date = startDate; date <= endDate; date = addDays(date, 1)) {
+    dates.push(date);
+  }
+  return dates;
+}
+
+function tripDateRange(item) {
+  return dateRange({ startDate: item.startDate, endDate: item.endDate });
+}
+
+function tripPlacesByDate() {
+  const days = new Map();
+  state.personalTrips.forEach((trip) => {
+    trip.places.forEach((place) => {
+      eachDate(place.startDate, place.endDate).forEach((date) => {
+        if (!days.has(date)) days.set(date, []);
+        days.get(date).push({ ...place, trip });
+      });
+    });
+  });
+  return days;
+}
+
+function schengenDayDetails() {
+  const days = tripPlacesByDate();
+  return [...days.entries()].map(([date, places]) => {
+    const schengenPlaces = places.filter((place) => schengenStatus(place) === true);
+    return {
+      date,
+      places,
+      schengenPlaces,
+      counts: schengenPlaces.length > 0
+    };
+  }).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function schengenUsedOn(dateValue) {
+  const windowStart = addDays(dateValue, -179);
+  return schengenDayDetails()
+    .filter((day) => day.counts && day.date >= windowStart && day.date <= dateValue)
+    .length;
+}
+
+function schengenTripStats(trip) {
+  const dates = new Set();
+  trip.places.forEach((place) => {
+    if (schengenStatus(place) !== true) return;
+    eachDate(place.startDate, place.endDate).forEach((date) => dates.add(date));
+  });
+
+  const sortedDates = [...dates].sort();
+  const maxUsed = sortedDates.reduce((max, date) => Math.max(max, schengenUsedOn(date)), 0);
+  return {
+    daysAdded: sortedDates.length,
+    entryUsed: schengenUsedOn(trip.startDate),
+    exitUsed: schengenUsedOn(trip.endDate),
+    maxUsed
+  };
+}
+
+function renderTrips() {
+  if (!elements.tripList || !elements.schengenSummary) return;
+  elements.schengenCheckDate.value = state.schengenCheckDate;
+  elements.tripList.innerHTML = "";
+  elements.schengenSummary.innerHTML = "";
+  if (!isSignedIn()) return;
+
+  const usedOnCheckDate = schengenUsedOn(state.schengenCheckDate);
+  const windowStart = addDays(state.schengenCheckDate, -179);
+  elements.schengenSummary.innerHTML = `
+    <article class="summary-card">
+      <span class="detail-label">Check date</span>
+      <strong>${escapeHtml(formatDate(state.schengenCheckDate))}</strong>
+      <p class="muted">Window: ${escapeHtml(formatDate(windowStart))} - ${escapeHtml(formatDate(state.schengenCheckDate))}</p>
+    </article>
+    <article class="summary-card ${usedOnCheckDate > 90 ? "is-danger" : ""}">
+      <span class="detail-label">Schengen days used</span>
+      <strong>${usedOnCheckDate} / 90</strong>
+      <p class="muted">${Math.max(0, 90 - usedOnCheckDate)} days remaining</p>
+    </article>
+  `;
+
+  const trips = [...state.personalTrips].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  if (!trips.length) {
+    elements.tripList.append(emptyState("No trips yet", "Add city-by-city trip rows to start counting Schengen days."));
+    return;
+  }
+
+  trips.forEach((trip) => {
+    const stats = schengenTripStats(trip);
+    const placesMarkup = trip.places.map((place) => `
+      <div class="trip-place">
+        <strong>${escapeHtml(tripDateRange(place))}</strong>
+        <span>${escapeHtml([place.city, place.country].filter(Boolean).join(", "))}</span>
+        <span class="pill ${schengenStatus(place) ? "score-pill" : "location-pill"}">${schengenLabel(place) || "Schengen unknown"}</span>
+      </div>
+    `).join("");
+    const card = document.createElement("article");
+    card.className = "event-card trip-card";
+    card.innerHTML = `
+      <div class="event-card-header">
+        <div>
+          <h3>${escapeHtml(trip.label)}</h3>
+          <p class="muted">${escapeHtml(tripDateRange(trip))}</p>
+        </div>
+        <span class="pill score-pill">${stats.daysAdded} days</span>
+      </div>
+      <div class="event-detail">
+        ${detailRow("Entry day count", `${stats.entryUsed} / 90`)}
+        ${detailRow("Exit day count", `${stats.exitUsed} / 90`)}
+        ${detailRow("Max during trip", `${stats.maxUsed} / 90`)}
+        ${trip.notes ? detailRow("Notes", trip.notes) : ""}
+      </div>
+      <div class="trip-place-list">${placesMarkup}</div>
+      <div class="event-actions">
+        <button type="button" data-action="edit-trip" data-id="${escapeHtml(trip.id)}">Edit</button>
+      </div>
+    `;
+    elements.tripList.append(card);
+  });
+}
+
 function renderAuth() {
   if (elements.authStatus) {
     elements.authStatus.innerHTML = isSignedIn()
@@ -1377,17 +1630,32 @@ function renderAuth() {
   if (elements.reviewTab) {
     elements.reviewTab.hidden = !isSignedIn();
   }
+  if (elements.tripsTab) {
+    elements.tripsTab.hidden = !isSignedIn();
+  }
   if (elements.reviewsView) {
     elements.reviewsView.hidden = !isSignedIn();
   }
-  if (!isSignedIn() && state.activeView === "reviews") {
+  if (elements.tripsView) {
+    elements.tripsView.hidden = !isSignedIn();
+  }
+  if (!isSignedIn() && ["reviews", "trips"].includes(state.activeView)) {
     switchView("calendar");
   }
   if (elements.reviewAuthPanel) {
     elements.reviewAuthPanel.hidden = isSignedIn();
   }
+  if (elements.tripsAuthPanel) {
+    elements.tripsAuthPanel.hidden = isSignedIn();
+  }
   if (elements.reviewList) {
     elements.reviewList.hidden = !isSignedIn();
+  }
+  if (elements.tripList) {
+    elements.tripList.hidden = !isSignedIn();
+  }
+  if (elements.schengenSummary) {
+    elements.schengenSummary.hidden = !isSignedIn();
   }
 }
 
@@ -1451,6 +1719,7 @@ function render() {
   renderEvents();
   renderFestivalList();
   renderRecentlyAdded();
+  renderTrips();
   renderReviews();
 }
 
@@ -1510,6 +1779,180 @@ function openEventDetails(eventId) {
   ].filter(Boolean).join("") || "<span class=\"event-status\">No source links yet</span>";
 
   elements.eventDetailsDialog.showModal();
+}
+
+function tripPlaceTemplate(place = {}) {
+  const row = document.createElement("section");
+  row.className = "trip-place-row";
+  row.innerHTML = `
+    <div class="form-grid trip-place-grid">
+      <label class="field">
+        <span>Start</span>
+        <input data-trip-place="startDate" type="date" value="${escapeHtml(place.startDate || elements.tripStartDate.value || localDateString(new Date()))}" required>
+      </label>
+      <label class="field">
+        <span>End</span>
+        <input data-trip-place="endDate" type="date" value="${escapeHtml(place.endDate || place.startDate || elements.tripEndDate.value || localDateString(new Date()))}" required>
+      </label>
+      <label class="field">
+        <span>City</span>
+        <input data-trip-place="city" type="text" value="${escapeHtml(place.city || "")}" required>
+      </label>
+      <label class="field">
+        <span>Country</span>
+        <input data-trip-place="country" type="text" value="${escapeHtml(place.country || "")}" required>
+      </label>
+      <label class="field">
+        <span>Role</span>
+        <select data-trip-place="role">
+          ${["stay", "origin", "stop", "destination"].map((role) => `<option value="${role}" ${role === (place.role || "stay") ? "selected" : ""}>${role}</option>`).join("")}
+        </select>
+      </label>
+      <label class="field">
+        <span>Event</span>
+        <select data-trip-place="eventId">
+          <option value="">No event</option>
+          ${state.events.map((event) => `<option value="${escapeHtml(event.id)}" ${event.id === place.eventId ? "selected" : ""}>${escapeHtml(`${event.name} (${event.startDate})`)}</option>`).join("")}
+        </select>
+      </label>
+    </div>
+    <label class="field">
+      <span>Place notes</span>
+      <input data-trip-place="notes" type="text" value="${escapeHtml(place.notes || "")}" placeholder="Flight, hotel, or Schengen note">
+    </label>
+    <button class="secondary-action" type="button" data-trip-action="remove-place">Remove city</button>
+  `;
+  return row;
+}
+
+function addTripPlaceRow(place) {
+  elements.tripPlacesEditor.append(tripPlaceTemplate(place));
+}
+
+function openTripDialog(tripId = "") {
+  const trip = state.personalTrips.find((item) => item.id === tripId);
+  elements.tripDialogTitle.textContent = trip ? "Edit trip" : "Add trip";
+  elements.tripId.value = trip?.id || "";
+  elements.tripLabel.value = trip?.label || "";
+  elements.tripStartDate.value = trip?.startDate || localDateString(new Date());
+  elements.tripEndDate.value = trip?.endDate || trip?.startDate || localDateString(new Date());
+  elements.tripNotes.value = trip?.notes || "";
+  elements.deleteTripBtn.hidden = !trip;
+  elements.tripPlacesEditor.innerHTML = "";
+  (trip?.places?.length ? trip.places : [{}]).forEach(addTripPlaceRow);
+  elements.tripDialog.showModal();
+}
+
+function closeTripDialog() {
+  if (elements.tripDialog?.open) {
+    elements.tripDialog.close();
+  }
+}
+
+function collectTripPlaces() {
+  return [...elements.tripPlacesEditor.querySelectorAll(".trip-place-row")].map((row, index) => {
+    const value = (field) => row.querySelector(`[data-trip-place="${field}"]`)?.value.trim() || "";
+    const startDate = value("startDate");
+    const endDate = value("endDate") < startDate ? startDate : value("endDate");
+    return {
+      startDate,
+      endDate,
+      city: value("city"),
+      country: value("country"),
+      role: value("role") || "stay",
+      eventId: value("eventId"),
+      notes: value("notes"),
+      sequence: index
+    };
+  });
+}
+
+async function saveTrip(event) {
+  event.preventDefault();
+  if (!elements.tripForm.reportValidity()) return;
+  if (!isSignedIn()) return;
+
+  const places = collectTripPlaces();
+  if (!places.length) {
+    window.alert("Add at least one city segment.");
+    return;
+  }
+
+  const startDate = elements.tripStartDate.value;
+  const endDate = elements.tripEndDate.value < startDate ? startDate : elements.tripEndDate.value;
+  const tripId = elements.tripId.value;
+  const tripBody = {
+    label: elements.tripLabel.value.trim(),
+    start_date: startDate,
+    end_date: endDate,
+    notes: elements.tripNotes.value.trim(),
+    access_level: "owner"
+  };
+
+  let savedTrip;
+  try {
+    if (tripId) {
+      [savedTrip] = await supabaseRequest(`personal_trips?id=eq.${tripId}`, {
+        method: "PATCH",
+        body: tripBody,
+        requiresAuth: true
+      });
+      await supabaseRequest(`personal_trip_places?trip_id=eq.${tripId}`, {
+        method: "DELETE",
+        requiresAuth: true
+      });
+    } else {
+      [savedTrip] = await supabaseRequest("personal_trips", {
+        method: "POST",
+        body: { id: crypto.randomUUID(), owner_id: currentUserId(), owner_email: currentUserEmail(), ...tripBody },
+        requiresAuth: true
+      });
+    }
+
+    const placeRows = places.map((place) => ({
+      id: crypto.randomUUID(),
+      trip_id: savedTrip.id,
+      owner_id: currentUserId(),
+      owner_email: currentUserEmail(),
+      event_edition_id: place.eventId || null,
+      start_date: place.startDate,
+      end_date: place.endDate,
+      city: place.city,
+      country: place.country,
+      travel_role: place.role,
+      sequence: place.sequence,
+      notes: place.notes,
+      access_level: "owner"
+    }));
+    await supabaseRequest("personal_trip_places", {
+      method: "POST",
+      body: placeRows,
+      requiresAuth: true
+    });
+    closeTripDialog();
+    state.personalTrips = await loadSupabasePersonalTrips();
+    render();
+  } catch (error) {
+    window.alert(error.message);
+  }
+}
+
+async function deleteTrip(tripId) {
+  if (!tripId) return;
+  const trip = state.personalTrips.find((item) => item.id === tripId);
+  const confirmed = window.confirm(`Delete ${trip?.label || "this trip"}?`);
+  if (!confirmed) return;
+  try {
+    await supabaseRequest(`personal_trips?id=eq.${tripId}`, {
+      method: "DELETE",
+      requiresAuth: true
+    });
+    closeTripDialog();
+    state.personalTrips = await loadSupabasePersonalTrips();
+    render();
+  } catch (error) {
+    window.alert(error.message);
+  }
 }
 
 function openEventDialog(eventId) {
@@ -1714,6 +2157,7 @@ function handleAction(event) {
   if (!target) return;
   const { action, id } = target.dataset;
   if (action === "details") openEventDetails(id);
+  if (action === "edit-trip") openTripDialog(id);
 }
 
 async function handleAuthSubmit(event) {
@@ -1800,6 +2244,26 @@ function bindEvents() {
     state.festivalSize = event.target.value;
     renderFestivalList();
   });
+  elements.schengenCheckDate?.addEventListener("change", (event) => {
+    state.schengenCheckDate = event.target.value || localDateString(new Date());
+    renderTrips();
+  });
+  elements.addTripBtn?.addEventListener("click", () => openTripDialog());
+  elements.tripForm?.addEventListener("submit", saveTrip);
+  elements.addTripPlaceBtn?.addEventListener("click", () => addTripPlaceRow());
+  elements.tripPlacesEditor?.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-trip-action]");
+    if (!target) return;
+    if (target.dataset.tripAction === "remove-place") {
+      target.closest(".trip-place-row")?.remove();
+    }
+  });
+  elements.tripDialog?.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-trip-action]");
+    if (!target) return;
+    if (target.dataset.tripAction === "close") closeTripDialog();
+  });
+  elements.deleteTripBtn?.addEventListener("click", () => deleteTrip(elements.tripId.value));
   elements.sortSelect.addEventListener("change", (event) => {
     state.sort = event.target.value;
     renderEvents();
