@@ -958,7 +958,7 @@ function schengenStatus(event) {
 function schengenLabel(event) {
   const status = schengenStatus(event);
   if (status === null) return "";
-  return status ? "Schengen" : "Non-Schengen";
+  return status ? "Yes" : "No";
 }
 
 function monthOverlaps(event, month) {
@@ -1093,30 +1093,8 @@ function eventDetailRows(event, { includeStatus = false, includeDates = false } 
     .join("");
 }
 
-function missingEditionFields(event) {
-  const fields = [
-    ["venue", "venue"],
-    ["tickets", "ticket link"],
-    ["price", "price"],
-    ["djs", "DJs"],
-    ["artists", "artists"],
-    ["eventSize", "event size"],
-    ["travel", "travel planning"]
-  ];
-  return fields.filter(([key]) => !event[key]).map(([, label]) => label);
-}
-
-function editionBlock(title, event, emptyText) {
-  if (!event) {
-    return `
-      <section class="edition-block is-empty">
-        <h4>${escapeHtml(title)}</h4>
-        <p class="muted">${escapeHtml(emptyText)}</p>
-      </section>
-    `;
-  }
-
-  const missing = missingEditionFields(event);
+function editionBlock(event) {
+  const title = `${eventYear(event)} edition`;
   const rows = [
     detailRow("Dates", dateRange(event)),
     detailRow("Location", eventLocation(event)),
@@ -1129,7 +1107,6 @@ function editionBlock(title, event, emptyText) {
     detailRow("DJs", event.djs),
     detailRow("Artists", event.artists),
     detailRow("Travel planning", event.travel),
-    missing.length ? detailRow("Missing", missing.join(", ")) : "",
     detailRow("Notes", event.notes)
   ].join("");
 
@@ -1141,39 +1118,41 @@ function editionBlock(title, event, emptyText) {
   `;
 }
 
-function selectedEditionBlocks(events, year) {
-  if (!events.length) {
-    return editionBlock(`Selected ${year} edition`, null, "No matching edition is tracked for the selected filters.");
-  }
-
-  const title = events.length === 1 ? `Selected ${year} edition` : `Selected ${year} editions`;
+function missingEditionBlock(year) {
   return `
-    <section class="edition-block">
-      <h4>${escapeHtml(title)}</h4>
-      <div class="edition-entry-list">
-        ${events.map((event) => `
-          <div class="edition-entry">
-            <div class="event-detail">
-              ${[
-                detailRow("Dates", dateRange(event)),
-                detailRow("Location", eventLocation(event)),
-                detailRow("Schengen", schengenLabel(event)),
-                detailRow("Venue", event.venue),
-                detailRow("Organizer", event.organizer),
-                detailRow("Event size", formatEventSize(event.eventSize)),
-                detailRow("Price", eventPrice(event)),
-                detailLinkRow("Ticket link", event.tickets, "Tickets"),
-                detailRow("DJs", event.djs),
-                detailRow("Artists", event.artists),
-                detailRow("Travel planning", event.travel),
-                missingEditionFields(event).length ? detailRow("Missing", missingEditionFields(event).join(", ")) : "",
-                detailRow("Notes", event.notes)
-              ].join("")}
-            </div>
-          </div>
-        `).join("")}
-      </div>
+    <section class="edition-block is-empty">
+      <h4>${escapeHtml(year)} edition</h4>
+      <p class="muted">Not tracked in Supabase yet.</p>
     </section>
+  `;
+}
+
+function editionHistoryBlocks(group) {
+  const currentYear = new Date().getFullYear();
+  const nextEdition = group.editions.find((event) => !isHistorical(event));
+  const startYear = nextEdition ? Number(eventYear(nextEdition)) : currentYear;
+  const years = [startYear, startYear - 1, startYear - 2];
+
+  return years.map((year) => {
+    const edition = group.editions
+      .filter((event) => Number(eventYear(event)) === year)
+      .sort((a, b) => b.startDate.localeCompare(a.startDate))[0];
+    return edition ? editionBlock(edition) : missingEditionBlock(year);
+  }).join("");
+}
+
+function priorEditionFor(event) {
+  return state.events
+    .filter((item) => eventFamilyKey(item) === eventFamilyKey(event) && item.startDate < event.startDate)
+    .sort((a, b) => b.startDate.localeCompare(a.startDate))[0] || null;
+}
+
+function detailActionButton(event, label = "Details", action = "details") {
+  if (!event) return "";
+  return `
+    <button type="button" data-action="${escapeHtml(action)}" data-id="${event.id}">
+      ${escapeHtml(label)}
+    </button>
   `;
 }
 
