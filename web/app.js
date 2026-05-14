@@ -18,7 +18,12 @@ const scoreCategories = [
 const state = {
   events: [],
   reviews: [],
+  trips: [],
+  personalTrips: [],
   authSession: null,
+  schengenCountries: new Map(),
+  schengenCountriesLoaded: false,
+  supabaseLoadStatus: {},
   deletedReviewSourceIds: [],
   activeView: localStorage.getItem("salsa-festivals-active-view") || "calendar",
   search: "",
@@ -26,6 +31,8 @@ const state = {
   selectedMonth: localDateString(new Date()).slice(0, 7),
   showHistorical: false,
   festivalYear: localStorage.getItem("salsa-festivals-event-list-year") || String(new Date().getFullYear()),
+  listMonth: "",
+  festivalMonth: "",
   festivalCountry: "",
   festivalSize: ""
 };
@@ -114,6 +121,7 @@ const elements = {
   addEventBtn: $("#addEventBtn"),
   tabs: document.querySelectorAll(".tab"),
   views: document.querySelectorAll(".view"),
+  reviewTab: document.querySelector('[data-view="reviews"]'),
   authStatus: $("#authStatus"),
   authDialog: $("#authDialog"),
   authForm: $("#authForm"),
@@ -132,6 +140,7 @@ const elements = {
   festivalCountrySelect: $("#festivalCountrySelect"),
   festivalSizeSelect: $("#festivalSizeSelect"),
   recentlyAddedList: $("#recentlyAddedList"),
+  reviewsView: $("#reviewsView"),
   eventDetailsDialog: $("#eventDetailsDialog"),
   eventDetailsTitle: $("#eventDetailsTitle"),
   eventDetailsMeta: $("#eventDetailsMeta"),
@@ -139,8 +148,10 @@ const elements = {
   eventDetailsLinks: $("#eventDetailsLinks"),
   reviewList: $("#reviewList"),
   searchInput: $("#searchInput"),
+  listMonthSelect: $("#listMonthSelect"),
   sortSelect: $("#sortSelect"),
   historyToggle: $("#historyToggle"),
+  festivalMonthSelect: $("#festivalMonthSelect"),
   eventDialog: $("#eventDialog"),
   eventDialogTitle: $("#eventDialogTitle"),
   eventForm: $("#eventForm"),
@@ -226,6 +237,10 @@ function isSignedIn() {
   return Boolean(state.authSession?.accessToken);
 }
 
+function viewAllowed(view) {
+  return view !== "reviews" || isSignedIn();
+}
+
 function authHeaders() {
   const config = window.supabaseConfig;
   return {
@@ -233,6 +248,28 @@ function authHeaders() {
     Authorization: `Bearer ${state.authSession.accessToken}`,
     "Content-Type": "application/json"
   };
+}
+
+function publicSupabaseHeaders() {
+  const config = window.supabaseConfig;
+  return {
+    apikey: config.publishableKey,
+    Authorization: `Bearer ${config.publishableKey}`,
+    "Content-Type": "application/json"
+  };
+}
+
+function setSupabaseLoadStatus(table, status, count = 0) {
+  state.supabaseLoadStatus[table] = { status, count };
+}
+
+function clearPrivateSupabaseData() {
+  state.reviews = [];
+  state.trips = [];
+  state.personalTrips = [];
+  setSupabaseLoadStatus("reviews", "signed-out");
+  setSupabaseLoadStatus("trips", "signed-out");
+  setSupabaseLoadStatus("personal_trips", "signed-out");
 }
 
 function normalizeAuthSession(payload) {
@@ -279,7 +316,7 @@ async function signInWithPassword(email, password) {
 
 function signOut() {
   state.authSession = null;
-  state.reviews = [];
+  clearPrivateSupabaseData();
   localStorage.removeItem(authStorageKey);
   closeAuthDialog();
   renderAuth();
@@ -304,21 +341,80 @@ function closeAuthDialog() {
 
 async function loadSupabaseEvents() {
   const config = window.supabaseConfig;
-  if (!config?.url || !config?.publishableKey) return [];
+  if (!config?.url || !config?.publishableKey) {
+    setSupabaseLoadStatus("events", "not-configured");
+    setSupabaseLoadStatus("event_editions", "not-configured");
+    return [];
+  }
 
   const endpoint = `${config.url}/rest/v1/events?select=*,event_editions(*)&visibility=eq.public&order=name.asc`;
   try {
     const response = await fetch(endpoint, {
-      headers: {
-        apikey: config.publishableKey,
-        Authorization: `Bearer ${config.publishableKey}`
-      }
+      headers: publicSupabaseHeaders()
     });
     if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
     const rows = await response.json();
+    setSupabaseLoadStatus("events", "loaded", rows.length);
+    setSupabaseLoadStatus(
+      "event_editions",
+      "loaded",
+      rows.reduce((total, row) => total + (Array.isArray(row.event_editions) ? row.event_editions.length : 0), 0)
+    );
     return mapSupabaseEvents(rows);
   } catch (error) {
     console.warn("Supabase public events unavailable; using repo seed data.", error);
+    setSupabaseLoadStatus("events", "error");
+    setSupabaseLoadStatus("event_editions", "error");
+    return [];
+  }
+}
+
+async function loadSupabaseSchengenCountries() {
+  const config = window.supabaseConfig;
+  if (!config?.url || !config?.publishableKey) {
+    setSupabaseLoadStatus("schengen_countries", "not-configured");
+    return new Map();
+  }
+
+  const endpoint = `${config.url}/rest/v1/schengen_countries?select=country_name,is_schengen`;
+  try {
+    const response = await fetch(endpoint, {
+      headers: publicSupabaseHeaders()
+    });
+    if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
+    const rows = await response.json();
+    setSupabaseLoadStatus("schengen_countries", "loaded", rows.length);
+    return new Map(rows.map((row) => [normalizeText(row.country_name), Boolean(row.is_schengen)]));
+  } catch (error) {
+    console.warn("Supabase Schengen country data unavailable.", error);
+    setSupabaseLoadStatus("schengen_countries", "error");
+    return new Map();
+  }
+}
+
+async function loadSupabaseTable(table, { requiresAuth = false } = {}) {
+  const config = window.supabaseConfig;
+  if (!config?.url || !config?.publishableKey) {
+    setSupabaseLoadStatus(table, "not-configured");
+    return [];
+  }
+  if (requiresAuth && !isSignedIn()) {
+    setSupabaseLoadStatus(table, "signed-out");
+    return [];
+  }
+
+  const endpoint = `${config.url}/rest/v1/${table}?select=*`;
+  try {
+    const response = await fetch(endpoint, {
+      headers: requiresAuth ? authHeaders() : publicSupabaseHeaders()
+    });
+    if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
+    const rows = await response.json();
+    setSupabaseLoadStatus(table, "loaded", rows.length);
+    return rows;
+  } catch (error) {
+    console.warn(`Supabase ${table} unavailable.`, error);
+    setSupabaseLoadStatus(table, "error");
     return [];
   }
 }
@@ -357,20 +453,49 @@ function mapSupabaseEvents(rows) {
 
 async function loadSupabaseReviews() {
   const config = window.supabaseConfig;
-  if (!config?.url || !config?.publishableKey || !isSignedIn()) return [];
+  if (!config?.url || !config?.publishableKey) {
+    setSupabaseLoadStatus("reviews", "not-configured");
+    return [];
+  }
+  if (!isSignedIn()) {
+    setSupabaseLoadStatus("reviews", "signed-out");
+    return [];
+  }
 
-  const endpoint = `${config.url}/rest/v1/reviews?select=*&visibility=eq.public&order=reviewed_at.desc`;
+  const endpoint = `${config.url}/rest/v1/reviews?select=*&order=reviewed_at.desc`;
   try {
     const response = await fetch(endpoint, {
       headers: authHeaders()
     });
     if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
     const rows = await response.json();
+    setSupabaseLoadStatus("reviews", "loaded", rows.length);
     return rows.map(mapSupabaseReview).filter((review) => state.events.some((event) => event.id === review.eventId));
   } catch (error) {
-    console.warn("Supabase public reviews unavailable; using repo review data.", error);
+    console.warn("Supabase private reviews unavailable.", error);
+    setSupabaseLoadStatus("reviews", "error");
     return [];
   }
+}
+
+async function refreshPrivateTablesFromSupabase() {
+  if (!isSignedIn()) {
+    clearPrivateSupabaseData();
+    render();
+    return;
+  }
+
+  const [reviews, trips, personalTrips] = await Promise.all([
+    loadSupabaseReviews(),
+    loadSupabaseTable("trips", { requiresAuth: true }),
+    loadSupabaseTable("personal_trips", { requiresAuth: true })
+  ]);
+
+  state.reviews = reviews;
+  state.trips = trips;
+  state.personalTrips = personalTrips;
+  console.info("Supabase table load status", state.supabaseLoadStatus);
+  render();
 }
 
 function mapSupabaseReview(review) {
@@ -412,8 +537,18 @@ function mapSupabaseReview(review) {
 }
 
 async function refreshPublicEventsFromSupabase() {
-  const supabaseEvents = await loadSupabaseEvents();
-  if (!supabaseEvents.length) return;
+  const [supabaseEvents, schengenCountries] = await Promise.all([
+    loadSupabaseEvents(),
+    loadSupabaseSchengenCountries()
+  ]);
+  state.schengenCountries = schengenCountries;
+  state.schengenCountriesLoaded = schengenCountries.size > 0;
+  if (!supabaseEvents.length) {
+    if (!isSignedIn()) clearPrivateSupabaseData();
+    console.info("Supabase table load status", state.supabaseLoadStatus);
+    render();
+    return;
+  }
 
   state.events = supabaseEvents;
   canonicalizeEventNames();
@@ -421,11 +556,8 @@ async function refreshPublicEventsFromSupabase() {
   removeLegacySampleEvents();
   deduplicateEvents();
   deduplicateCalendarEditions();
-  if (isSignedIn()) {
-    state.reviews = await loadSupabaseReviews();
-  } else {
-    state.reviews = [];
-  }
+  if (!isSignedIn()) clearPrivateSupabaseData();
+  console.info("Supabase table load status", state.supabaseLoadStatus);
   render();
 }
 
@@ -818,6 +950,17 @@ function eventLocation(event) {
   return [event.city, event.country].filter(Boolean).join(", ");
 }
 
+function schengenStatus(event) {
+  if (!state.schengenCountriesLoaded || !event.country) return null;
+  return state.schengenCountries.get(normalizeText(event.country)) === true;
+}
+
+function schengenLabel(event) {
+  const status = schengenStatus(event);
+  if (status === null) return "";
+  return status ? "Schengen" : "Non-Schengen";
+}
+
 function monthOverlaps(event, month) {
   const start = event.startDate.slice(0, 7);
   const end = event.endDate.slice(0, 7);
@@ -907,8 +1050,145 @@ function sourceLink(label, value) {
   return `<a href="${escapeHtml(href)}" target="_blank" rel="noreferrer">${label}</a>`;
 }
 
+function eventPrice(event) {
+  return [event.price, event.currency].filter(Boolean).join(" ");
+}
+
+function detailRow(label, value) {
+  if (!value) return "";
+  return `
+    <div class="detail-row">
+      <span class="detail-label">${escapeHtml(label)}</span>
+      <span>${escapeHtml(value)}</span>
+    </div>
+  `;
+}
+
+function detailLinkRow(label, value, linkLabel = "Open link") {
+  if (!value) return "";
+  return `
+    <div class="detail-row">
+      <span class="detail-label">${escapeHtml(label)}</span>
+      <span>${sourceLink(linkLabel, value)}</span>
+    </div>
+  `;
+}
+
+function eventDetailRows(event, { includeStatus = false, includeDates = false } = {}) {
+  return [
+    includeDates ? ["Dates", dateRange(event)] : null,
+    includeStatus ? ["Status", isHistorical(event) ? "Past event" : "Upcoming"] : null,
+    ["Schengen", schengenLabel(event)],
+    ["Organizer", event.organizer],
+    ["Venue", event.venue],
+    ["Event size", formatEventSize(event.eventSize)],
+    ["Price", eventPrice(event)],
+    ["DJs", event.djs],
+    ["Artists", event.artists],
+    ["Travel planning", event.travel],
+    ["Notes", event.notes]
+  ]
+    .filter(Boolean)
+    .map(([label, value]) => detailRow(label, value))
+    .join("");
+}
+
+function missingEditionFields(event) {
+  const fields = [
+    ["venue", "venue"],
+    ["tickets", "ticket link"],
+    ["price", "price"],
+    ["djs", "DJs"],
+    ["artists", "artists"],
+    ["eventSize", "event size"],
+    ["travel", "travel planning"]
+  ];
+  return fields.filter(([key]) => !event[key]).map(([, label]) => label);
+}
+
+function editionBlock(title, event, emptyText) {
+  if (!event) {
+    return `
+      <section class="edition-block is-empty">
+        <h4>${escapeHtml(title)}</h4>
+        <p class="muted">${escapeHtml(emptyText)}</p>
+      </section>
+    `;
+  }
+
+  const missing = missingEditionFields(event);
+  const rows = [
+    detailRow("Dates", dateRange(event)),
+    detailRow("Location", eventLocation(event)),
+    detailRow("Schengen", schengenLabel(event)),
+    detailRow("Venue", event.venue),
+    detailRow("Organizer", event.organizer),
+    detailRow("Event size", formatEventSize(event.eventSize)),
+    detailRow("Price", eventPrice(event)),
+    detailLinkRow("Ticket link", event.tickets, "Tickets"),
+    detailRow("DJs", event.djs),
+    detailRow("Artists", event.artists),
+    detailRow("Travel planning", event.travel),
+    missing.length ? detailRow("Missing", missing.join(", ")) : "",
+    detailRow("Notes", event.notes)
+  ].join("");
+
+  return `
+    <section class="edition-block">
+      <h4>${escapeHtml(title)}</h4>
+      <div class="event-detail">${rows}</div>
+    </section>
+  `;
+}
+
+function selectedEditionBlocks(events, year) {
+  if (!events.length) {
+    return editionBlock(`Selected ${year} edition`, null, "No matching edition is tracked for the selected filters.");
+  }
+
+  const title = events.length === 1 ? `Selected ${year} edition` : `Selected ${year} editions`;
+  return `
+    <section class="edition-block">
+      <h4>${escapeHtml(title)}</h4>
+      <div class="edition-entry-list">
+        ${events.map((event) => `
+          <div class="edition-entry">
+            <div class="event-detail">
+              ${[
+                detailRow("Dates", dateRange(event)),
+                detailRow("Location", eventLocation(event)),
+                detailRow("Schengen", schengenLabel(event)),
+                detailRow("Venue", event.venue),
+                detailRow("Organizer", event.organizer),
+                detailRow("Event size", formatEventSize(event.eventSize)),
+                detailRow("Price", eventPrice(event)),
+                detailLinkRow("Ticket link", event.tickets, "Tickets"),
+                detailRow("DJs", event.djs),
+                detailRow("Artists", event.artists),
+                detailRow("Travel planning", event.travel),
+                missingEditionFields(event).length ? detailRow("Missing", missingEditionFields(event).join(", ")) : "",
+                detailRow("Notes", event.notes)
+              ].join("")}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function recentAddedDate(event) {
   return event.addedOn || "";
+}
+
+function isRecentlyAdded(event) {
+  const addedOn = recentAddedDate(event);
+  if (!addedOn) return false;
+  const addedDate = new Date(`${addedOn}T12:00:00`);
+  if (Number.isNaN(addedDate.getTime())) return false;
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  return addedDate >= sevenDaysAgo;
 }
 
 function escapeHtml(value) {
@@ -922,6 +1202,8 @@ function escapeHtml(value) {
 
 function renderEventCard(event) {
   const score = reviewScoreForEvent(event);
+  const location = eventLocation(event);
+  const detailRows = eventDetailRows(event);
   const card = document.createElement("article");
   card.className = "event-card";
   card.innerHTML = `
@@ -932,21 +1214,8 @@ function renderEventCard(event) {
       </div>
       ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
     </div>
-    <div class="event-meta">
-      ${eventLocation(event) ? `<span class="pill">${escapeHtml(eventLocation(event))}</span>` : ""}
-      ${event.eventSize ? `<span class="pill">${escapeHtml(formatEventSize(event.eventSize))}</span>` : ""}
-      ${event.price ? `<span class="pill">${escapeHtml(event.price)}</span>` : ""}
-      ${event.price && event.currency ? `<span class="pill">${escapeHtml(event.currency)}</span>` : ""}
-    </div>
-    <div class="event-detail">
-      ${event.organizer ? `<div><strong>Organizer:</strong> ${escapeHtml(event.organizer)}</div>` : ""}
-      ${event.venue ? `<div><strong>Venue:</strong> ${escapeHtml(event.venue)}</div>` : ""}
-      ${event.eventSize ? `<div><strong>Event size:</strong> ${escapeHtml(formatEventSize(event.eventSize))}</div>` : ""}
-      ${event.djs ? `<div><strong>DJs:</strong> ${escapeHtml(event.djs)}</div>` : ""}
-      ${event.artists ? `<div><strong>Artists:</strong> ${escapeHtml(event.artists)}</div>` : ""}
-      ${event.travel ? `<div><strong>Travel planning:</strong> ${escapeHtml(event.travel)}</div>` : ""}
-      ${event.notes ? `<div><strong>Notes:</strong> ${escapeHtml(event.notes)}</div>` : ""}
-    </div>
+    ${location ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(location)}</span></div>` : ""}
+    ${detailRows ? `<div class="event-detail">${detailRows}</div>` : ""}
     <div class="event-actions">
       <button type="button" data-action="details" data-id="${event.id}">Details</button>
       ${sourceLink("Website", event.website)}
@@ -1009,13 +1278,15 @@ function calendarEventMarkup(event) {
 
 function renderEvents() {
   elements.eventList.innerHTML = "";
+  setSelectOptions(elements.listMonthSelect, monthOptions(), state.listMonth);
   elements.historyToggle.checked = state.showHistorical;
   const search = state.search.trim().toLowerCase();
   let events = state.events.filter((event) => {
-    const haystack = [event.name, event.city, event.country, event.venue, event.organizer, event.djs, event.artists].join(" ").toLowerCase();
+    const haystack = [event.name, event.city, event.country, event.venue, event.organizer, event.djs, event.artists, schengenLabel(event)].join(" ").toLowerCase();
     const matchesSearch = !search || haystack.includes(search);
     const matchesTimeframe = state.showHistorical ? isHistorical(event) : !isHistorical(event);
-    return matchesSearch && matchesTimeframe;
+    const matchesMonth = !state.listMonth || eventMonthValue(event) === state.listMonth;
+    return matchesSearch && matchesTimeframe && matchesMonth;
   });
 
   events = events.sort((a, b) => {
@@ -1056,6 +1327,20 @@ function eventMonthIndex(event) {
   return Number(event.startDate.slice(5, 7)) - 1;
 }
 
+function eventMonthValue(event) {
+  return event.startDate.slice(5, 7);
+}
+
+function monthOptions(allLabel = "All months") {
+  return [
+    { value: "", label: allLabel },
+    ...monthNames.map((name, index) => ({
+      value: String(index + 1).padStart(2, "0"),
+      label: name
+    }))
+  ];
+}
+
 function availableFestivalYears() {
   return uniqueValues(state.events.map(eventYear).filter(Boolean)).sort();
 }
@@ -1091,6 +1376,8 @@ function populateFestivalFilters() {
     state.festivalYear
   );
 
+  setSelectOptions(elements.festivalMonthSelect, monthOptions(), state.festivalMonth);
+
   const countries = uniqueValues(
     state.events
       .filter((event) => eventYear(event) === state.festivalYear)
@@ -1124,6 +1411,7 @@ function filteredFestivalEditions() {
   const search = elements.festivalSearchInput.value.trim().toLowerCase();
   const country = state.festivalCountry;
   const size = normalizeText(state.festivalSize);
+  const month = state.festivalMonth;
 
   return state.events
     .filter((event) => {
@@ -1135,13 +1423,15 @@ function filteredFestivalEditions() {
         event.organizer,
         event.djs,
         event.artists,
-        event.notes
+        event.notes,
+        schengenLabel(event)
       ].join(" ").toLowerCase();
       const matchesYear = eventYear(event) === state.festivalYear;
       const matchesSearch = !search || haystack.includes(search);
       const matchesCountry = !country || event.country === country;
       const matchesSize = !size || normalizeText(event.eventSize) === size;
-      return matchesYear && matchesSearch && matchesCountry && matchesSize;
+      const matchesMonth = !month || eventMonthValue(event) === month;
+      return matchesYear && matchesSearch && matchesCountry && matchesSize && matchesMonth;
     })
     .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
 }
@@ -1151,14 +1441,18 @@ function renderFestivalList() {
   populateFestivalFilters();
   const filteredEditions = filteredFestivalEditions();
   const visibleKeys = new Set(filteredEditions.map(eventFamilyKey));
-  const yearDateByKey = new Map(
-    filteredEditions.map((event) => [eventFamilyKey(event), event.startDate])
-  );
+  const filteredEditionsByKey = new Map();
+  filteredEditions.forEach((event) => {
+    const key = eventFamilyKey(event);
+    if (!filteredEditionsByKey.has(key)) filteredEditionsByKey.set(key, []);
+    filteredEditionsByKey.get(key).push(event);
+  });
+  filteredEditionsByKey.forEach((events) => events.sort((a, b) => a.startDate.localeCompare(b.startDate)));
   const groups = uniqueFestivalGroups()
     .filter((group) => visibleKeys.has(normalizeText(group.name)))
     .sort((a, b) => {
-      const aDate = yearDateByKey.get(normalizeText(a.name)) || "9999-12-31";
-      const bDate = yearDateByKey.get(normalizeText(b.name)) || "9999-12-31";
+      const aDate = filteredEditionsByKey.get(normalizeText(a.name))?.[0]?.startDate || "9999-12-31";
+      const bDate = filteredEditionsByKey.get(normalizeText(b.name))?.[0]?.startDate || "9999-12-31";
       return aDate.localeCompare(bDate) || a.name.localeCompare(b.name);
     });
 
@@ -1170,10 +1464,15 @@ function renderFestivalList() {
   groups.forEach((group) => {
     const card = document.createElement("article");
     card.className = "event-card";
-    const nextEdition = group.upcoming[0];
-    const lastEdition = group.past[group.past.length - 1];
-    const detailsTarget = nextEdition || lastEdition || group.editions[group.editions.length - 1];
-    const score = nextEdition ? reviewScoreForEvent(nextEdition) : null;
+    const selectedEditions = filteredEditionsByKey.get(normalizeText(group.name)) || [];
+    const firstSelected = selectedEditions[0];
+    const lastSelected = selectedEditions[selectedEditions.length - 1];
+    const priorEdition = group.editions
+      .filter((event) => firstSelected && event.startDate < firstSelected.startDate)
+      .at(-1);
+    const nextTrackedEdition = group.editions.find((event) => lastSelected && event.startDate > lastSelected.startDate);
+    const detailsTarget = firstSelected || nextTrackedEdition || priorEdition || group.editions[group.editions.length - 1];
+    const score = detailsTarget ? reviewScoreForEvent(detailsTarget) : null;
 
     card.innerHTML = `
       <div class="event-card-header">
@@ -1181,17 +1480,13 @@ function renderFestivalList() {
           <h3>${escapeHtml(group.name)}</h3>
           <p class="muted">${escapeHtml(group.locations.join(" | "))}</p>
         </div>
-        ${score ? `<span class="pill score-pill">${score.average.toFixed(1)} prior</span>` : ""}
+        ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
       </div>
-      <div class="event-meta">
-        ${nextEdition ? `<span class="pill">Next edition: ${escapeHtml(dateRange(nextEdition))}</span>` : "<span class=\"pill\">No upcoming edition</span>"}
-        ${lastEdition ? `<span class="pill">Last edition: ${escapeHtml(dateRange(lastEdition))}</span>` : "<span class=\"pill\">No past edition</span>"}
-        ${group.organizers.map((organizer) => `<span class="pill">${escapeHtml(organizer)}</span>`).join("")}
-      </div>
-      <div class="event-detail">
-        ${nextEdition?.venue ? `<div><strong>Next venue:</strong> ${escapeHtml(nextEdition.venue)}</div>` : ""}
-        ${nextEdition?.djs ? `<div><strong>DJs:</strong> ${escapeHtml(nextEdition.djs)}</div>` : ""}
-        ${nextEdition?.artists ? `<div><strong>Artists:</strong> ${escapeHtml(nextEdition.artists)}</div>` : ""}
+      ${detailsTarget && eventLocation(detailsTarget) ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(eventLocation(detailsTarget))}</span></div>` : ""}
+      <div class="festival-editions">
+        ${selectedEditionBlocks(selectedEditions, state.festivalYear)}
+        ${editionBlock("Prior tracked edition", priorEdition, "No tracked prior edition yet. Add the verified older Facebook/event-page edition to Supabase when found.")}
+        ${editionBlock("Next tracked edition", nextTrackedEdition, "No later tracked edition yet.")}
       </div>
       <div class="event-actions">
         ${detailsTarget ? `<button type="button" data-action="details" data-id="${detailsTarget.id}">Details</button>` : ""}
@@ -1208,18 +1503,23 @@ function renderFestivalList() {
 function renderRecentlyAdded() {
   elements.recentlyAddedList.innerHTML = "";
   const events = state.events
-    .filter((event) => recentAddedDate(event))
+    .filter(isRecentlyAdded)
     .sort((a, b) => recentAddedDate(b).localeCompare(recentAddedDate(a)) || a.startDate.localeCompare(b.startDate));
 
   if (!events.length) {
-    elements.recentlyAddedList.append(emptyState("No recently added events", "Newly added event editions will show here once they are marked in the repo."));
+    elements.recentlyAddedList.append(emptyState("No recently added events", "New database additions from the last 7 days will show here."));
     return;
   }
 
   events.forEach((event) => {
     const card = renderEventCard(event);
-    const header = card.querySelector(".event-card-header");
-    header?.insertAdjacentHTML("beforeend", `<span class="pill">Added ${escapeHtml(formatDate(recentAddedDate(event)))}</span>`);
+    const details = card.querySelector(".event-detail");
+    const addedRow = detailRow("Added", formatDate(recentAddedDate(event)));
+    if (details) {
+      details.insertAdjacentHTML("afterbegin", addedRow);
+    } else {
+      card.querySelector(".event-actions")?.insertAdjacentHTML("beforebegin", `<div class="event-detail">${addedRow}</div>`);
+    }
     elements.recentlyAddedList.append(card);
   });
 }
@@ -1271,6 +1571,15 @@ function renderAuth() {
       : "<button class=\"secondary-action\" type=\"button\" data-auth-action=\"signin\">Sign in</button>";
   }
 
+  if (elements.reviewTab) {
+    elements.reviewTab.hidden = !isSignedIn();
+  }
+  if (elements.reviewsView) {
+    elements.reviewsView.hidden = !isSignedIn();
+  }
+  if (!isSignedIn() && state.activeView === "reviews") {
+    switchView("calendar");
+  }
   if (elements.reviewAuthPanel) {
     elements.reviewAuthPanel.hidden = isSignedIn();
   }
@@ -1288,7 +1597,7 @@ function renderReviews() {
   const reviews = [...state.reviews].sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt));
 
   if (!reviews.length) {
-    elements.reviewList.append(emptyState("No reviews yet", "Public reviews will show here once they are added to Supabase."));
+    elements.reviewList.append(emptyState("No reviews yet", "Your private reviews will show here once they are added to Supabase."));
     return;
   }
 
@@ -1343,7 +1652,7 @@ function render() {
 }
 
 function switchView(view) {
-  const nextView = [...elements.tabs].some((tab) => tab.dataset.view === view) ? view : "calendar";
+  const nextView = [...elements.tabs].some((tab) => tab.dataset.view === view && !tab.hidden) && viewAllowed(view) ? view : "calendar";
   state.activeView = nextView;
   localStorage.setItem("salsa-festivals-active-view", nextView);
   elements.tabs.forEach((tab) => tab.classList.toggle("is-active", tab.dataset.view === nextView));
@@ -1357,29 +1666,14 @@ function openEventDetails(eventId) {
   const score = reviewScoreForEvent(event);
   elements.eventDetailsTitle.textContent = event.name;
   elements.eventDetailsMeta.innerHTML = [
-    `<span class="pill">${escapeHtml(dateRange(event))}</span>`,
-    eventLocation(event) ? `<span class="pill">${escapeHtml(eventLocation(event))}</span>` : "",
-    event.organizer ? `<span class="pill">${escapeHtml(event.organizer)}</span>` : "",
-    event.eventSize ? `<span class="pill">${escapeHtml(formatEventSize(event.eventSize))}</span>` : "",
-    event.price ? `<span class="pill">${escapeHtml(event.price)}</span>` : "",
-    event.price && event.currency ? `<span class="pill">${escapeHtml(event.currency)}</span>` : "",
-    score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : "",
-    `<span class="pill">${isHistorical(event) ? "Past event" : "Upcoming"}</span>`
+    eventLocation(event) ? `<span class="pill location-pill">${escapeHtml(eventLocation(event))}</span>` : "",
+    score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""
   ].filter(Boolean).join("");
 
-  const detailRows = [
-    ["Venue", event.venue],
-    ["Organizer", event.organizer],
-    ["Event size", formatEventSize(event.eventSize)],
-    ["DJs", event.djs],
-    ["Artists", event.artists],
-    ["Price", event.price],
-    ["Travel planning", event.travel],
-    ["Notes", event.notes]
-  ].filter(([, value]) => value);
+  const detailRows = eventDetailRows(event, { includeDates: true, includeStatus: true });
 
   elements.eventDetailsBody.innerHTML = detailRows.length
-    ? detailRows.map(([label, value]) => `<div><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</div>`).join("")
+    ? detailRows
     : "<p class=\"muted\">No extra details have been added yet.</p>";
 
   elements.eventDetailsLinks.innerHTML = [
@@ -1614,7 +1908,7 @@ async function handleAuthSubmit(event) {
     elements.authMessage.textContent = "";
     closeAuthDialog();
     renderAuth();
-    await refreshReviews();
+    await refreshPrivateTablesFromSupabase();
   } catch (error) {
     elements.authMessage.textContent = `Could not sign in: ${error.message}`;
     console.warn(error);
@@ -1622,13 +1916,7 @@ async function handleAuthSubmit(event) {
 }
 
 async function refreshReviews() {
-  if (!isSignedIn()) {
-    state.reviews = [];
-    render();
-    return;
-  }
-  state.reviews = await loadSupabaseReviews();
-  render();
+  await refreshPrivateTablesFromSupabase();
 }
 
 function handleAuthAction(event) {
@@ -1666,11 +1954,19 @@ function bindEvents() {
     state.search = event.target.value;
     renderEvents();
   });
+  elements.listMonthSelect?.addEventListener("change", (event) => {
+    state.listMonth = event.target.value;
+    renderEvents();
+  });
   elements.festivalSearchInput.addEventListener("input", renderFestivalList);
   elements.festivalYearSelect.addEventListener("change", (event) => {
     state.festivalYear = event.target.value;
     state.festivalCountry = "";
     localStorage.setItem("salsa-festivals-event-list-year", state.festivalYear);
+    renderFestivalList();
+  });
+  elements.festivalMonthSelect?.addEventListener("change", (event) => {
+    state.festivalMonth = event.target.value;
     renderFestivalList();
   });
   elements.festivalCountrySelect.addEventListener("change", (event) => {
@@ -1706,7 +2002,7 @@ async function init() {
   switchView(state.activeView);
   await refreshPublicEventsFromSupabase();
   if (isSignedIn()) {
-    await refreshReviews();
+    await refreshPrivateTablesFromSupabase();
   }
 }
 

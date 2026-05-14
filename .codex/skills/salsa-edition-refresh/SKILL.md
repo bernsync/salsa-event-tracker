@@ -15,13 +15,15 @@ Default repo path:
 Primary files:
 - Supabase `events`: one row per festival brand.
 - Supabase `event_editions`: one row per festival edition.
-- Supabase `reviews`: public reviews.
+- Supabase `reviews`: private/owner review data unless the user explicitly changes the review access model.
+- Supabase `schengen_countries`: public Schengen country lookup.
 - Supabase `personal_trips`: private trip rows, do not touch unless the user explicitly asks.
 - `web/seed-events.js`: legacy fallback data, not the primary source of truth.
 - `web/event-links.js`: legacy fallback source links, not the primary source of truth.
 - `web/app.js`: canonical aliases, date corrections, duplicate cleanup.
 - `scripts/refresh-event-editions.mjs`: weekly audit script.
 - `.github/workflows/weekly-event-edition-refresh.yml`: weekly GitHub Actions cron.
+- `DATA_ACCESS.md` and `DATA_UPDATE_WORKFLOW.md`: access classification and remote update rules.
 
 ## Weekly Audit Workflow
 
@@ -59,6 +61,8 @@ Primary files:
 - Never commit the service role key, database password, or user private trip data.
 - Prefer SQL snippets for the user to review and run unless they explicitly ask you to update Supabase directly.
 - Weekly cron is audit-only. It should not insert or update rows automatically.
+- Do not create new local hardcoded data lists for production behavior. Durable data belongs in Supabase tables.
+- Before adding any new durable data, classify it with `DATA_ACCESS.md` as `public`, `authenticated`, or `owner`, and confirm the intended access level with the user.
 
 ## Data Rules
 

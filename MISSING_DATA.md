@@ -5,8 +5,9 @@ This file replaces the old in-app Data Gaps tab. It is intentionally kept in the
 Scope: 2025 and 2026 editions only. 2027 editions are intentionally excluded until most events publish reliable information.
 
 When updating data:
-- Put stable fields such as website, Instagram, Facebook, and organizer in `web/event-links.js` under `window.eventLinks`.
-- Put edition-specific fields such as venue, ticket link, price, DJs, artists, event size, travel planning, and notes in `web/event-links.js` under `window.eventEditionDetails`.
+- Supabase is the source of truth. Put stable festival fields such as website, Instagram, Facebook, and organizer in `public.events`.
+- Put edition-specific fields such as venue, ticket link, price, DJs, artists, event size, travel planning, and notes in `public.event_editions`.
+- Classify public festival data as `public`. Anything personal, review-related, attendance-related, or visa-related must be discussed first and usually belongs to `owner`.
 - Do not copy venues, DJs, prices, ticket links, or travel details across editions unless the exact edition source confirms it.
 - Do not use Salsa Vida as an official source.
 

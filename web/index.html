@@ -58,6 +58,10 @@
           </div>
           <div class="toolbar-controls">
             <label class="field compact">
+              <span>Month</span>
+              <select id="listMonthSelect"></select>
+            </label>
+            <label class="field compact">
               <span>Sort</span>
               <select id="sortSelect">
                 <option value="date">Date</option>
@@ -83,12 +87,16 @@
         <div class="toolbar">
           <div>
             <h2 id="festivalListTitle">Event List</h2>
-            <p class="muted">One row per festival, with next and last edition dates.</p>
+            <p class="muted">One row per festival, with selected, prior, and next tracked edition details.</p>
           </div>
           <div class="toolbar-controls">
             <label class="field compact">
               <span>Year</span>
               <select id="festivalYearSelect"></select>
+            </label>
+            <label class="field compact">
+              <span>Month</span>
+              <select id="festivalMonthSelect"></select>
             </label>
             <label class="field compact">
               <span>Country</span>
@@ -137,7 +145,6 @@
             <h3>Sign in to view reviews</h3>
             <p class="muted">Reviews are private and require your Supabase account.</p>
           </div>
-          <button class="primary-action" type="button" data-auth-action="signin">Sign in</button>
         </div>
         <div id="reviewList" class="review-list"></div>
       </section>
