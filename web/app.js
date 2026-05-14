@@ -1220,8 +1220,20 @@ function renderCalendar() {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
     const dateValue = localDateString(date);
+    const searchQuery = state.search.trim().toLowerCase();
+
     const dayEvents = state.events
-      .filter((event) => eventOccursOnDate(event, dateValue))
+      .filter((event) => {
+        const occursOnDate = eventOccursOnDate(event, dateValue);
+        if (!occursOnDate) return false;
+        if (!searchQuery) return true;
+
+        const haystack = [
+          event.name, event.city, event.country, event.venue, event.organizer, 
+          event.djs, event.artists, event.notes, schengenLabel(event)
+        ].join(" ").toLowerCase();
+        return haystack.includes(searchQuery);
+      })
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
     const day = document.createElement("section");
     day.className = "calendar-day";
@@ -1932,6 +1944,7 @@ function bindEvents() {
   elements.searchInput.addEventListener("input", (event) => {
     state.search = event.target.value;
     renderEvents();
+    renderCalendar();
   });
   elements.listMonthSelect?.addEventListener("change", (event) => {
     state.listMonth = event.target.value;
