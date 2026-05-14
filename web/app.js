@@ -28,12 +28,24 @@ const state = {
   search: "",
   sort: "date",
   selectedMonth: localDateString(new Date()).slice(0, 7),
+  hideDuplicateAttendedEvents: localStorage.getItem("salsa-festivals-hide-duplicate-attended") !== "false",
+  attendedOnlyCalendar: localStorage.getItem("salsa-festivals-attended-only-calendar") === "true",
   showHistorical: false,
   festivalYear: localStorage.getItem("salsa-festivals-event-list-year") || String(new Date().getFullYear()),
+  listYear: "",
   listMonth: "",
   festivalMonth: "",
   festivalCountry: "",
   festivalSize: "",
+  showHistoricalTrips: localStorage.getItem("salsa-festivals-show-historical-trips") === "true",
+  showSchengenImpactingTrips: localStorage.getItem("salsa-festivals-show-schengen-impacting-trips") === "true",
+  tripCountry: "",
+  tripYear: "",
+  tripMonth: "",
+  collapsedCards: {
+    calendarList: { all: false, expanded: new Set(), collapsed: new Set() },
+    eventList: { all: false, expanded: new Set(), collapsed: new Set() }
+  },
   schengenCheckDate: localDateString(new Date())
 };
 
@@ -129,6 +141,8 @@ const elements = {
   reviewAuthPanel: $("#reviewAuthPanel"),
   tripsAuthPanel: $("#tripsAuthPanel"),
   monthPicker: $("#monthPicker"),
+  hideDuplicateAttendedToggle: $("#hideDuplicateAttendedToggle"),
+  attendedOnlyToggle: $("#attendedOnlyToggle"),
   prevMonthBtn: $("#prevMonthBtn"),
   nextMonthBtn: $("#nextMonthBtn"),
   calendarGrid: $("#calendarGrid"),
@@ -142,7 +156,13 @@ const elements = {
   tripsView: $("#tripsView"),
   tripList: $("#tripList"),
   schengenSummary: $("#schengenSummary"),
+  ptoYearSummary: $("#ptoYearSummary"),
   schengenCheckDate: $("#schengenCheckDate"),
+  tripHistoryToggle: $("#tripHistoryToggle"),
+  schengenImpactToggle: $("#schengenImpactToggle"),
+  tripCountrySelect: $("#tripCountrySelect"),
+  tripYearSelect: $("#tripYearSelect"),
+  tripMonthSelect: $("#tripMonthSelect"),
   addTripBtn: $("#addTripBtn"),
   tripDialog: $("#tripDialog"),
   tripForm: $("#tripForm"),
@@ -154,6 +174,8 @@ const elements = {
   tripNotes: $("#tripNotes"),
   tripPlacesEditor: $("#tripPlacesEditor"),
   addTripPlaceBtn: $("#addTripPlaceBtn"),
+  ptoDaysEditor: $("#ptoDaysEditor"),
+  addPtoDayBtn: $("#addPtoDayBtn"),
   deleteTripBtn: $("#deleteTripBtn"),
   saveTripBtn: $("#saveTripBtn"),
   reviewsView: $("#reviewsView"),
@@ -164,10 +186,15 @@ const elements = {
   eventDetailsLinks: $("#eventDetailsLinks"),
   reviewList: $("#reviewList"),
   searchInput: $("#searchInput"),
+  listYearSelect: $("#listYearSelect"),
   listMonthSelect: $("#listMonthSelect"),
   sortSelect: $("#sortSelect"),
   historyToggle: $("#historyToggle"),
+  collapseCalendarListBtn: $("#collapseCalendarListBtn"),
+  expandCalendarListBtn: $("#expandCalendarListBtn"),
   festivalMonthSelect: $("#festivalMonthSelect"),
+  collapseFestivalListBtn: $("#collapseFestivalListBtn"),
+  expandFestivalListBtn: $("#expandFestivalListBtn"),
   eventDialog: $("#eventDialog"),
   eventDialogTitle: $("#eventDialogTitle"),
   eventForm: $("#eventForm"),
@@ -261,6 +288,7 @@ function clearPrivateSupabaseData() {
   setSupabaseLoadStatus("reviews", "signed-out");
   setSupabaseLoadStatus("trips", "signed-out");
   setSupabaseLoadStatus("personal_trips", "signed-out");
+  setSupabaseLoadStatus("personal_pto_days", "signed-out");
 }
 
 function normalizeAuthSession(payload) {
@@ -495,7 +523,7 @@ async function loadSupabasePersonalTrips() {
     return [];
   }
 
-  const endpoint = "personal_trips?select=*,personal_trip_places(*)&order=start_date.asc";
+  const endpoint = "personal_trips?select=*,personal_trip_places(*),personal_pto_days(*)&order=start_date.asc";
   try {
     const rows = await supabaseRequest(endpoint, { requiresAuth: true });
     setSupabaseLoadStatus("personal_trips", "loaded", rows.length);
@@ -504,17 +532,24 @@ async function loadSupabasePersonalTrips() {
       "loaded",
       rows.reduce((total, row) => total + (Array.isArray(row.personal_trip_places) ? row.personal_trip_places.length : 0), 0)
     );
+    setSupabaseLoadStatus(
+      "personal_pto_days",
+      "loaded",
+      rows.reduce((total, row) => total + (Array.isArray(row.personal_pto_days) ? row.personal_pto_days.length : 0), 0)
+    );
     return rows.map(mapSupabaseTrip);
   } catch (error) {
     console.warn("Supabase private trips unavailable.", error);
     setSupabaseLoadStatus("personal_trips", "error");
     setSupabaseLoadStatus("personal_trip_places", "error");
+    setSupabaseLoadStatus("personal_pto_days", "error");
     return [];
   }
 }
 
 function mapSupabaseTrip(row) {
   const places = Array.isArray(row.personal_trip_places) ? row.personal_trip_places : [];
+  const ptoDays = Array.isArray(row.personal_pto_days) ? row.personal_pto_days : [];
   return {
     id: row.id,
     ownerId: row.owner_id,
@@ -526,7 +561,10 @@ function mapSupabaseTrip(row) {
     updatedAt: row.updated_at || "",
     places: places
       .map(mapSupabaseTripPlace)
-      .sort((a, b) => a.sequence - b.sequence || a.startDate.localeCompare(b.startDate) || a.city.localeCompare(b.city))
+      .sort((a, b) => a.sequence - b.sequence || a.startDate.localeCompare(b.startDate) || a.city.localeCompare(b.city)),
+    ptoDays: ptoDays
+      .map(mapSupabasePtoDay)
+      .sort((a, b) => a.date.localeCompare(b.date))
   };
 }
 
@@ -541,6 +579,16 @@ function mapSupabaseTripPlace(row) {
     country: row.country || "",
     role: row.travel_role || "stay",
     sequence: Number(row.sequence || 0),
+    notes: row.notes || ""
+  };
+}
+
+function mapSupabasePtoDay(row) {
+  return {
+    id: row.id,
+    tripId: row.trip_id,
+    date: row.pto_date || "",
+    amount: Number(row.amount || 1),
     notes: row.notes || ""
   };
 }
@@ -878,9 +926,9 @@ function formatEventSize(value) {
   const size = normalizeText(value);
   if (!size) return "";
   const labels = {
-    small: "Small (under 200)",
-    medium: "Medium (200-500)",
-    large: "Large (500-999)",
+    small: "Small (under 250)",
+    medium: "Medium (250-999)",
+    large: "Large (legacy)",
     "extra large": "Extra large (1000+)",
     xl: "Extra large (1000+)"
   };
@@ -1063,7 +1111,7 @@ function missingEditionBlock(year) {
   return `
     <section class="edition-block is-empty">
       <h4>${escapeHtml(year)} edition</h4>
-      <p class="muted">Not tracked in Supabase yet.</p>
+      <p class="muted">Not tracked.</p>
     </section>
   `;
 }
@@ -1120,7 +1168,60 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function renderEventCard(event) {
+function collapsedStateFor(view) {
+  return state.collapsedCards[view] || { all: false, expanded: new Set(), collapsed: new Set() };
+}
+
+function isCardCollapsed(view, id) {
+  if (!view || !id) return false;
+  const collapseState = collapsedStateFor(view);
+  return collapseState.all ? !collapseState.expanded.has(id) : collapseState.collapsed.has(id);
+}
+
+function cardCollapseButton(view, id) {
+  if (!view || !id) return "";
+  const collapsed = isCardCollapsed(view, id);
+  return `
+    <button class="secondary-action card-collapse-button" type="button" data-action="toggle-card-collapse" data-view="${escapeHtml(view)}" data-id="${escapeHtml(id)}">
+      ${collapsed ? "Expand" : "Collapse"}
+    </button>
+  `;
+}
+
+function collapsibleCardBody(view, id, content) {
+  const collapsed = isCardCollapsed(view, id);
+  return `<div class="card-collapsible" ${collapsed ? "hidden" : ""}>${content}</div>`;
+}
+
+function setCollapseMode(view, collapsed) {
+  const collapseState = collapsedStateFor(view);
+  collapseState.all = collapsed;
+  collapseState.expanded.clear();
+  collapseState.collapsed.clear();
+  renderEvents();
+  renderFestivalList();
+}
+
+function toggleCardCollapse(view, id) {
+  const collapseState = collapsedStateFor(view);
+  if (collapseState.all) {
+    if (collapseState.expanded.has(id)) {
+      collapseState.expanded.delete(id);
+    } else {
+      collapseState.expanded.add(id);
+    }
+  } else if (collapseState.collapsed.has(id)) {
+    collapseState.collapsed.delete(id);
+  } else {
+    collapseState.collapsed.add(id);
+  }
+  if (view === "calendarList") renderEvents();
+  if (view === "eventList") renderFestivalList();
+}
+
+function renderEventCard(event, options = {}) {
+  const collapseView = options.collapseView || "";
+  const collapseId = event.id;
   const score = reviewScoreForEvent(event);
   const location = eventLocation(event);
   const detailRows = eventDetailRows(event);
@@ -1132,23 +1233,36 @@ function renderEventCard(event) {
         <h3>${escapeHtml(event.name)}</h3>
         <p class="muted">${escapeHtml(dateRange(event))}</p>
       </div>
-      ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
+      <div class="card-header-actions">
+        ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
+        ${cardCollapseButton(collapseView, collapseId)}
+      </div>
     </div>
-    ${location ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(location)}</span></div>` : ""}
-    ${detailRows ? `<div class="event-detail">${detailRows}</div>` : ""}
-    <div class="event-actions">
-      ${sourceLink("Website", event.website)}
-      ${sourceLink("Instagram", event.instagram)}
-      ${sourceLink("Facebook", event.facebook)}
-      ${sourceLink("Tickets", event.tickets)}
-      <span class="event-status">${isHistorical(event) ? "Past event" : "Upcoming"}</span>
-    </div>
+    ${collapsibleCardBody(collapseView, collapseId, `
+      ${location ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(location)}</span></div>` : ""}
+      ${detailRows ? `<div class="event-detail">${detailRows}</div>` : ""}
+      <div class="event-actions">
+        ${sourceLink("Website", event.website)}
+        ${sourceLink("Instagram", event.instagram)}
+        ${sourceLink("Facebook", event.facebook)}
+        ${sourceLink("Tickets", event.tickets)}
+        <span class="event-status">${isHistorical(event) ? "Past event" : "Upcoming"}</span>
+      </div>
+    `)}
   `;
   return card;
 }
 
 function renderCalendar() {
   elements.monthPicker.value = state.selectedMonth;
+  if (elements.hideDuplicateAttendedToggle) {
+    elements.hideDuplicateAttendedToggle.checked = state.hideDuplicateAttendedEvents;
+    elements.hideDuplicateAttendedToggle.disabled = !isSignedIn();
+  }
+  if (elements.attendedOnlyToggle) {
+    elements.attendedOnlyToggle.checked = state.attendedOnlyCalendar;
+    elements.attendedOnlyToggle.disabled = !isSignedIn();
+  }
   elements.calendarGrid.innerHTML = "";
 
   const [year, month] = state.selectedMonth.split("-").map(Number);
@@ -1162,19 +1276,6 @@ function renderCalendar() {
     const dateValue = localDateString(date);
     const searchQuery = state.search.trim().toLowerCase();
 
-    const dayEvents = state.events
-      .filter((event) => {
-        const occursOnDate = eventOccursOnDate(event, dateValue);
-        if (!occursOnDate) return false;
-        if (!searchQuery) return true;
-
-        const haystack = [
-          event.name, event.city, event.country, event.venue, event.organizer, 
-          event.djs, event.artists, event.notes, schengenLabel(event)
-        ].join(" ").toLowerCase();
-        return haystack.includes(searchQuery);
-      })
-      .sort((a, b) => a.startDate.localeCompare(b.startDate));
     const dayTripPlaces = calendarTripPlacesForDate(dateValue)
       .filter((place) => {
         if (!searchQuery) return true;
@@ -1188,6 +1289,26 @@ function renderCalendar() {
           schengenLabel(place)
         ].join(" ").toLowerCase();
         return haystack.includes(searchQuery);
+      });
+    const dayEvents = state.events
+      .filter((event) => {
+        const occursOnDate = eventOccursOnDate(event, dateValue);
+        if (!occursOnDate) return false;
+        if (state.attendedOnlyCalendar && isSignedIn()) return false;
+        if (state.hideDuplicateAttendedEvents && attendedPlaceMatchesEventOnDate(event, dateValue)) return false;
+        if (!searchQuery) return true;
+
+        const haystack = [
+          event.name, event.city, event.country, event.venue, event.organizer, 
+          event.djs, event.artists, event.notes, schengenLabel(event)
+        ].join(" ").toLowerCase();
+        return haystack.includes(searchQuery);
+      })
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const dayPtoDays = calendarPtoDaysForDate(dateValue)
+      .filter((ptoDay) => {
+        if (!searchQuery) return true;
+        return [ptoDay.trip.label, ptoDay.notes, holidayForDate(ptoDay.date), "pto"].join(" ").toLowerCase().includes(searchQuery);
       });
     const day = document.createElement("section");
     day.className = "calendar-day";
@@ -1224,6 +1345,17 @@ function renderCalendar() {
       day.append(chip);
     });
 
+    dayPtoDays.forEach((ptoDay) => {
+      const chip = document.createElement("button");
+      chip.className = `calendar-trip calendar-pto ${holidayForDate(ptoDay.date) ? "is-holiday" : ""}`;
+      chip.type = "button";
+      chip.dataset.action = "edit-trip";
+      chip.dataset.id = ptoDay.trip.id;
+      chip.setAttribute("aria-label", `Edit PTO for ${ptoDay.trip.label}`);
+      chip.innerHTML = calendarPtoMarkup(ptoDay);
+      day.append(chip);
+    });
+
     elements.calendarGrid.append(day);
   }
 }
@@ -1236,11 +1368,43 @@ function calendarTripPlacesForDate(dateValue) {
     .sort((a, b) => a.sequence - b.sequence || a.city.localeCompare(b.city));
 }
 
+function attendedPlaceMatchesEventOnDate(event, dateValue) {
+  return calendarTripPlacesForDate(dateValue).some((place) => tripPlaceMatchesEvent(place, event));
+}
+
+function tripPlaceMatchesEvent(place, event) {
+  if (place.eventId && place.eventId === event.id) return true;
+  const eventLocationKey = normalizeText([event.city, event.country].filter(Boolean).join(" "));
+  const placeLocationKey = normalizeText([place.city, place.country].filter(Boolean).join(" "));
+  if (!eventLocationKey || eventLocationKey !== placeLocationKey) return false;
+
+  const eventName = normalizeText(event.name);
+  const tripLabel = normalizeText(place.trip?.label || "");
+  const placeNotes = normalizeText(place.notes || "");
+  return Boolean(eventName && (tripLabel.includes(eventName) || placeNotes.includes(eventName)));
+}
+
 function calendarTripMarkup(place) {
   const event = place.eventId ? state.events.find((item) => item.id === place.eventId) : null;
   return `
     <strong>${escapeHtml(event?.name || [place.city, place.country].filter(Boolean).join(", "))}</strong>
     ${event ? `<span>${escapeHtml([place.city, place.country].filter(Boolean).join(", "))}</span>` : ""}
+  `;
+}
+
+function calendarPtoDaysForDate(dateValue) {
+  if (!isSignedIn()) return [];
+  return state.personalTrips
+    .flatMap((trip) => (trip.ptoDays || []).map((ptoDay) => ({ ...ptoDay, trip })))
+    .filter((ptoDay) => ptoDay.date === dateValue)
+    .sort((a, b) => a.trip.startDate.localeCompare(b.trip.startDate));
+}
+
+function calendarPtoMarkup(ptoDay) {
+  const holiday = holidayForDate(ptoDay.date);
+  return `
+    <strong>${escapeHtml(holiday || formatPtoAmount(ptoDay.amount))}</strong>
+    <span>${escapeHtml(holiday ? "Holiday" : "PTO")}</span>
   `;
 }
 
@@ -1253,15 +1417,23 @@ function calendarEventMarkup(event) {
 
 function renderEvents() {
   elements.eventList.innerHTML = "";
+  const listYears = availableEventListYears();
+  if (state.listYear && !listYears.includes(state.listYear)) state.listYear = "";
+  setSelectOptions(
+    elements.listYearSelect,
+    [{ value: "", label: "All years" }, ...listYears.map((year) => ({ value: year, label: year }))],
+    state.listYear
+  );
   setSelectOptions(elements.listMonthSelect, monthOptions(), state.listMonth);
   elements.historyToggle.checked = state.showHistorical;
   const search = state.search.trim().toLowerCase();
   let events = state.events.filter((event) => {
-    const haystack = [event.name, event.city, event.country, event.venue, event.organizer, event.djs, event.artists, schengenLabel(event)].join(" ").toLowerCase();
+    const haystack = [event.name, event.city, event.country, event.venue, event.organizer, event.djs, event.artists, event.notes, schengenLabel(event)].join(" ").toLowerCase();
     const matchesSearch = !search || haystack.includes(search);
     const matchesTimeframe = state.showHistorical ? isHistorical(event) : !isHistorical(event);
+    const matchesYear = !state.listYear || eventYear(event) === state.listYear;
     const matchesMonth = !state.listMonth || eventMonthValue(event) === state.listMonth;
-    return matchesSearch && matchesTimeframe && matchesMonth;
+    return matchesSearch && matchesTimeframe && matchesYear && matchesMonth;
   });
 
   events = events.sort((a, b) => {
@@ -1276,7 +1448,15 @@ function renderEvents() {
     return;
   }
 
-  events.forEach((event) => elements.eventList.append(renderEventCard(event)));
+  events.forEach((event) => elements.eventList.append(renderEventCard(event, { collapseView: "calendarList" })));
+}
+
+function availableEventListYears() {
+  return uniqueValues(state.events
+    .filter((event) => state.showHistorical ? isHistorical(event) : !isHistorical(event))
+    .map(eventYear)
+    .filter(Boolean)
+  ).sort();
 }
 
 const monthNames = [
@@ -1375,7 +1555,7 @@ function populateFestivalFilters() {
       { value: "", label: "All sizes" },
       { value: "small", label: "Small" },
       { value: "medium", label: "Medium" },
-      { value: "large", label: "Large" },
+      { value: "large", label: "Large (legacy)" },
       { value: "extra large", label: "Extra large" }
     ],
     state.festivalSize
@@ -1442,6 +1622,7 @@ function renderFestivalList() {
     const filteredGroupEditions = filteredEditionsByKey.get(normalizeText(group.name)) || [];
     const detailsTarget = group.upcoming[0] || filteredGroupEditions[0] || group.editions[group.editions.length - 1];
     const score = detailsTarget ? reviewScoreForEvent(detailsTarget) : null;
+    const collapseId = normalizeText(group.name);
 
     card.innerHTML = `
       <div class="event-card-header">
@@ -1449,19 +1630,23 @@ function renderFestivalList() {
           <h3>${escapeHtml(group.name)}</h3>
           <p class="muted">${escapeHtml(group.locations.join(" | "))}</p>
         </div>
-        ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
+        <div class="card-header-actions">
+          ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
+          ${cardCollapseButton("eventList", collapseId)}
+        </div>
       </div>
-      ${detailsTarget && eventLocation(detailsTarget) ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(eventLocation(detailsTarget))}</span></div>` : ""}
-      <div class="festival-editions">
-        ${editionHistoryBlocks(group)}
-      </div>
-      <div class="event-actions">
-        ${detailActionButton(detailsTarget)}
-        ${sourceLink("Website", group.website)}
-        ${sourceLink("Instagram", group.instagram)}
-        ${sourceLink("Facebook", group.facebook)}
-        ${sourceLink("Tickets", group.tickets)}
-      </div>
+      ${collapsibleCardBody("eventList", collapseId, `
+        <div class="festival-editions">
+          ${editionHistoryBlocks(group)}
+        </div>
+        <div class="event-actions">
+          ${detailActionButton(detailsTarget)}
+          ${sourceLink("Website", group.website)}
+          ${sourceLink("Instagram", group.instagram)}
+          ${sourceLink("Facebook", group.facebook)}
+          ${sourceLink("Tickets", group.tickets)}
+        </div>
+      `)}
     `;
     elements.festivalList.append(card);
   });
@@ -1545,6 +1730,176 @@ function eachDate(startDate, endDate) {
   return dates;
 }
 
+function dateForYearMonthDay(year, month, day) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function nthWeekdayOfMonth(year, month, weekday, occurrence) {
+  const date = new Date(year, month - 1, 1, 12);
+  const offset = (weekday - date.getDay() + 7) % 7;
+  date.setDate(1 + offset + (occurrence - 1) * 7);
+  return localDateString(date);
+}
+
+function lastWeekdayOfMonth(year, month, weekday) {
+  const date = new Date(year, month, 0, 12);
+  const offset = (date.getDay() - weekday + 7) % 7;
+  date.setDate(date.getDate() - offset);
+  return localDateString(date);
+}
+
+function observedFixedHoliday(year, month, day) {
+  const actual = new Date(year, month - 1, day, 12);
+  if (actual.getDay() === 0) return localDateString(new Date(year, month - 1, day + 1, 12));
+  if (actual.getDay() === 6) return localDateString(new Date(year, month - 1, day - 1, 12));
+  return localDateString(actual);
+}
+
+function federalHolidaysForYear(year) {
+  const holidays = new Map();
+  const addHoliday = (date, name) => holidays.set(date, name);
+  const addFixedHoliday = (month, day, name) => {
+    addHoliday(dateForYearMonthDay(year, month, day), name);
+    const observed = observedFixedHoliday(year, month, day);
+    if (observed !== dateForYearMonthDay(year, month, day)) {
+      addHoliday(observed, `${name} observed`);
+    }
+  };
+
+  addFixedHoliday(1, 1, "New Year's Day");
+  addHoliday(lastWeekdayOfMonth(year, 5, 1), "Memorial Day");
+  addFixedHoliday(6, 19, "Juneteenth");
+  addFixedHoliday(7, 4, "July 4th");
+  addHoliday(nthWeekdayOfMonth(year, 9, 1, 1), "Labor Day");
+  addHoliday(nthWeekdayOfMonth(year, 11, 4, 4), "Thanksgiving");
+  addFixedHoliday(12, 25, "Christmas");
+  return holidays;
+}
+
+function holidayForDate(dateValue) {
+  const year = Number(dateValue.slice(0, 4));
+  if (!year) return "";
+  return federalHolidaysForYear(year).get(dateValue) || federalHolidaysForYear(year + 1).get(dateValue) || "";
+}
+
+function ptoDayCount(ptoDay) {
+  return holidayForDate(ptoDay.date) ? 0 : Number(ptoDay.amount || 0);
+}
+
+function tripPtoStats(trip) {
+  const ptoDays = trip.ptoDays || [];
+  const holidays = ptoDays.filter((ptoDay) => holidayForDate(ptoDay.date));
+  const requested = ptoDays.reduce((total, ptoDay) => total + Number(ptoDay.amount || 0), 0);
+  const counted = ptoDays.reduce((total, ptoDay) => total + ptoDayCount(ptoDay), 0);
+  return {
+    requested,
+    counted,
+    holidays: holidays.length
+  };
+}
+
+function totalPtoUsed() {
+  return state.personalTrips.reduce((total, trip) => total + tripPtoStats(trip).counted, 0);
+}
+
+function formatPtoAmount(amount) {
+  const value = Number(amount || 0);
+  return `${Number.isInteger(value) ? value : value.toFixed(1)} day${value === 1 ? "" : "s"}`;
+}
+
+function currentYearValue() {
+  return localDateString(new Date()).slice(0, 4);
+}
+
+function ptoDaysForYear(year) {
+  return state.personalTrips
+    .flatMap((trip) => (trip.ptoDays || []).map((ptoDay) => ({ ...ptoDay, trip })))
+    .filter((ptoDay) => ptoDay.date?.startsWith(`${year}-`))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.trip.label.localeCompare(b.trip.label));
+}
+
+function ptoYearStats(year) {
+  const ptoDays = ptoDaysForYear(year);
+  const counted = ptoDays.reduce((total, ptoDay) => total + ptoDayCount(ptoDay), 0);
+  const requested = ptoDays.reduce((total, ptoDay) => total + Number(ptoDay.amount || 0), 0);
+  const holidays = ptoDays.filter((ptoDay) => holidayForDate(ptoDay.date));
+  const halfDays = ptoDays.filter((ptoDay) => !holidayForDate(ptoDay.date) && Number(ptoDay.amount) === 0.5).length;
+  const fullDays = ptoDays.filter((ptoDay) => !holidayForDate(ptoDay.date) && Number(ptoDay.amount) === 1).length;
+  return {
+    ptoDays,
+    counted,
+    requested,
+    holidays,
+    halfDays,
+    fullDays
+  };
+}
+
+function tripYears(trip) {
+  const years = new Set();
+  eachDate(trip.startDate, trip.endDate).forEach((date) => years.add(date.slice(0, 4)));
+  return [...years];
+}
+
+function tripMonths(trip) {
+  const months = new Set();
+  eachDate(trip.startDate, trip.endDate).forEach((date) => months.add(date.slice(5, 7)));
+  return [...months];
+}
+
+function tripCountries(trip) {
+  return uniqueValues((trip.places || []).map((place) => place.country).filter(Boolean));
+}
+
+function tripHasSchengenImpact(trip) {
+  const windowStart = addDays(state.schengenCheckDate, -179);
+  return (trip.places || []).some((place) => {
+    if (schengenStatus(place) !== true) return false;
+    return eachDate(place.startDate, place.endDate).some((date) => date >= windowStart && date <= state.schengenCheckDate);
+  });
+}
+
+function tripMatchesFilters(trip) {
+  const today = localDateString(new Date());
+  const isPastTrip = trip.endDate < today;
+  const includeHistorical = state.showHistoricalTrips || (state.showSchengenImpactingTrips && tripHasSchengenImpact(trip));
+  if (isPastTrip && !includeHistorical) return false;
+  if (state.showSchengenImpactingTrips && !tripHasSchengenImpact(trip)) return false;
+  if (state.tripCountry && !tripCountries(trip).includes(state.tripCountry)) return false;
+  if (state.tripYear && !tripYears(trip).includes(state.tripYear)) return false;
+  if (state.tripMonth && !tripMonths(trip).includes(state.tripMonth)) return false;
+  return true;
+}
+
+function filteredTrips() {
+  return [...state.personalTrips]
+    .filter(tripMatchesFilters)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+}
+
+function populateTripFilters() {
+  if (elements.tripHistoryToggle) elements.tripHistoryToggle.checked = state.showHistoricalTrips;
+  if (elements.schengenImpactToggle) elements.schengenImpactToggle.checked = state.showSchengenImpactingTrips;
+
+  const countries = uniqueValues(state.personalTrips.flatMap(tripCountries)).sort((a, b) => a.localeCompare(b));
+  if (state.tripCountry && !countries.includes(state.tripCountry)) state.tripCountry = "";
+  setSelectOptions(
+    elements.tripCountrySelect,
+    [{ value: "", label: "All countries" }, ...countries.map((country) => ({ value: country, label: country }))],
+    state.tripCountry
+  );
+
+  const years = uniqueValues(state.personalTrips.flatMap(tripYears)).sort();
+  if (state.tripYear && !years.includes(state.tripYear)) state.tripYear = "";
+  setSelectOptions(
+    elements.tripYearSelect,
+    [{ value: "", label: "All years" }, ...years.map((year) => ({ value: year, label: year }))],
+    state.tripYear
+  );
+
+  setSelectOptions(elements.tripMonthSelect, monthOptions(), state.tripMonth);
+}
+
 function tripDateRange(item) {
   return dateRange({ startDate: item.startDate, endDate: item.endDate });
 }
@@ -1604,7 +1959,9 @@ function renderTrips() {
   elements.schengenCheckDate.value = state.schengenCheckDate;
   elements.tripList.innerHTML = "";
   elements.schengenSummary.innerHTML = "";
+  if (elements.ptoYearSummary) elements.ptoYearSummary.innerHTML = "";
   if (!isSignedIn()) return;
+  populateTripFilters();
 
   const usedOnCheckDate = schengenUsedOn(state.schengenCheckDate);
   const windowStart = addDays(state.schengenCheckDate, -179);
@@ -1620,15 +1977,22 @@ function renderTrips() {
       <p class="muted">${Math.max(0, 90 - usedOnCheckDate)} days remaining</p>
     </article>
   `;
+  renderPtoYearSummary();
 
-  const trips = [...state.personalTrips].sort((a, b) => a.startDate.localeCompare(b.startDate));
-  if (!trips.length) {
+  if (!state.personalTrips.length) {
     elements.tripList.append(emptyState("No trips yet", "Add city-by-city trip rows to start counting Schengen days."));
+    return;
+  }
+
+  const trips = filteredTrips();
+  if (!trips.length) {
+    elements.tripList.append(emptyState("No matching trips", "Adjust the trip filters or turn on historical trips."));
     return;
   }
 
   trips.forEach((trip) => {
     const stats = schengenTripStats(trip);
+    const ptoStats = tripPtoStats(trip);
     const placesMarkup = trip.places.map((place) => `
       <div class="trip-place">
         <strong>${escapeHtml(tripDateRange(place))}</strong>
@@ -1636,6 +2000,16 @@ function renderTrips() {
         <span class="pill ${schengenStatus(place) ? "score-pill" : "location-pill"}">${schengenLabel(place) || "Schengen unknown"}</span>
       </div>
     `).join("");
+    const ptoMarkup = (trip.ptoDays || []).map((ptoDay) => {
+      const holiday = holidayForDate(ptoDay.date);
+      return `
+        <div class="trip-place pto-place ${holiday ? "is-holiday" : ""}">
+          <strong>${escapeHtml(formatDate(ptoDay.date))}</strong>
+          <span>${escapeHtml(ptoDay.notes || "PTO")}</span>
+          <span class="pill ${holiday ? "location-pill" : "score-pill"}">${escapeHtml(holiday || formatPtoAmount(ptoDay.amount))}</span>
+        </div>
+      `;
+    }).join("");
     const card = document.createElement("article");
     card.className = "event-card trip-card";
     card.innerHTML = `
@@ -1650,15 +2024,58 @@ function renderTrips() {
         ${detailRow("Entry day count", `${stats.entryUsed} / 90`)}
         ${detailRow("Exit day count", `${stats.exitUsed} / 90`)}
         ${detailRow("Max during trip", `${stats.maxUsed} / 90`)}
+        ${detailRow("PTO count", `${formatPtoAmount(ptoStats.counted)}${ptoStats.holidays ? ` (${ptoStats.holidays} holiday${ptoStats.holidays === 1 ? "" : "s"} excluded)` : ""}`)}
         ${trip.notes ? detailRow("Notes", trip.notes) : ""}
       </div>
       <div class="trip-place-list">${placesMarkup}</div>
+      ${ptoMarkup ? `<div class="trip-place-list pto-place-list">${ptoMarkup}</div>` : ""}
       <div class="event-actions">
         <button type="button" data-action="edit-trip" data-id="${escapeHtml(trip.id)}">Edit</button>
       </div>
     `;
     elements.tripList.append(card);
   });
+}
+
+function renderPtoYearSummary() {
+  if (!elements.ptoYearSummary) return;
+  const year = currentYearValue();
+  const stats = ptoYearStats(year);
+  const ptoRows = stats.ptoDays.slice(0, 8).map((ptoDay) => {
+    const holiday = holidayForDate(ptoDay.date);
+    return `
+      <div class="pto-year-row ${holiday ? "is-holiday" : ""}">
+        <strong>${escapeHtml(formatDate(ptoDay.date))}</strong>
+        <span>${escapeHtml(ptoDay.trip.label)}</span>
+        <span class="pill ${holiday ? "location-pill" : "score-pill"}">${escapeHtml(holiday || formatPtoAmount(ptoDay.amount))}</span>
+      </div>
+    `;
+  }).join("");
+  const hiddenCount = Math.max(0, stats.ptoDays.length - 8);
+  elements.ptoYearSummary.innerHTML = `
+    <article class="event-card pto-year-card">
+      <div class="event-card-header">
+        <div>
+          <h3>${escapeHtml(year)} PTO tracker</h3>
+          <p class="muted">Full and half PTO days, with holidays excluded from the total.</p>
+        </div>
+        <span class="pill score-pill">${escapeHtml(formatPtoAmount(stats.counted))}</span>
+      </div>
+      <div class="summary-grid pto-year-grid">
+        <article class="summary-card">
+          <span class="detail-label">PTO used</span>
+          <strong>${escapeHtml(formatPtoAmount(stats.counted))}</strong>
+          <p class="muted">${escapeHtml(formatPtoAmount(stats.requested))} requested before holiday exclusions</p>
+        </article>
+        <article class="summary-card">
+          <span class="detail-label">Breakdown</span>
+          <strong>${stats.fullDays} full / ${stats.halfDays} half</strong>
+          <p class="muted">${stats.holidays.length} holiday${stats.holidays.length === 1 ? "" : "s"} excluded</p>
+        </article>
+      </div>
+      ${ptoRows ? `<div class="pto-year-list">${ptoRows}${hiddenCount ? `<p class="muted">+ ${hiddenCount} more PTO entr${hiddenCount === 1 ? "y" : "ies"}</p>` : ""}</div>` : "<p class=\"muted\">No PTO days marked for this year yet.</p>"}
+    </article>
+  `;
 }
 
 function renderAuth() {
@@ -1698,6 +2115,18 @@ function renderAuth() {
   if (elements.schengenSummary) {
     elements.schengenSummary.hidden = !isSignedIn();
   }
+  if (elements.ptoYearSummary) {
+    elements.ptoYearSummary.hidden = !isSignedIn();
+  }
+  [
+    elements.tripHistoryToggle,
+    elements.schengenImpactToggle,
+    elements.tripCountrySelect,
+    elements.tripYearSelect,
+    elements.tripMonthSelect
+  ].forEach((control) => {
+    if (control) control.disabled = !isSignedIn();
+  });
 }
 
 function renderReviews() {
@@ -1870,6 +2299,38 @@ function addTripPlaceRow(place) {
   elements.tripPlacesEditor.append(tripPlaceTemplate(place));
 }
 
+function ptoDayTemplate(ptoDay = {}) {
+  const row = document.createElement("section");
+  row.className = "trip-pto-row";
+  const dateValue = ptoDay.date || elements.tripStartDate.value || localDateString(new Date());
+  row.innerHTML = `
+    <div class="form-grid pto-day-grid">
+      <label class="field">
+        <span>Date</span>
+        <input data-pto-day="date" type="date" value="${escapeHtml(dateValue)}" required>
+      </label>
+      <label class="field">
+        <span>Amount</span>
+        <select data-pto-day="amount">
+          <option value="1" ${Number(ptoDay.amount || 1) === 1 ? "selected" : ""}>Full day</option>
+          <option value="0.5" ${Number(ptoDay.amount) === 0.5 ? "selected" : ""}>Half day</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Note</span>
+        <input data-pto-day="notes" type="text" value="${escapeHtml(ptoDay.notes || "")}" placeholder="Optional PTO note">
+      </label>
+      <div class="pto-day-status" data-pto-holiday>${escapeHtml(holidayForDate(dateValue) || "Counts as PTO")}</div>
+    </div>
+    <button class="secondary-action" type="button" data-trip-action="remove-pto">Remove PTO</button>
+  `;
+  return row;
+}
+
+function addPtoDayRow(ptoDay) {
+  elements.ptoDaysEditor.append(ptoDayTemplate(ptoDay));
+}
+
 function openTripDialog(tripId = "") {
   const trip = state.personalTrips.find((item) => item.id === tripId);
   elements.tripDialogTitle.textContent = trip ? "Edit trip" : "Add trip";
@@ -1880,7 +2341,9 @@ function openTripDialog(tripId = "") {
   elements.tripNotes.value = trip?.notes || "";
   elements.deleteTripBtn.hidden = !trip;
   elements.tripPlacesEditor.innerHTML = "";
+  elements.ptoDaysEditor.innerHTML = "";
   (trip?.places?.length ? trip.places : [{}]).forEach(addTripPlaceRow);
+  (trip?.ptoDays || []).forEach(addPtoDayRow);
   elements.tripDialog.showModal();
 }
 
@@ -1908,12 +2371,33 @@ function collectTripPlaces() {
   });
 }
 
+function collectPtoDays() {
+  return [...elements.ptoDaysEditor.querySelectorAll(".trip-pto-row")].map((row) => {
+    const value = (field) => row.querySelector(`[data-pto-day="${field}"]`)?.value.trim() || "";
+    return {
+      date: value("date"),
+      amount: Number(value("amount") || 1),
+      notes: value("notes")
+    };
+  }).filter((ptoDay) => ptoDay.date);
+}
+
+function updatePtoHolidayStatus(row) {
+  const dateValue = row.querySelector('[data-pto-day="date"]')?.value || "";
+  const status = row.querySelector("[data-pto-holiday]");
+  if (!status) return;
+  const holiday = holidayForDate(dateValue);
+  status.textContent = holiday || "Counts as PTO";
+  status.classList.toggle("is-holiday", Boolean(holiday));
+}
+
 async function saveTrip(event) {
   event.preventDefault();
   if (!elements.tripForm.reportValidity()) return;
   if (!isSignedIn()) return;
 
   const places = collectTripPlaces();
+  const ptoDays = collectPtoDays();
   if (!places.length) {
     window.alert("Add at least one city segment.");
     return;
@@ -1939,6 +2423,10 @@ async function saveTrip(event) {
         requiresAuth: true
       });
       await supabaseRequest(`personal_trip_places?trip_id=eq.${tripId}`, {
+        method: "DELETE",
+        requiresAuth: true
+      });
+      await supabaseRequest(`personal_pto_days?trip_id=eq.${tripId}`, {
         method: "DELETE",
         requiresAuth: true
       });
@@ -1970,6 +2458,23 @@ async function saveTrip(event) {
       body: placeRows,
       requiresAuth: true
     });
+    const ptoRows = ptoDays.map((ptoDay) => ({
+      id: crypto.randomUUID(),
+      trip_id: savedTrip.id,
+      owner_id: currentUserId(),
+      owner_email: currentUserEmail(),
+      pto_date: ptoDay.date,
+      amount: ptoDay.amount,
+      notes: ptoDay.notes,
+      access_level: "owner"
+    }));
+    if (ptoRows.length) {
+      await supabaseRequest("personal_pto_days", {
+        method: "POST",
+        body: ptoRows,
+        requiresAuth: true
+      });
+    }
     closeTripDialog();
     state.personalTrips = await loadSupabasePersonalTrips();
     render();
@@ -2199,6 +2704,7 @@ function handleAction(event) {
   const { action, id } = target.dataset;
   if (action === "details") openEventDetails(id);
   if (action === "edit-trip") openTripDialog(id);
+  if (action === "toggle-card-collapse") toggleCardCollapse(target.dataset.view, id);
 }
 
 async function handleAuthSubmit(event) {
@@ -2255,6 +2761,16 @@ function bindEvents() {
     state.selectedMonth = event.target.value;
     renderCalendar();
   });
+  elements.hideDuplicateAttendedToggle?.addEventListener("change", (event) => {
+    state.hideDuplicateAttendedEvents = event.target.checked;
+    localStorage.setItem("salsa-festivals-hide-duplicate-attended", String(state.hideDuplicateAttendedEvents));
+    renderCalendar();
+  });
+  elements.attendedOnlyToggle?.addEventListener("change", (event) => {
+    state.attendedOnlyCalendar = event.target.checked;
+    localStorage.setItem("salsa-festivals-attended-only-calendar", String(state.attendedOnlyCalendar));
+    renderCalendar();
+  });
   elements.prevMonthBtn.addEventListener("click", () => shiftSelectedMonth(-1));
   elements.nextMonthBtn.addEventListener("click", () => shiftSelectedMonth(1));
   elements.searchInput.addEventListener("input", (event) => {
@@ -2262,10 +2778,16 @@ function bindEvents() {
     renderEvents();
     renderCalendar();
   });
+  elements.listYearSelect?.addEventListener("change", (event) => {
+    state.listYear = event.target.value;
+    renderEvents();
+  });
   elements.listMonthSelect?.addEventListener("change", (event) => {
     state.listMonth = event.target.value;
     renderEvents();
   });
+  elements.collapseCalendarListBtn?.addEventListener("click", () => setCollapseMode("calendarList", true));
+  elements.expandCalendarListBtn?.addEventListener("click", () => setCollapseMode("calendarList", false));
   elements.festivalSearchInput.addEventListener("input", renderFestivalList);
   elements.festivalYearSelect.addEventListener("change", (event) => {
     state.festivalYear = event.target.value;
@@ -2285,18 +2807,55 @@ function bindEvents() {
     state.festivalSize = event.target.value;
     renderFestivalList();
   });
+  elements.collapseFestivalListBtn?.addEventListener("click", () => setCollapseMode("eventList", true));
+  elements.expandFestivalListBtn?.addEventListener("click", () => setCollapseMode("eventList", false));
   elements.schengenCheckDate?.addEventListener("change", (event) => {
     state.schengenCheckDate = event.target.value || localDateString(new Date());
+    renderTrips();
+  });
+  elements.tripHistoryToggle?.addEventListener("change", (event) => {
+    state.showHistoricalTrips = event.target.checked;
+    localStorage.setItem("salsa-festivals-show-historical-trips", String(state.showHistoricalTrips));
+    renderTrips();
+  });
+  elements.schengenImpactToggle?.addEventListener("change", (event) => {
+    state.showSchengenImpactingTrips = event.target.checked;
+    localStorage.setItem("salsa-festivals-show-schengen-impacting-trips", String(state.showSchengenImpactingTrips));
+    renderTrips();
+  });
+  elements.tripCountrySelect?.addEventListener("change", (event) => {
+    state.tripCountry = event.target.value;
+    renderTrips();
+  });
+  elements.tripYearSelect?.addEventListener("change", (event) => {
+    state.tripYear = event.target.value;
+    renderTrips();
+  });
+  elements.tripMonthSelect?.addEventListener("change", (event) => {
+    state.tripMonth = event.target.value;
     renderTrips();
   });
   elements.addTripBtn?.addEventListener("click", () => openTripDialog());
   elements.tripForm?.addEventListener("submit", saveTrip);
   elements.addTripPlaceBtn?.addEventListener("click", () => addTripPlaceRow());
+  elements.addPtoDayBtn?.addEventListener("click", () => addPtoDayRow());
   elements.tripPlacesEditor?.addEventListener("click", (event) => {
     const target = event.target.closest("[data-trip-action]");
     if (!target) return;
     if (target.dataset.tripAction === "remove-place") {
       target.closest(".trip-place-row")?.remove();
+    }
+  });
+  elements.ptoDaysEditor?.addEventListener("click", (event) => {
+    const target = event.target.closest("[data-trip-action]");
+    if (!target) return;
+    if (target.dataset.tripAction === "remove-pto") {
+      target.closest(".trip-pto-row")?.remove();
+    }
+  });
+  elements.ptoDaysEditor?.addEventListener("change", (event) => {
+    if (event.target.matches('[data-pto-day="date"]')) {
+      updatePtoHolidayStatus(event.target.closest(".trip-pto-row"));
     }
   });
   elements.tripDialog?.addEventListener("click", (event) => {
@@ -2311,6 +2870,7 @@ function bindEvents() {
   });
   elements.historyToggle.addEventListener("change", (event) => {
     state.showHistorical = event.target.checked;
+    state.listYear = "";
     renderEvents();
   });
   elements.tabs.forEach((tab) => {

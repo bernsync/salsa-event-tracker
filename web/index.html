@@ -39,6 +39,16 @@
             <button class="icon-button" id="nextMonthBtn" type="button" aria-label="Next month">&gt;</button>
           </div>
         </div>
+        <div class="calendar-filters">
+          <label class="toggle-field">
+            <input id="hideDuplicateAttendedToggle" type="checkbox">
+            <span>Hide duplicate attended events</span>
+          </label>
+          <label class="toggle-field">
+            <input id="attendedOnlyToggle" type="checkbox">
+            <span>Hide non-attended events</span>
+          </label>
+        </div>
         <div class="calendar-weekdays" aria-hidden="true">
           <span>Sun</span>
           <span>Mon</span>
@@ -59,6 +69,10 @@
           </div>
           <div class="toolbar-controls">
             <label class="field compact">
+              <span>Year</span>
+              <select id="listYearSelect"></select>
+            </label>
+            <label class="field compact">
               <span>Month</span>
               <select id="listMonthSelect"></select>
             </label>
@@ -77,8 +91,10 @@
             </label>
             <label class="search-box">
               <span class="sr-only">Search events</span>
-              <input id="searchInput" type="search" placeholder="Search events, city, country">
+              <input id="searchInput" type="search" placeholder="Search events, DJs, city, country">
             </label>
+            <button class="secondary-action" id="collapseCalendarListBtn" type="button">Collapse all</button>
+            <button class="secondary-action" id="expandCalendarListBtn" type="button">Expand all</button>
           </div>
         </div>
         <div id="eventList" class="event-list"></div>
@@ -111,7 +127,7 @@
                 <option value="">All sizes</option>
                 <option value="small">Small</option>
                 <option value="medium">Medium</option>
-                <option value="large">Large</option>
+                <option value="large">Large (legacy)</option>
                 <option value="extra large">Extra large</option>
               </select>
             </label>
@@ -119,6 +135,8 @@
               <span class="sr-only">Search festivals</span>
               <input id="festivalSearchInput" type="search" placeholder="Search festival, city, country">
             </label>
+            <button class="secondary-action" id="collapseFestivalListBtn" type="button">Collapse all</button>
+            <button class="secondary-action" id="expandFestivalListBtn" type="button">Expand all</button>
           </div>
         </div>
         <div id="festivalList" class="event-list"></div>
@@ -148,6 +166,32 @@
             <button class="primary-action" id="addTripBtn" type="button">Add trip</button>
           </div>
         </div>
+        <div class="calendar-filters trip-filters">
+          <label class="toggle-field">
+            <input id="tripHistoryToggle" type="checkbox">
+            <span>Show historical trips</span>
+          </label>
+          <label class="toggle-field">
+            <input id="schengenImpactToggle" type="checkbox">
+            <span>Show Schengen-impacting trips</span>
+          </label>
+          <label class="field compact">
+            <span>Country</span>
+            <select id="tripCountrySelect">
+              <option value="">All countries</option>
+            </select>
+          </label>
+          <label class="field compact">
+            <span>Year</span>
+            <select id="tripYearSelect">
+              <option value="">All years</option>
+            </select>
+          </label>
+          <label class="field compact">
+            <span>Month</span>
+            <select id="tripMonthSelect"></select>
+          </label>
+        </div>
         <div class="auth-panel" id="tripsAuthPanel">
           <div>
             <h3>Sign in to view trips</h3>
@@ -155,6 +199,7 @@
           </div>
         </div>
         <div id="schengenSummary" class="summary-grid"></div>
+        <div id="ptoYearSummary" class="pto-year-summary"></div>
         <div id="tripList" class="event-list"></div>
       </section>
 
@@ -252,6 +297,13 @@
             <button class="secondary-action" id="addTripPlaceBtn" type="button">Add city</button>
           </div>
           <div id="tripPlacesEditor"></div>
+        </div>
+        <div class="trip-place-editor">
+          <div class="trip-place-editor-header">
+            <h3>PTO days</h3>
+            <button class="secondary-action" id="addPtoDayBtn" type="button">Add PTO</button>
+          </div>
+          <div id="ptoDaysEditor"></div>
         </div>
         <div class="modal-actions">
           <button class="danger-action" id="deleteTripBtn" type="button">Delete</button>

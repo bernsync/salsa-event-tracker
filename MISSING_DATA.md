@@ -12,9 +12,9 @@ When updating data:
 - Do not use Salsa Vida as an official source.
 
 Event size values:
-- `small`: under 200 people
-- `medium`: 200-500 people
-- `large`: 500-999 people
+- `small`: under 250 people
+- `medium`: 250-999 people
+- `large`: legacy value; use `medium` or `extra large` going forward
 - `extra large`: 1000+ people
 
 ## Summary
