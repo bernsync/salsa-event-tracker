@@ -4,7 +4,7 @@ Supabase tracks edition rows separately from festival rows. If an event card say
 
 Use this file as the reviewed source queue for backfilling older editions. Add rows to `public.event_editions` only after checking an official source: official website, official Facebook event/page, official Instagram post, or official ticketing page. Do not use Salsa Vida as an official source.
 
-Reviewed SQL for source-confirmed rows lives in `supabase/manual-prior-edition-backfill.sql`.
+When a backfill SQL file has been run, it can be deleted. Keep this file as the ongoing queue of still-missing prior editions.
 
 ## Backfill Priority
 
@@ -15,7 +15,7 @@ These festivals have a 2026 edition in Supabase but do not currently have an old
 | Agozar | Dec 18-20, 2026 | Facebook page and Instagram | Needs prior edition row |
 | Amsterdam International Salsa Marathon | Oct 16-18, 2026 | International Salsa Festival website/Facebook | Needs prior edition row |
 | Baila New York | Jun 19-22, 2026 | Instagram and ticketing page | Needs prior edition row |
-| Brussels Mambo Weekend | Sep 4-7, 2026 | Facebook event/page and Weezevent | SQL prepared for 2025 |
+| Brussels Mambo Weekend | Sep 4-7, 2026 | Facebook event/page and Weezevent | Backfilled in Supabase for 2025 |
 | Brussels Salsa Marathon | Dec 4-7, 2026 | Instagram/Facebook | Needs prior edition row |
 | Chocolate Mambo Marathon | Jun 26-28, 2026 | Official website/Instagram | Needs prior edition row |
 | Cologne Salsa Congress | May 22-24, 2026 | Official website/Instagram/Facebook | Needs prior edition row |
@@ -24,7 +24,7 @@ These festivals have a 2026 edition in Supabase but do not currently have an old
 | El Sol | Nov 12-16, 2026 | Official website/Facebook/Instagram | Needs prior edition row |
 | Empire Sensual Movement | Jul 31-Aug 3, 2026 | ESM NYC website/Instagram | Needs prior edition row |
 | Jeju Latin Culture Festival | Jun 18-22, 2026 | Official website/Instagram | Needs prior edition row |
-| London Salsa Marathon | Jul 23-27, 2026 | Official website/Facebook/Instagram | SQL prepared for 2025 |
+| London Salsa Marathon | Jul 23-27, 2026 | Official website/Facebook/Instagram | Backfilled in Supabase for 2025 |
 | Mambo y Nada Mas | May 29-31, 2026 | The Dance House website/Facebook | Needs prior edition row |
 | Perfectly Mambo | Aug 21-23, 2026 | Official website/Instagram | Needs prior edition row |
 | Pink Marathon | Oct 23-25, 2026 | Instagram and ticketing page | Needs prior edition row |
