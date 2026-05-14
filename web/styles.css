@@ -148,10 +148,19 @@ select:focus-visible {
   margin-bottom: 14px;
 }
 
+.toolbar > div:first-child {
+  flex: 0 1 280px;
+  min-width: min(240px, 100%);
+}
+
 .toolbar-controls {
   display: flex;
   align-items: flex-end;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
   gap: 10px;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .month-controls {
@@ -253,6 +262,7 @@ select:focus-visible {
 }
 
 .search-box {
+  flex: 1 1 280px;
   min-width: min(300px, 42vw);
 }
 
@@ -1035,6 +1045,11 @@ select:focus-visible {
   .toolbar {
     gap: 10px;
     margin-bottom: 10px;
+  }
+
+  .toolbar > div:first-child {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .toolbar h2 {
