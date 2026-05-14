@@ -425,6 +425,39 @@ select:focus-visible {
   font-weight: 800;
 }
 
+.calendar-trip {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  border: 1px solid #bfd7cf;
+  border-radius: 6px;
+  background: #eef9f4;
+  color: #174d42;
+  cursor: pointer;
+  padding: 7px;
+  text-align: left;
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+
+.calendar-trip.is-travel {
+  border-color: #bfd0ef;
+  background: #f1f6ff;
+  color: #274c85;
+}
+
+.calendar-trip strong,
+.calendar-trip span {
+  display: block;
+}
+
+.calendar-trip span {
+  margin-top: 3px;
+  color: inherit;
+  opacity: 0.78;
+  font-size: 0.68rem;
+}
+
 .calendar-event strong,
 .calendar-event span {
   display: block;
@@ -439,6 +472,16 @@ select:focus-visible {
 .calendar-event:hover {
   background: #ffefc7;
   border-color: #e7bd64;
+}
+
+.calendar-trip:hover {
+  background: #e2f4ec;
+  border-color: #8ec1b3;
+}
+
+.calendar-trip.is-travel:hover {
+  background: #e6efff;
+  border-color: #91addf;
 }
 
 .event-card,
