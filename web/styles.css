@@ -380,7 +380,14 @@ select:focus-visible {
   font-weight: 900;
 }
 
-.calendar-event {
+.calendar-event-card {
+  display: grid;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.calendar-event,
+.calendar-prior-event {
   display: block;
   width: 100%;
   border: 1px solid #f4d8a0;
@@ -388,7 +395,6 @@ select:focus-visible {
   background: #fff8e8;
   color: #694600;
   cursor: pointer;
-  margin-top: 5px;
   padding: 7px;
   text-align: left;
   font-size: 0.76rem;
@@ -406,9 +412,22 @@ select:focus-visible {
   font-size: 0.7rem;
 }
 
+.calendar-prior-event {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  color: #40516a;
+  padding: 5px 7px;
+  font-size: 0.72rem;
+}
+
 .calendar-event:hover {
   background: #ffefc7;
   border-color: #e7bd64;
+}
+
+.calendar-prior-event:hover {
+  background: #edf2f7;
+  border-color: #aebccd;
 }
 
 .event-card,
@@ -526,7 +545,7 @@ select:focus-visible {
 
 .festival-editions {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: 14px;
 }

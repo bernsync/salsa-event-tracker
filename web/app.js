@@ -1196,7 +1196,6 @@ function renderEventCard(event) {
     ${location ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(location)}</span></div>` : ""}
     ${detailRows ? `<div class="event-detail">${detailRows}</div>` : ""}
     <div class="event-actions">
-      <button type="button" data-action="details" data-id="${event.id}">Details</button>
       ${sourceLink("Website", event.website)}
       ${sourceLink("Instagram", event.instagram)}
       ${sourceLink("Facebook", event.facebook)}
@@ -1246,6 +1245,9 @@ function renderCalendar() {
     `;
 
     dayEvents.forEach((event) => {
+      const priorEdition = priorEditionFor(event);
+      const wrapper = document.createElement("div");
+      wrapper.className = "calendar-event-card";
       const button = document.createElement("button");
       button.className = "calendar-event";
       button.type = "button";
@@ -1253,7 +1255,17 @@ function renderCalendar() {
       button.dataset.id = event.id;
       button.setAttribute("aria-label", `View details for ${event.name}`);
       button.innerHTML = calendarEventMarkup(event);
-      day.append(button);
+      wrapper.append(button);
+      if (priorEdition) {
+        const priorButton = document.createElement("button");
+        priorButton.className = "calendar-prior-event";
+        priorButton.type = "button";
+        priorButton.dataset.action = "details";
+        priorButton.dataset.id = priorEdition.id;
+        priorButton.textContent = `${eventYear(priorEdition)} edition`;
+        wrapper.append(priorButton);
+      }
+      day.append(wrapper);
     });
 
     elements.calendarGrid.append(day);
@@ -1455,14 +1467,8 @@ function renderFestivalList() {
   groups.forEach((group) => {
     const card = document.createElement("article");
     card.className = "event-card";
-    const selectedEditions = filteredEditionsByKey.get(normalizeText(group.name)) || [];
-    const firstSelected = selectedEditions[0];
-    const lastSelected = selectedEditions[selectedEditions.length - 1];
-    const priorEdition = group.editions
-      .filter((event) => firstSelected && event.startDate < firstSelected.startDate)
-      .at(-1);
-    const nextTrackedEdition = group.editions.find((event) => lastSelected && event.startDate > lastSelected.startDate);
-    const detailsTarget = firstSelected || nextTrackedEdition || priorEdition || group.editions[group.editions.length - 1];
+    const filteredGroupEditions = filteredEditionsByKey.get(normalizeText(group.name)) || [];
+    const detailsTarget = group.upcoming[0] || filteredGroupEditions[0] || group.editions[group.editions.length - 1];
     const score = detailsTarget ? reviewScoreForEvent(detailsTarget) : null;
 
     card.innerHTML = `
@@ -1475,12 +1481,10 @@ function renderFestivalList() {
       </div>
       ${detailsTarget && eventLocation(detailsTarget) ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(eventLocation(detailsTarget))}</span></div>` : ""}
       <div class="festival-editions">
-        ${selectedEditionBlocks(selectedEditions, state.festivalYear)}
-        ${editionBlock("Prior tracked edition", priorEdition, "No tracked prior edition yet. Add the verified older Facebook/event-page edition to Supabase when found.")}
-        ${editionBlock("Next tracked edition", nextTrackedEdition, "No later tracked edition yet.")}
+        ${editionHistoryBlocks(group)}
       </div>
       <div class="event-actions">
-        ${detailsTarget ? `<button type="button" data-action="details" data-id="${detailsTarget.id}">Details</button>` : ""}
+        ${detailActionButton(detailsTarget)}
         ${sourceLink("Website", group.website)}
         ${sourceLink("Instagram", group.instagram)}
         ${sourceLink("Facebook", group.facebook)}
