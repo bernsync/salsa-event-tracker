@@ -1175,6 +1175,20 @@ function renderCalendar() {
         return haystack.includes(searchQuery);
       })
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const dayTripPlaces = calendarTripPlacesForDate(dateValue)
+      .filter((place) => {
+        if (!searchQuery) return true;
+        const event = place.eventId ? state.events.find((item) => item.id === place.eventId) : null;
+        const haystack = [
+          place.city,
+          place.country,
+          place.notes,
+          place.trip.label,
+          event?.name,
+          schengenLabel(place)
+        ].join(" ").toLowerCase();
+        return haystack.includes(searchQuery);
+      });
     const day = document.createElement("section");
     day.className = "calendar-day";
     if (date.getMonth() !== month - 1) day.classList.add("is-outside");
@@ -1199,8 +1213,35 @@ function renderCalendar() {
       day.append(wrapper);
     });
 
+    dayTripPlaces.forEach((place) => {
+      const chip = document.createElement("button");
+      chip.className = `calendar-trip ${place.eventId ? "is-event-linked" : "is-travel"}`;
+      chip.type = "button";
+      chip.dataset.action = "edit-trip";
+      chip.dataset.id = place.trip.id;
+      chip.setAttribute("aria-label", `Edit trip ${place.trip.label}`);
+      chip.innerHTML = calendarTripMarkup(place);
+      day.append(chip);
+    });
+
     elements.calendarGrid.append(day);
   }
+}
+
+function calendarTripPlacesForDate(dateValue) {
+  if (!isSignedIn()) return [];
+  return state.personalTrips
+    .flatMap((trip) => trip.places.map((place) => ({ ...place, trip })))
+    .filter((place) => place.startDate <= dateValue && place.endDate >= dateValue)
+    .sort((a, b) => a.sequence - b.sequence || a.city.localeCompare(b.city));
+}
+
+function calendarTripMarkup(place) {
+  const event = place.eventId ? state.events.find((item) => item.id === place.eventId) : null;
+  return `
+    <strong>${escapeHtml(event?.name || [place.city, place.country].filter(Boolean).join(", "))}</strong>
+    ${event ? `<span>${escapeHtml([place.city, place.country].filter(Boolean).join(", "))}</span>` : ""}
+  `;
 }
 
 function calendarEventMarkup(event) {
