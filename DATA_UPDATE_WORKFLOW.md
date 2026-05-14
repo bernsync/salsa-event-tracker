@@ -24,14 +24,42 @@ Use this for discovery and review.
 
 ### 2. Manual Supabase Upsert Workflow
 
-Recommended next workflow:
+The workflow `.github/workflows/upsert-supabase-events.yml` can be started manually from GitHub Actions.
 
 1. Trigger from GitHub Actions on phone or desktop with `workflow_dispatch`.
 2. Paste a small reviewed JSON payload of events or editions.
 3. A script validates required fields, dedupes by event name + city + country + dates, and upserts to Supabase using `SUPABASE_SERVICE_ROLE_KEY`.
-4. The workflow posts a summary back to the run or an issue.
+4. The workflow logs exactly which events and editions it created or updated.
 
 This is best for public festival data after you have verified dates, venues, links, and organizers.
+
+Payload shape:
+
+```json
+{
+  "events": [
+    {
+      "name": "World Stars Salsa Festival",
+      "organizer": "Koda Production",
+      "website": "https://varnasalsafestival.com/",
+      "instagram": "@world_stars_salsa_festival",
+      "facebook": "https://www.facebook.com/varnasalsafest/",
+      "editions": [
+        {
+          "start_date": "2027-04-22",
+          "end_date": "2027-04-26",
+          "city": "Albena",
+          "country": "Bulgaria",
+          "venue": "Hotel Maritim Paradise Blue 5*, Albena Resort",
+          "tickets": "https://ticket.varnasalsafestival.com/",
+          "event_size": "large",
+          "notes": "Official Instagram result screenshot lists 22-26 April 2027."
+        }
+      ]
+    }
+  ]
+}
+```
 
 ### 3. Issue-Driven Update Requests
 

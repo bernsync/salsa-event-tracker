@@ -1,0 +1,31 @@
+name: Upsert Supabase events
+
+on:
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: "Reviewed JSON payload with events and editions to upsert"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  upsert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Upsert event data
+        run: node scripts/upsert-supabase-events.mjs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EVENT_UPSERT_JSON: ${{ inputs.payload }}
