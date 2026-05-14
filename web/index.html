@@ -20,6 +20,7 @@
         <button class="tab" data-view="events" type="button">Calendar List</button>
         <button class="tab" data-view="festivalList" type="button">Event List</button>
         <button class="tab" data-view="recentlyAdded" type="button">Recently Added</button>
+        <button class="tab" data-view="trips" type="button">Trips</button>
         <button class="tab" data-view="reviews" type="button">Reviews</button>
       </nav>
 
@@ -133,6 +134,30 @@
         <div id="recentlyAddedList" class="event-list"></div>
       </section>
 
+      <section class="view" id="tripsView" aria-labelledby="tripsTitle">
+        <div class="toolbar">
+          <div>
+            <h2 id="tripsTitle">Trips</h2>
+            <p class="muted">Private city-by-city travel and Schengen day counts.</p>
+          </div>
+          <div class="toolbar-controls">
+            <label class="field compact">
+              <span>Check date</span>
+              <input id="schengenCheckDate" type="date">
+            </label>
+            <button class="primary-action" id="addTripBtn" type="button">Add trip</button>
+          </div>
+        </div>
+        <div class="auth-panel" id="tripsAuthPanel">
+          <div>
+            <h3>Sign in to view trips</h3>
+            <p class="muted">Trip and visa-day data is private to your Supabase account.</p>
+          </div>
+        </div>
+        <div id="schengenSummary" class="summary-grid"></div>
+        <div id="tripList" class="event-list"></div>
+      </section>
+
       <section class="view" id="reviewsView" aria-labelledby="reviewsTitle">
         <div class="toolbar">
           <div>
@@ -189,6 +214,49 @@
         <div id="eventDetailsLinks" class="event-actions"></div>
         <div class="modal-actions">
           <button class="secondary-action" value="cancel" type="submit">Close</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="tripDialog" class="modal wide-modal">
+      <form id="tripForm">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Private trip</p>
+            <h2 id="tripDialogTitle">Add trip</h2>
+          </div>
+          <button class="icon-button" value="cancel" type="button" aria-label="Close" data-trip-action="close">x</button>
+        </div>
+        <input id="tripId" type="hidden">
+        <label class="field">
+          <span>Trip label</span>
+          <input id="tripLabel" type="text" placeholder="Bucharest + Greece + Zagreb April 2026" required>
+        </label>
+        <div class="form-grid two">
+          <label class="field">
+            <span>Start date</span>
+            <input id="tripStartDate" type="date" required>
+          </label>
+          <label class="field">
+            <span>End date</span>
+            <input id="tripEndDate" type="date" required>
+          </label>
+        </div>
+        <label class="field">
+          <span>Notes</span>
+          <textarea id="tripNotes" rows="2" placeholder="Private trip notes"></textarea>
+        </label>
+        <div class="trip-place-editor">
+          <div class="trip-place-editor-header">
+            <h3>City segments</h3>
+            <button class="secondary-action" id="addTripPlaceBtn" type="button">Add city</button>
+          </div>
+          <div id="tripPlacesEditor"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="danger-action" id="deleteTripBtn" type="button">Delete</button>
+          <button class="secondary-action" value="cancel" type="button" data-trip-action="close">Cancel</button>
+          <button class="primary-action" id="saveTripBtn" type="submit">Save trip</button>
         </div>
       </form>
     </dialog>

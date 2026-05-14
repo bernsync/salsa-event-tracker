@@ -95,4 +95,5 @@ Use service-role scripts or manually reviewed SQL for admin-managed public refer
 | `schengen_countries` | `public` | Public reference lookup. |
 | `reviews` | `owner` | Personal review data behind login. Revisit access before any community review launch. |
 | `personal_trips` | `owner` | Private travel and visa planning data. |
+| `personal_trip_places` | `owner` | Private city/date rows for trip and Schengen calculations. |
 | `trips` | `owner` | Private travel and visa planning data unless explicitly reclassified. |
