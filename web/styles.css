@@ -273,6 +273,25 @@ select:focus-visible {
   accent-color: var(--accent);
 }
 
+.calendar-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: -4px 0 12px;
+}
+
+.calendar-filters .toggle-field {
+  min-height: 34px;
+}
+
+.calendar-filters .toggle-field:has(input:disabled) {
+  opacity: 0.55;
+}
+
+.trip-filters {
+  align-items: flex-end;
+}
+
 .event-grid,
 .event-list,
 .review-list,
@@ -303,6 +322,39 @@ select:focus-visible {
 .summary-card.is-danger {
   border-color: #f2b9c1;
   background: #fff1f3;
+}
+
+.pto-year-summary {
+  margin-bottom: 12px;
+}
+
+.pto-year-card {
+  display: grid;
+  gap: 12px;
+}
+
+.pto-year-grid {
+  margin-bottom: 0;
+}
+
+.pto-year-list {
+  display: grid;
+  gap: 8px;
+}
+
+.pto-year-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(180px, 1.3fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 9px 10px;
+}
+
+.pto-year-row.is-holiday {
+  background: #fff8e8;
 }
 
 .month-section {
@@ -446,6 +498,18 @@ select:focus-visible {
   color: #274c85;
 }
 
+.calendar-pto {
+  border-color: #d7c4ee;
+  background: #f7f2ff;
+  color: #54327b;
+}
+
+.calendar-pto.is-holiday {
+  border-color: #f4d8a0;
+  background: #fff8e8;
+  color: #694600;
+}
+
 .calendar-trip strong,
 .calendar-trip span {
   display: block;
@@ -484,6 +548,16 @@ select:focus-visible {
   border-color: #91addf;
 }
 
+.calendar-pto:hover {
+  background: #eee3ff;
+  border-color: #b79bdd;
+}
+
+.calendar-pto.is-holiday:hover {
+  background: #ffefc7;
+  border-color: #e7bd64;
+}
+
 .event-card,
 .review-card {
   background: var(--panel);
@@ -503,6 +577,24 @@ select:focus-visible {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.card-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.card-collapse-button {
+  min-height: 30px;
+  padding: 0 9px;
+  font-size: 0.78rem;
+}
+
+.card-collapsible[hidden] {
+  display: none;
 }
 
 .event-card h3,
@@ -639,7 +731,8 @@ select:focus-visible {
   margin: 0;
 }
 
-.trip-place-row {
+.trip-place-row,
+.trip-pto-row {
   display: grid;
   gap: 10px;
   border: 1px solid var(--line);
@@ -659,6 +752,31 @@ select:focus-visible {
 
 .trip-place-grid {
   grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.pto-day-grid {
+  grid-template-columns: minmax(150px, 1fr) minmax(130px, 0.8fr) minmax(220px, 1.3fr) minmax(150px, 0.8fr);
+  align-items: end;
+}
+
+.pto-day-status {
+  min-height: 42px;
+  border: 1px solid #bfd7cf;
+  border-radius: 8px;
+  background: #eef9f4;
+  color: #174d42;
+  padding: 11px;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.pto-day-status.is-holiday,
+.pto-place.is-holiday {
+  background: #fff8e8;
+}
+
+.pto-place-list {
+  margin-top: 8px;
 }
 
 .wide-modal {
@@ -859,6 +977,10 @@ select:focus-visible {
 }
 
 @media (max-width: 760px) {
+  body {
+    font-size: 15px;
+  }
+
   .app-header,
   .toolbar,
   .toolbar-controls,
@@ -869,7 +991,94 @@ select:focus-visible {
   }
 
   .app-header {
-    padding-top: 22px;
+    gap: 10px;
+    padding: 16px 14px;
+  }
+
+  .app-header h1 {
+    font-size: 1.25rem;
+  }
+
+  .auth-status {
+    position: static;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .app-shell {
+    width: min(100% - 16px, 760px);
+    margin-top: 10px;
+  }
+
+  .tabs {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    gap: 6px;
+    margin-inline: -2px;
+    padding: 6px;
+    border-radius: 8px;
+    scrollbar-width: thin;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+    min-width: max-content;
+    padding: 9px 11px;
+    font-size: 0.86rem;
+  }
+
+  .view {
+    margin-top: 12px;
+  }
+
+  .toolbar {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .toolbar h2 {
+    font-size: 1.18rem;
+  }
+
+  .toolbar-controls,
+  .month-controls {
+    gap: 8px;
+  }
+
+  .month-controls {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 42px;
+  }
+
+  .month-controls .field {
+    min-width: 0;
+  }
+
+  .calendar-filters {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 0 0 10px;
+  }
+
+  .trip-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .primary-action,
+  .secondary-action,
+  .danger-action,
+  .event-actions button,
+  .event-actions a,
+  .event-status {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .icon-button {
+    width: 42px;
+    height: 42px;
   }
 
   .search-box,
@@ -883,19 +1092,73 @@ select:focus-visible {
 
   .calendar-grid {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   .calendar-day {
     min-height: auto;
+    padding: 10px;
   }
 
   .calendar-day.is-outside {
     display: none;
   }
 
+  .calendar-date {
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 6px;
+  }
+
+  .calendar-event,
+  .calendar-trip {
+    padding: 10px;
+    font-size: 0.86rem;
+  }
+
+  .calendar-event span,
+  .calendar-trip span {
+    font-size: 0.78rem;
+  }
+
+  .event-card,
+  .review-card,
+  .summary-card,
+  .auth-panel {
+    padding: 12px;
+  }
+
+  .event-card-header,
+  .modal-header,
+  .month-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .card-header-actions {
+    justify-content: flex-start;
+  }
+
+  .card-header-actions .pill,
+  .card-collapse-button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-card strong {
+    font-size: 1.35rem;
+  }
+
   .form-grid,
   .trip-place-grid,
+  .pto-day-grid,
   .trip-place,
+  .pto-year-row,
   .score-grid,
   .detail-row,
   .festival-editions {
@@ -904,6 +1167,27 @@ select:focus-visible {
 
   .span-2 {
     grid-column: auto;
+  }
+
+  .event-actions,
+  .modal-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .modal {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
+
+  .modal form {
+    padding: 14px;
+  }
+
+  .trip-place-row,
+  .trip-pto-row,
+  .edition-block {
+    padding: 10px;
   }
 }
 
