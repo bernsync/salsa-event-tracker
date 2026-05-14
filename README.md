@@ -1,20 +1,25 @@
 # Salsa Festivals Tracker
 
-A low-cost tracker for salsa festivals in Europe. The current practical version is a browser app in `web/` because it can run on Windows without a Mac or Xcode.
+A low-cost tracker for salsa festivals. The current practical version is a browser app in `web/` backed by Supabase.
 
 ## Current MVP
 
 - Calendar tab for festivals by month
 - Event list with search
 - Festival detail pages with website, Instagram, and Facebook links
-- Manual event creation and editing
-- Local personal reviews with category scores
-- Browser localStorage persistence
-- Sample festivals to make first launch less empty
+- Supabase-backed public event data
+- Supabase-backed Schengen country status
+- Private reviews behind login
 
 ## Cost-Saving Approach
 
-This version has no backend, no login, and no paid scraping service. Data lives locally in your browser.
+This version uses GitHub Pages for free hosting and Supabase for the small amount of structured data. Supabase should remain on the free tier for this app's expected data volume.
+
+## Data Source Rule
+
+Supabase is the source of truth for durable app data. Do not add new hardcoded local lists or seed-style datasets for production features. New data-backed features should use Supabase tables first, with local files reserved for UI code, cleanup helpers, or temporary offline fallbacks.
+
+See `DATA_ACCESS.md` for public/authenticated/owner data rules and `DATA_UPDATE_WORKFLOW.md` for remote update and automation options.
 
 ## How To Open
 
