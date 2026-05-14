@@ -24,7 +24,6 @@ const state = {
   schengenCountries: new Map(),
   schengenCountriesLoaded: false,
   supabaseLoadStatus: {},
-  deletedReviewSourceIds: [],
   activeView: localStorage.getItem("salsa-festivals-active-view") || "calendar",
   search: "",
   sort: "date",
@@ -91,10 +90,6 @@ const removedEventNames = new Set([
   "live 2 mambo: 2 weekends",
   "super mario birthday"
 ]);
-
-const sharedEventFields = ["organizer", "website", "instagram", "facebook"];
-const editionSpecificEventFields = ["venue", "tickets", "price", "currency", "djs", "artists", "eventSize", "travel", "addedOn", "notes"];
-const eventMetadataFields = [...sharedEventFields, ...editionSpecificEventFields];
 
 const eventDateCorrections = {
   "prague salsa marathon|2026-05-09|2026-05-11": ["2026-05-07", "2026-05-11"],
@@ -171,34 +166,9 @@ const elements = {
 };
 
 function loadState() {
-  const raw = localStorage.getItem(storageKey);
-  if (raw) {
-    try {
-      const saved = JSON.parse(raw);
-      state.events = saved.events || [];
-      state.reviews = saved.reviews || [];
-      state.deletedReviewSourceIds = saved.deletedReviewSourceIds || [];
-      canonicalizeEventNames();
-      correctEventDates();
-      removeLegacySampleEvents();
-      deduplicateEvents();
-      mergeSeedEvents();
-      removeUnverifiedEditionDefaults();
-      deduplicateEvents();
-      deduplicateCalendarEditions();
-      mergeHardcodedReviews();
-      return;
-    } catch {
-      localStorage.removeItem(storageKey);
-    }
-  }
-
+  localStorage.removeItem(storageKey);
   state.events = [];
-  mergeSeedEvents();
-  removeUnverifiedEditionDefaults();
-  deduplicateEvents();
-  deduplicateCalendarEditions();
-  mergeHardcodedReviews();
+  state.reviews = [];
 }
 
 function loadAuthSession() {
@@ -363,7 +333,7 @@ async function loadSupabaseEvents() {
     );
     return mapSupabaseEvents(rows);
   } catch (error) {
-    console.warn("Supabase public events unavailable; using repo seed data.", error);
+    console.warn("Supabase public events unavailable.", error);
     setSupabaseLoadStatus("events", "error");
     setSupabaseLoadStatus("event_editions", "error");
     return [];
@@ -727,170 +697,6 @@ function eventDetailScore(event) {
     .reduce((score, field) => score + (event[field] ? String(event[field]).length : 0), 0);
 }
 
-function pickFields(source, fields) {
-  return fields.reduce((picked, field) => {
-    if (source?.[field]) {
-      picked[field] = source[field];
-    }
-    return picked;
-  }, {});
-}
-
-function editionDetailsKey(event) {
-  return [canonicalNameFor(event.name), event.startDate].map(normalizeText).join("|");
-}
-
-function sharedEventDetails(event) {
-  const canonicalName = canonicalNameFor(event.name);
-  const linkData = window.eventLinks?.[canonicalName] || window.eventLinks?.[event.name] || {};
-  return pickFields(linkData, sharedEventFields);
-}
-
-function editionSpecificDetails(event) {
-  return window.eventEditionDetails?.[editionDetailsKey(event)] || {};
-}
-
-function hydrateEventDetails(event) {
-  return {
-    ...event,
-    ...sharedEventDetails(event),
-    ...editionSpecificDetails(event)
-  };
-}
-
-function mergeSeedEvents() {
-  if (!Array.isArray(window.seedEvents)) return;
-
-  let changed = false;
-  window.seedEvents.forEach((seed) => {
-    seed.name = canonicalNameForEdition(seed.name, seed.startDate);
-    const hydratedSeed = hydrateEventDetails(seed);
-    const existing = state.events.find((event) => eventKey(event) === eventKey(seed));
-    if (existing) {
-      changed = updateMissingEventFields(existing, hydratedSeed) || changed;
-      return;
-    }
-
-    state.events.push({
-      id: crypto.randomUUID(),
-      name: hydratedSeed.name,
-      startDate: hydratedSeed.startDate,
-      endDate: hydratedSeed.endDate,
-      city: hydratedSeed.city || "",
-      country: hydratedSeed.country || "",
-      venue: hydratedSeed.venue || "",
-      organizer: hydratedSeed.organizer || "",
-      website: hydratedSeed.website || "",
-      instagram: hydratedSeed.instagram || "",
-      facebook: hydratedSeed.facebook || "",
-      tickets: hydratedSeed.tickets || "",
-      price: hydratedSeed.price || "",
-      currency: hydratedSeed.currency || "",
-      djs: hydratedSeed.djs || "",
-      artists: hydratedSeed.artists || "",
-      eventSize: hydratedSeed.eventSize || "",
-      travel: hydratedSeed.travel || "",
-      addedOn: hydratedSeed.addedOn || "",
-      notes: hydratedSeed.notes || "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    changed = true;
-  });
-
-  if (changed) {
-    saveState();
-  }
-}
-
-function removeUnverifiedEditionDefaults() {
-  let changed = false;
-
-  state.events.forEach((event) => {
-    let eventChanged = false;
-    event.name = canonicalNameFor(event.name);
-    const sharedData = window.eventLinks?.[event.name] || {};
-    const editionData = editionSpecificDetails(event);
-
-    editionSpecificEventFields.forEach((field) => {
-      if (!editionData[field] && sharedData[field] && event[field] === sharedData[field]) {
-        event[field] = "";
-        eventChanged = true;
-      }
-    });
-
-    if (!event.price && event.currency) {
-      event.currency = "";
-      eventChanged = true;
-    }
-
-    if (eventChanged) {
-      event.updatedAt = new Date().toISOString();
-      changed = true;
-    }
-  });
-
-  if (changed) {
-    saveState();
-  }
-}
-
-function mergeHardcodedReviews() {
-  if (!Array.isArray(window.hardcodedReviews)) return;
-
-  let changed = false;
-  window.hardcodedReviews.forEach((sourceReview) => {
-    if (state.deletedReviewSourceIds.includes(sourceReview.sourceId)) return;
-    const event = state.events.find((item) => (
-      eventFamilyKey(item) === normalizeText(sourceReview.eventName)
-      && item.startDate === sourceReview.eventStartDate
-      && item.endDate === sourceReview.eventEndDate
-    ));
-    if (!event) return;
-
-    const existing = state.reviews.find((review) => review.sourceId === sourceReview.sourceId);
-    const nextReview = {
-      sourceId: sourceReview.sourceId,
-      eventId: event.id,
-      scores: sourceReview.scores,
-      categoryComments: sourceReview.categoryComments || {},
-      topReason: sourceReview.topReason || "",
-      notes: sourceReview.notes || "",
-      reviewedAt: sourceReview.reviewedAt || new Date().toISOString(),
-      isPublished: true
-    };
-
-    if (existing) {
-      if (existing.userModified) return;
-      Object.assign(existing, nextReview, { id: existing.id, updatedAt: new Date().toISOString() });
-    } else {
-      state.reviews.push({ id: crypto.randomUUID(), ...nextReview });
-    }
-    changed = true;
-  });
-
-  if (changed) {
-    saveState();
-  }
-}
-
-function updateMissingEventFields(event, source) {
-  let changed = false;
-
-  eventMetadataFields.forEach((field) => {
-    if (source[field] && event[field] !== source[field]) {
-      event[field] = source[field];
-      changed = true;
-    }
-  });
-
-  if (changed) {
-    event.updatedAt = new Date().toISOString();
-  }
-
-  return changed;
-}
-
 function eventKey(event) {
   return [
     event.name,
@@ -923,8 +729,7 @@ function normalizeText(value) {
 function saveState() {
   localStorage.setItem(storageKey, JSON.stringify({
     events: state.events,
-    reviews: state.reviews,
-    deletedReviewSourceIds: state.deletedReviewSourceIds
+    reviews: state.reviews
   }));
 }
 
@@ -1863,7 +1668,6 @@ function saveReview() {
     existing.categoryComments = categoryComments;
     existing.topReason = elements.topReason.value.trim();
     existing.notes = elements.reviewNotes.value.trim();
-    existing.userModified = Boolean(existing.sourceId);
     existing.updatedAt = new Date().toISOString();
   } else {
     state.reviews.push({
@@ -1889,9 +1693,6 @@ function deleteReview(reviewId) {
   const event = state.events.find((item) => item.id === review.eventId);
   const confirmed = window.confirm(`Delete review for ${event?.name || "this event"}?`);
   if (!confirmed) return;
-  if (review.sourceId && !state.deletedReviewSourceIds.includes(review.sourceId)) {
-    state.deletedReviewSourceIds.push(review.sourceId);
-  }
   state.reviews = state.reviews.filter((item) => item.id !== reviewId);
   saveState();
   render();
