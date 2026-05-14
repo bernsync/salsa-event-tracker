@@ -17,7 +17,7 @@ This version uses GitHub Pages for free hosting and Supabase for the small amoun
 
 ## Data Source Rule
 
-Supabase is the source of truth for durable app data. Do not add new hardcoded local lists or seed-style datasets for production features. New data-backed features should use Supabase tables first, with local files reserved for UI code, cleanup helpers, or temporary offline fallbacks.
+Supabase is the source of truth for durable app data. Do not add new hardcoded local lists or seed-style datasets for production features. New data-backed features should use Supabase tables first, with local files reserved for UI code and cleanup helpers.
 
 See `DATA_ACCESS.md` for public/authenticated/owner data rules and `DATA_UPDATE_WORKFLOW.md` for remote update and automation options.
 

@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import vm from "node:vm";
 
 const root = process.cwd();
 const outputDir = process.env.OUTPUT_DIR || path.join(root, "audit");
@@ -11,18 +10,6 @@ since.setUTCMonth(since.getUTCMonth() - 6);
 const sourceTimeoutMs = Number(process.env.SOURCE_TIMEOUT_MS || 12000);
 const maxSourcesPerEvent = Number(process.env.MAX_SOURCES_PER_EVENT || 4);
 
-const context = { window: {} };
-vm.createContext(context);
-for (const file of ["seed-events.js", "event-links.js"]) {
-  const fullPath = path.join(root, "web", file);
-  if (fs.existsSync(fullPath)) {
-    vm.runInContext(fs.readFileSync(fullPath, "utf8"), context);
-  }
-}
-
-const repoSeedEvents = Array.isArray(context.window.seedEvents) ? context.window.seedEvents : [];
-const eventLinks = context.window.eventLinks || {};
-const eventEditionDetails = context.window.eventEditionDetails || {};
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "";
 const knownFutureNotAnnounced = new Set([
@@ -92,79 +79,62 @@ function editionKey(event) {
   return [eventFamilyKey(event), event.startDate, event.endDate, normalize(event.city), normalize(event.country)].join("|");
 }
 
-function editionDetailsKey(event) {
-  return [eventFamilyKey(event), event.startDate].join("|");
-}
-
 function eventLocation(event) {
   return [event.city, event.country].filter(Boolean).join(", ");
 }
 
 function sourceLinksFor(event) {
-  const links = eventLinks[event.name] || {};
-  const edition = eventEditionDetails[editionDetailsKey(event)] || {};
   const raw = [
     event.website,
     event.tickets,
     event.facebook,
-    event.instagram?.startsWith("@") ? `https://www.instagram.com/${event.instagram.slice(1)}/` : event.instagram,
-    links.website,
-    edition.tickets,
-    links.tickets,
-    links.facebook,
-    links.instagram?.startsWith("@") ? `https://www.instagram.com/${links.instagram.slice(1)}/` : links.instagram
+    event.instagram?.startsWith("@") ? `https://www.instagram.com/${event.instagram.slice(1)}/` : event.instagram
   ].filter(Boolean);
   return [...new Set(raw)].slice(0, maxSourcesPerEvent);
 }
 
 async function loadSupabaseEvents() {
-  if (!supabaseUrl || !supabaseKey) return [];
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("SUPABASE_URL and a Supabase key are required.");
+  }
 
   const endpoint = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/events?select=*,event_editions(*)&visibility=eq.public&order=name.asc`;
-  try {
-    const response = await fetch(endpoint, {
-      headers: {
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`
-      }
-    });
-    if (!response.ok) {
-      throw new Error(`Supabase returned ${response.status}`);
+  const response = await fetch(endpoint, {
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`
     }
-    const rows = await response.json();
-    return rows.flatMap((event) => {
-      const editions = Array.isArray(event.event_editions) ? event.event_editions : [];
-      return editions
-        .filter((edition) => edition.visibility === "public")
-        .map((edition) => ({
-          name: event.name,
-          startDate: edition.start_date || "",
-          endDate: edition.end_date || edition.start_date || "",
-          city: edition.city || "",
-          country: edition.country || "",
-          venue: edition.venue || "",
-          website: event.website || "",
-          instagram: event.instagram || "",
-          facebook: event.facebook || "",
-          tickets: edition.tickets || "",
-          organizer: event.organizer || "",
-          djs: edition.djs || "",
-          artists: edition.artists || "",
-          notes: edition.notes || ""
-        }));
-    });
-  } catch (error) {
-    console.warn(`Supabase event load failed; falling back to repo seed data. ${error.message}`);
-    return [];
+  });
+  if (!response.ok) {
+    throw new Error(`Supabase returned ${response.status}`);
   }
+  const rows = await response.json();
+  return rows.flatMap((event) => {
+    const editions = Array.isArray(event.event_editions) ? event.event_editions : [];
+    return editions
+      .filter((edition) => edition.visibility === "public")
+      .map((edition) => ({
+        name: event.name,
+        startDate: edition.start_date || "",
+        endDate: edition.end_date || edition.start_date || "",
+        city: edition.city || "",
+        country: edition.country || "",
+        venue: edition.venue || "",
+        website: event.website || "",
+        instagram: event.instagram || "",
+        facebook: event.facebook || "",
+        tickets: edition.tickets || "",
+        organizer: event.organizer || "",
+        djs: edition.djs || "",
+        artists: edition.artists || "",
+        notes: edition.notes || ""
+      }));
+  });
 }
 
 async function loadAuditEvents() {
   const supabaseEvents = await loadSupabaseEvents();
-  if (supabaseEvents.length) {
-    return { source: "Supabase", events: supabaseEvents };
-  }
-  return { source: "repo seed files", events: repoSeedEvents };
+  return { source: "Supabase", events: supabaseEvents };
 }
 
 async function fetchText(url) {
