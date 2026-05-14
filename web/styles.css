@@ -386,8 +386,7 @@ select:focus-visible {
   margin-top: 5px;
 }
 
-.calendar-event,
-.calendar-prior-event {
+.calendar-event {
   display: block;
   width: 100%;
   border: 1px solid #f4d8a0;
@@ -412,22 +411,9 @@ select:focus-visible {
   font-size: 0.7rem;
 }
 
-.calendar-prior-event {
-  border-color: #cbd5e1;
-  background: #f8fafc;
-  color: #40516a;
-  padding: 5px 7px;
-  font-size: 0.72rem;
-}
-
 .calendar-event:hover {
   background: #ffefc7;
   border-color: #e7bd64;
-}
-
-.calendar-prior-event:hover {
-  background: #edf2f7;
-  border-color: #aebccd;
 }
 
 .event-card,
@@ -565,6 +551,10 @@ select:focus-visible {
   margin: 0;
   color: #253245;
   font-size: 0.86rem;
+}
+
+.detail-edition-block {
+  margin-top: 12px;
 }
 
 .edition-entry-list {

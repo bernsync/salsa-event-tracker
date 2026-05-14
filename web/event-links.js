@@ -102,15 +102,19 @@ window.eventLinks = {
     venue: "Novotel Paris-Est",
     notes: "Paris Salsa Marathon On2. 5th edition / 5-year anniversary. Screenshot confirms September 18-20, 2026."
   },
-  "Prague Salsa Marathon": {
+  "Prague Salsa Marathon - Spring": {
     website: "https://www.praguesalsa.com/",
     instagram: "@praguesalsa",
     facebook: "https://www.facebook.com/praguesalsa",
     organizer: "Dance Meetup / Prague Salsa",
-    venue: "Fanta building, Main Train Station, Wilsonova 300/8, 11000 Prague 1, Czechia",
-    price: "Standard pass 238 EUR",
-    djs: "DJ Julian, DJ Anael, DJ Morena, DJ Cycy, DJ V, DJ Czequita, DJ Randy, DJ Koki",
-    notes: "100% social marathon: no shows, no workshops. All-inclusive food and soft drinks. May 2026 edition includes Romantic Grotta meetup and Fanta building marathon venue; September 2026 edition listed as 24.09-28.09.2026."
+    notes: "Spring Prague Salsa Marathon editions use the Fanta building venue and are tracked separately from the Autumn editions."
+  },
+  "Prague Salsa Marathon - Autumn": {
+    website: "https://www.praguesalsa.com/",
+    instagram: "@praguesalsa",
+    facebook: "https://www.facebook.com/praguesalsa",
+    organizer: "Dance Meetup / Prague Salsa",
+    notes: "Autumn Prague Salsa Marathon editions use the Na Marjance venue and are tracked separately from the Spring editions."
   },
   "Porto Salsa Weekend": {
     website: "https://www.portosalsaweekend.com/",
@@ -549,7 +553,7 @@ window.eventEditionDetails = {
     djs: "DJ Rupert, DJ Ricardo, DJ 69, DJ Yasser, DJ Pascal, DJ Valery",
     notes: "2025 Paris Salsa Marathon On2 edition with meals and social dancing at Novotel Paris-Est."
   },
-  "prague salsa marathon|2026-05-07": {
+  "prague salsa marathon - spring|2026-05-07": {
     venue: "Fanta building, Main Train Station, Wilsonova 300/8, 11000 Prague 1, Czechia",
     tickets: "https://www.praguesalsa.com/",
     price: "Standard pass 238 EUR",
@@ -559,13 +563,13 @@ window.eventEditionDetails = {
     travel: "Prague Airport is the main airport. Prague is also easy to reach by train and bus from Central Europe.",
     notes: "100% social marathon: no shows, no workshops. All-inclusive food and soft drinks. May 2026 edition includes Romantic Grotta meetup and Fanta building marathon venue."
   },
-  "prague salsa marathon|2025-09-25": {
+  "prague salsa marathon - autumn|2025-09-25": {
     venue: "Na Marjance, Belohorska 262/35, 16900 Prague 6, Czechia",
     tickets: "https://www.praguesalsa.com/events/PSM.2025.autumn",
     djs: "DJ Julian, DJ Manu, DJ Anael, DJ Morena, DJ Czequita, DJ V",
     notes: "Autumn 2025 edition. Separate Prague Salsa Marathon edition from the spring event."
   },
-  "prague salsa marathon|2026-09-24": {
+  "prague salsa marathon - autumn|2026-09-24": {
     venue: "Na Marjance, Belohorska 262/35, 16900 Prague 6, Czechia",
     tickets: "https://www.praguesalsa.com/events/PSM.2026.autumn",
     djs: "DJ Manu, DJ Anael, DJ Julian, DJ Morena, DJ Czequita, DJ V",

@@ -98,6 +98,7 @@ const eventMetadataFields = [...sharedEventFields, ...editionSpecificEventFields
 
 const eventDateCorrections = {
   "prague salsa marathon|2026-05-09|2026-05-11": ["2026-05-07", "2026-05-11"],
+  "prague salsa marathon - spring|2026-05-09|2026-05-11": ["2026-05-07", "2026-05-11"],
   "smyrna mambo getaway|2026-05-22|2026-05-26": ["2026-05-21", "2026-05-24"],
   "mambo y nada mas|2026-05-29|2026-06-02": ["2026-05-29", "2026-05-31"],
   "porto salsa weekend|2025-10-02|2025-10-06": ["2025-10-02", "2025-10-05"],
@@ -426,7 +427,7 @@ function mapSupabaseEvents(rows) {
       .filter((edition) => edition.visibility === "public")
       .map((edition) => ({
         id: edition.id,
-        name: canonicalNameFor(event.name),
+        name: canonicalNameForEdition(event.name, edition.start_date || ""),
         startDate: edition.start_date || "",
         endDate: edition.end_date || edition.start_date || "",
         city: edition.city || "",
@@ -565,7 +566,7 @@ function canonicalizeEventNames() {
   let changed = false;
 
   state.events.forEach((event) => {
-    const canonicalName = canonicalNameFor(event.name);
+    const canonicalName = canonicalNameForEdition(event.name, event.startDate);
     if (event.name !== canonicalName) {
       event.name = canonicalName;
       event.updatedAt = new Date().toISOString();
@@ -597,6 +598,18 @@ function correctEventDates() {
 
 function canonicalNameFor(name) {
   return canonicalEventNames[normalizeText(name)] || name;
+}
+
+function canonicalNameForEdition(name, startDate = "") {
+  const canonicalName = canonicalNameFor(name);
+  if (normalizeText(canonicalName) !== "prague salsa marathon") {
+    return canonicalName;
+  }
+
+  const month = String(startDate || "").slice(5, 7);
+  if (month === "05") return "Prague Salsa Marathon - Spring";
+  if (month === "09") return "Prague Salsa Marathon - Autumn";
+  return canonicalName;
 }
 
 function removeLegacySampleEvents() {
@@ -750,7 +763,7 @@ function mergeSeedEvents() {
 
   let changed = false;
   window.seedEvents.forEach((seed) => {
-    seed.name = canonicalNameFor(seed.name);
+    seed.name = canonicalNameForEdition(seed.name, seed.startDate);
     const hydratedSeed = hydrateEventDetails(seed);
     const existing = state.events.find((event) => eventKey(event) === eventKey(seed));
     if (existing) {
@@ -982,7 +995,7 @@ function calendarDisplayEndDate(event) {
   const start = new Date(`${event.startDate}T12:00:00`);
   const end = new Date(`${event.endDate}T12:00:00`);
   const endsMonday = end.getDay() === 1;
-  const keepsMonday = normalizeText(event.name) === "prague salsa marathon";
+  const keepsMonday = normalizeText(event.name).startsWith("prague salsa marathon");
 
   if (endsMonday && event.startDate !== event.endDate && !keepsMonday) {
     end.setDate(end.getDate() - 1);
@@ -1245,7 +1258,6 @@ function renderCalendar() {
     `;
 
     dayEvents.forEach((event) => {
-      const priorEdition = priorEditionFor(event);
       const wrapper = document.createElement("div");
       wrapper.className = "calendar-event-card";
       const button = document.createElement("button");
@@ -1256,15 +1268,6 @@ function renderCalendar() {
       button.setAttribute("aria-label", `View details for ${event.name}`);
       button.innerHTML = calendarEventMarkup(event);
       wrapper.append(button);
-      if (priorEdition) {
-        const priorButton = document.createElement("button");
-        priorButton.className = "calendar-prior-event";
-        priorButton.type = "button";
-        priorButton.dataset.action = "details";
-        priorButton.dataset.id = priorEdition.id;
-        priorButton.textContent = `${eventYear(priorEdition)} edition`;
-        wrapper.append(priorButton);
-      }
       day.append(wrapper);
     });
 
@@ -1659,6 +1662,7 @@ function openEventDetails(eventId) {
   if (!event) return;
 
   const score = reviewScoreForEvent(event);
+  const priorEdition = priorEditionFor(event);
   elements.eventDetailsTitle.textContent = event.name;
   elements.eventDetailsMeta.innerHTML = [
     eventLocation(event) ? `<span class="pill location-pill">${escapeHtml(eventLocation(event))}</span>` : "",
@@ -1666,9 +1670,31 @@ function openEventDetails(eventId) {
   ].filter(Boolean).join("");
 
   const detailRows = eventDetailRows(event, { includeDates: true, includeStatus: true });
+  const priorEditionSection = priorEdition
+    ? `
+      <section class="edition-block detail-edition-block">
+        <h4>${escapeHtml(eventYear(priorEdition))} edition</h4>
+        <div class="event-detail">
+          ${[
+            detailRow("Dates", dateRange(priorEdition)),
+            detailRow("Location", eventLocation(priorEdition)),
+            detailRow("Venue", priorEdition.venue),
+            detailRow("Organizer", priorEdition.organizer),
+            detailRow("Event size", formatEventSize(priorEdition.eventSize)),
+            detailRow("Price", eventPrice(priorEdition)),
+            detailLinkRow("Ticket link", priorEdition.tickets, "Tickets"),
+            detailRow("DJs", priorEdition.djs),
+            detailRow("Artists", priorEdition.artists),
+            detailRow("Travel planning", priorEdition.travel),
+            detailRow("Notes", priorEdition.notes)
+          ].join("")}
+        </div>
+      </section>
+    `
+    : "";
 
-  elements.eventDetailsBody.innerHTML = detailRows.length
-    ? detailRows
+  elements.eventDetailsBody.innerHTML = detailRows.length || priorEditionSection
+    ? `${detailRows}${priorEditionSection}`
     : "<p class=\"muted\">No extra details have been added yet.</p>";
 
   elements.eventDetailsLinks.innerHTML = [
