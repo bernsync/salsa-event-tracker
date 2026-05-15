@@ -1,4 +1,4 @@
-import { Api, mapSupabaseEvents } from './api.js';
+import { Api } from "./api.js";
 
 const storageKey = "salsa-festivals-tracker-v1";
 const authStorageKey = "salsa-festivals-auth-session-v1";
@@ -499,7 +499,6 @@ function mapSupabaseEvents(rows) {
       .map((edition) => ({
         id: edition.id,
         name: canonicalNameForEdition(event.name, edition.start_date || ""),
-        name: canonicalNameFor(event.name),
         startDate: edition.start_date || "",
         endDate: edition.end_date || edition.start_date || "",
         city: edition.city || "",
@@ -2302,7 +2301,6 @@ function renderAuth() {
     elements.tripsView.hidden = !isSignedIn();
   }
   if (!isSignedIn() && ["reviews", "trips"].includes(state.activeView)) {
-  if (!isSignedIn() && state.activeView === "reviews") {
     switchView("calendar");
   }
   if (elements.reviewAuthPanel) {
@@ -2444,8 +2442,6 @@ function openEventDetails(eventId) {
 
   elements.eventDetailsBody.innerHTML = detailRows.length || priorEditionSection
     ? `${detailRows}${priorEditionSection}`
-  elements.eventDetailsBody.innerHTML = detailRows.length
-    ? detailRows
     : "<p class=\"muted\">No extra details have been added yet.</p>";
 
   elements.eventDetailsLinks.innerHTML = [
