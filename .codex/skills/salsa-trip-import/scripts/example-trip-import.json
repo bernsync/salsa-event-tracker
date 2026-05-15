@@ -1,0 +1,76 @@
+{
+  "owner_id": "<OWNER_UUID_FROM_PRIVATE_QUERY>",
+  "owner_email": "<OWNER_EMAIL_FROM_PRIVATE_QUERY>",
+  "default_notes": "Imported from 2025-2026 trip spreadsheet screenshot.",
+  "trips": [
+    {
+      "label": "Trip 29: Prague Salsa Marathon Autumn",
+      "start_date": "2026-09-24",
+      "end_date": "2026-09-28",
+      "places": [
+        {
+          "city": "Prague",
+          "country": "Czechia",
+          "start_date": "2026-09-24",
+          "end_date": "2026-09-28",
+          "event_edition_id": "bbbc371d-67f5-4958-ac91-0930e9651a09"
+        }
+      ]
+    },
+    {
+      "label": "Trip 30: Milan",
+      "start_date": "2026-09-28",
+      "end_date": "2026-10-01",
+      "places": [
+        {
+          "city": "Milan",
+          "country": "Italy",
+          "start_date": "2026-09-28",
+          "end_date": "2026-10-01"
+        }
+      ]
+    },
+    {
+      "label": "Trip 31: Porto Weekender",
+      "start_date": "2026-10-01",
+      "end_date": "2026-10-06",
+      "places": [
+        {
+          "city": "Porto",
+          "country": "Portugal",
+          "start_date": "2026-10-01",
+          "end_date": "2026-10-06",
+          "event_edition_id": "ae34eec6-0b46-4618-a677-76f46e5cb38b"
+        }
+      ]
+    },
+    {
+      "label": "Trip 32: Prague Back 2 Mambo",
+      "start_date": "2026-10-15",
+      "end_date": "2026-10-19",
+      "places": [
+        {
+          "city": "Prague",
+          "country": "Czechia",
+          "start_date": "2026-10-15",
+          "end_date": "2026-10-19",
+          "event_edition_id": "6935d6da-e8fe-476e-91d5-2ce983fd2942"
+        }
+      ]
+    },
+    {
+      "label": "Trip 33: Ljubljana Beats Passion Mambo",
+      "start_date": "2026-11-05",
+      "end_date": "2026-11-09",
+      "places": [
+        {
+          "city": "Ljubljana",
+          "country": "Slovenia",
+          "start_date": "2026-11-05",
+          "end_date": "2026-11-09",
+          "event_edition_id": "3b2a77bc-0cd1-4312-91ac-3db13d54b26f"
+        }
+      ]
+    }
+  ]
+}
