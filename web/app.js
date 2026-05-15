@@ -1,3 +1,5 @@
+import { Api, mapSupabaseEvents } from './api.js';
+
 const storageKey = "salsa-festivals-tracker-v1";
 const authStorageKey = "salsa-festivals-auth-session-v1";
 
@@ -47,7 +49,7 @@ const state = {
     calendarList: { all: false, expanded: new Set(), collapsed: new Set() },
     eventList: { all: false, expanded: new Set(), collapsed: new Set() }
   },
-  schengenCheckDate: localDateString(new Date())
+  schengenCheckDate: localDateString(new Date()),
   festivalSize: ""
 };
 
@@ -358,36 +360,7 @@ function currentUserEmail() {
 }
 
 async function signInWithPassword(email, password) {
-  const config = window.supabaseConfig;
-  if (!config?.url || !config?.publishableKey) {
-    throw new Error("Supabase is not configured.");
-  }
-
-  const response = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: {
-      apikey: config.publishableKey,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      email,
-      password
-    })
-  });
-
-  if (!response.ok) {
-    let message = `Supabase returned ${response.status}`;
-    try {
-      const payload = await response.json();
-      message = payload.msg || payload.message || payload.error_description || payload.error || message;
-    } catch {
-      const text = await response.text();
-      if (text) message = text;
-    }
-    throw new Error(message);
-  }
-
-  return normalizeAuthSession(await response.json());
+  return await Api.signIn(email, password);
 }
 
 function signOut() {
@@ -629,28 +602,13 @@ function mapSupabasePtoDay(row) {
 }
 
 async function loadSupabaseReviews() {
-  const config = window.supabaseConfig;
-  if (!config?.url || !config?.publishableKey) {
-    setSupabaseLoadStatus("reviews", "not-configured");
-    return [];
-  }
-  if (!isSignedIn()) {
-    setSupabaseLoadStatus("reviews", "signed-out");
-    return [];
-  }
-
-  const endpoint = `${config.url}/rest/v1/reviews?select=*&order=reviewed_at.desc`;
+  if (!isSignedIn()) return [];
   try {
-    const response = await fetch(endpoint, {
-      headers: authHeaders()
-    });
-    if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
-    const rows = await response.json();
+    const rows = await Api.fetchReviews();
     setSupabaseLoadStatus("reviews", "loaded", rows.length);
     return rows.map(mapSupabaseReview).filter((review) => state.events.some((event) => event.id === review.eventId));
   } catch (error) {
     console.warn("Supabase private reviews unavailable.", error);
-    setSupabaseLoadStatus("reviews", "error");
     return [];
   }
 }
@@ -662,15 +620,13 @@ async function refreshPrivateTablesFromSupabase() {
     return;
   }
 
-  const [reviews, trips, personalTrips] = await Promise.all([
+  const [reviews, personalTrips] = await Promise.all([
     loadSupabaseReviews(),
-    loadSupabaseTable("trips", { requiresAuth: true }),
     loadSupabasePersonalTrips()
-    loadSupabaseTable("personal_trips", { requiresAuth: true })
   ]);
 
   state.reviews = reviews;
-  state.trips = trips;
+  state.trips = [];
   state.personalTrips = personalTrips;
   console.info("Supabase table load status", state.supabaseLoadStatus);
   render();
@@ -1177,8 +1133,7 @@ function calendarDisplayEndDate(event) {
   const start = new Date(`${event.startDate}T12:00:00`);
   const end = new Date(`${event.endDate}T12:00:00`);
   const endsMonday = end.getDay() === 1;
-  // Data-driven flag preferred over hardcoded strings
-  const keepsMonday = event.forceShowMonday === true || normalizeText(event.name) === "prague salsa marathon";
+  const keepsMonday = event.forceShowMonday === true;
 
   if (endsMonday && event.startDate !== event.endDate && !keepsMonday) {
     end.setDate(end.getDate() - 1);
