@@ -1,0 +1,10 @@
+{
+  "name": "Salsa Festival Tracker",
+  "short_name": "Salsa Tracker",
+  "description": "Track salsa festivals, trips, reviews, and travel planning.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#111827"
+}
