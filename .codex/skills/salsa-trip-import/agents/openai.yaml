@@ -1,0 +1,4 @@
+interface:
+  display_name: "Salsa Trip Import"
+  short_description: "Build reviewed Supabase trip inserts"
+  default_prompt: "Use $salsa-trip-import to convert trip spreadsheet rows into reviewed Supabase SQL."
