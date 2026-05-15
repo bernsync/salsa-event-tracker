@@ -1,10 +1,27 @@
 {
+  "id": "./",
   "name": "Salsa Festival Tracker",
   "short_name": "Salsa Tracker",
   "description": "Track salsa festivals, trips, reviews, and travel planning.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#111827"
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "icons/app-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/app-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
 }
