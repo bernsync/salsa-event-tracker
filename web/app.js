@@ -1177,7 +1177,6 @@ function calendarDisplayEndDate(event) {
   const start = new Date(`${event.startDate}T12:00:00`);
   const end = new Date(`${event.endDate}T12:00:00`);
   const endsMonday = end.getDay() === 1;
-  const keepsMonday = normalizeText(event.name).startsWith("prague salsa marathon");
   // Data-driven flag preferred over hardcoded strings
   const keepsMonday = event.forceShowMonday === true || normalizeText(event.name) === "prague salsa marathon";
 
@@ -1650,7 +1649,6 @@ function renderEvents() {
   elements.historyToggle.checked = state.showHistorical;
   const search = state.search.trim().toLowerCase();
   let events = state.events.filter((event) => {
-    const haystack = [event.name, event.city, event.country, event.venue, event.organizer, event.djs, event.artists, event.notes, schengenLabel(event)].join(" ").toLowerCase();
     const haystack = [
       event.name, event.city, event.country, event.venue, event.organizer, 
       event.djs, event.artists, event.notes, schengenLabel(event)
