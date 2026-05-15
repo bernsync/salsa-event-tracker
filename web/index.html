@@ -6,15 +6,7 @@
     <meta name="theme-color" content="#111827">
     <title>Salsa Festival Tracker</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
-    <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(() => {});
-        });
-      }
-    </script>
   </head>
   <body>
     <header class="app-header">
@@ -331,6 +323,6 @@
     </template>
 
     <script src="supabase-config.js"></script>
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
   </body>
 </html>
