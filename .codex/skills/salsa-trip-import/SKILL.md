@@ -50,8 +50,9 @@ order by ee.start_date, e.name;
 - If extra days are unrelated travel padding, split into multiple place segments: unlinked pre-stay, event-linked event stay, unlinked post-stay.
 - Use travel-only rows for cities without a matching event edition, with `event_edition_id: null`.
 - Add `personal_pto_days` only when the user provides exact PTO dates and amounts. A PTO count alone is not enough.
-- Prefer labels that continue the visible sequence, for example `Trip 34: City Event Name`.
-- Use a note such as `Imported from 2025-2026 trip spreadsheet screenshot.` unless the user provides a better provenance note.
+- Prefer readable labels without trip numbers, for example `Prague Salsa Marathon Autumn`.
+- Leave import provenance notes blank unless the user explicitly wants the source shown privately.
+- When the user provides city/date rows rather than explicit trip boundaries, group rows into trips when each next segment starts on the same day or the day after the previous segment ends.
 
 ## Generator
 
@@ -67,7 +68,8 @@ Input shape:
 {
   "owner_id": "<OWNER_UUID_FROM_PRIVATE_QUERY>",
   "owner_email": "<OWNER_EMAIL_FROM_PRIVATE_QUERY>",
-  "default_notes": "Imported from 2025-2026 trip spreadsheet screenshot.",
+  "default_notes": "",
+  "auto_group_continuous_trips": true,
   "trips": [
     {
       "label": "Trip 29: Prague Salsa Marathon Autumn",

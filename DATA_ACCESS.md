@@ -90,7 +90,7 @@ Use service-role scripts or manually reviewed SQL for admin-managed public refer
 
 | Table | Access level | Notes |
 | --- | --- | --- |
-| `events` | `public` | Festival brand/reference data. |
+| `events` | `public` | Festival brand/reference data, style tags, and public watchlist flag. |
 | `event_editions` | `public` | Public edition dates and official details. |
 | `schengen_countries` | `public` | Public reference lookup. |
 | `reviews` | `owner` | Personal review data behind login. Revisit access before any community review launch. |

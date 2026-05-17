@@ -2,7 +2,7 @@ const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const payloadText = process.env.EVENT_UPSERT_JSON || "";
 
-const eventFields = ["organizer", "website", "instagram", "facebook"];
+const eventFields = ["organizer", "website", "instagram", "facebook", "styles", "watchlist"];
 const editionFields = [
   "venue",
   "tickets",

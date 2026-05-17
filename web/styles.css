@@ -487,6 +487,12 @@ select:focus-visible {
   font-weight: 800;
 }
 
+.calendar-event.is-watchlist {
+  border-color: #75b987;
+  background: #ecf9ef;
+  color: #1c5f2c;
+}
+
 .calendar-trip {
   display: block;
   width: 100%;
@@ -543,9 +549,24 @@ select:focus-visible {
   font-size: 0.7rem;
 }
 
+.calendar-event.is-watchlist span {
+  color: #2f7d41;
+}
+
+.calendar-event .calendar-badge {
+  font-size: 0.64rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .calendar-event:hover {
   background: #ffefc7;
   border-color: #e7bd64;
+}
+
+.calendar-event.is-watchlist:hover {
+  background: #def3e4;
+  border-color: #4fa766;
 }
 
 .calendar-trip:hover {
@@ -580,6 +601,11 @@ select:focus-visible {
 .event-card:hover,
 .review-card:hover {
   border-color: #c7d2de;
+}
+
+.event-card.is-watchlist {
+  border-color: #a8d9b4;
+  box-shadow: 0 1px 2px rgba(31, 41, 51, 0.04), inset 4px 0 0 #45a85a;
 }
 
 .event-card-header {
@@ -672,6 +698,16 @@ select:focus-visible {
 .location-pill {
   background: #eef3f8;
   color: #314155;
+}
+
+.watchlist-pill {
+  background: #e4f7e9;
+  color: #1e6d32;
+}
+
+.style-pill {
+  background: #eef3f8;
+  color: #2f465c;
 }
 
 .event-detail {

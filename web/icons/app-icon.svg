@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Salsa Festival Tracker">
+  <rect width="512" height="512" rx="96" fill="#111827"/>
+  <path fill="#f9fafb" d="M128 352c48-96 144-160 256-176v48c-88 14-160 66-200 144l-56-16zm48-192c32-40 88-64 152-64h48v48c-48 0-88 16-120 44l-80-28zm96 96c24-24 56-36 96-36h40v40c-40 0-72 12-96 32l-40-36z"/>
+</svg>

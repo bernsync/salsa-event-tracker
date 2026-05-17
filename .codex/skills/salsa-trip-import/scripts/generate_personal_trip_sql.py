@@ -3,6 +3,7 @@
 import json
 import re
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 UUID_RE = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
@@ -24,6 +25,104 @@ def require_date(value, label):
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", text):
         fail(f"{label} must be YYYY-MM-DD. Got {text or '(empty)'}")
     return text
+
+
+def date_value(value):
+    return date.fromisoformat(require_date(value, "date"))
+
+
+def clean_label(value):
+    return re.sub(r"^trip\s+\d+\s*:\s*", "", str(value or "").strip(), flags=re.I)
+
+
+def trip_label_for_group(places):
+    explicit = next((clean_label(place.get("trip_label") or place.get("label")) for place in places if clean_label(place.get("trip_label") or place.get("label"))), "")
+    if explicit:
+        return explicit
+    event_name = next((clean_label(place.get("event_name") or place.get("event")) for place in places if clean_label(place.get("event_name") or place.get("event"))), "")
+    if event_name:
+        return event_name
+    cities = []
+    for place in places:
+        city = str(place.get("city") or "").strip()
+        if city and city not in cities:
+            cities.append(city)
+    return " + ".join(cities) if cities else "Imported trip"
+
+
+def place_dates(place):
+    start_date = require_date(place.get("start_date") or place.get("date"), "place.start_date")
+    end_date = require_date(place.get("end_date") or start_date, "place.end_date")
+    return start_date, end_date
+
+
+def build_continuous_trips(raw_places):
+    places = []
+    for index, place in enumerate(raw_places or []):
+        start_date, end_date = place_dates(place)
+        places.append({**place, "start_date": start_date, "end_date": end_date, "_source_index": index})
+    places.sort(key=lambda place: (place["start_date"], place["end_date"], place["_source_index"]))
+
+    groups = []
+    for place in places:
+        if not groups:
+            groups.append([place])
+            continue
+        previous_end = max(date_value(item["end_date"]) for item in groups[-1])
+        next_start = date_value(place["start_date"])
+        if next_start <= previous_end + timedelta(days=1):
+            groups[-1].append(place)
+        else:
+            groups.append([place])
+
+    trips = []
+    for group in groups:
+        start_date = min(place["start_date"] for place in group)
+        end_date = max(place["end_date"] for place in group)
+        trips.append({
+            "label": trip_label_for_group(group),
+            "start_date": start_date,
+            "end_date": end_date,
+            "notes": str(next((place.get("trip_notes") for place in group if place.get("trip_notes")), "")),
+            "places": [
+                {
+                    **{key: value for key, value in place.items() if not key.startswith("_")},
+                    "sequence": index,
+                }
+                for index, place in enumerate(group)
+            ],
+        })
+    return trips
+
+
+def places_from_trip_rows(raw_trips):
+    places = []
+    for trip in raw_trips or []:
+        trip_start = trip.get("start_date")
+        trip_end = trip.get("end_date") or trip_start
+        raw_places = trip.get("places")
+        if isinstance(raw_places, list) and raw_places:
+            for place in raw_places:
+                places.append({
+                    **place,
+                    "trip_label": trip.get("label"),
+                    "trip_notes": trip.get("notes"),
+                    "start_date": place.get("start_date") or trip_start,
+                    "end_date": place.get("end_date") or trip_end,
+                })
+        else:
+            places.append({
+                "city": trip.get("city"),
+                "country": trip.get("country"),
+                "start_date": trip_start,
+                "end_date": trip_end,
+                "event_edition_id": trip.get("event_edition_id"),
+                "event_name": trip.get("event_name"),
+                "notes": trip.get("place_notes") or "",
+                "trip_label": trip.get("label"),
+                "trip_notes": trip.get("notes"),
+            })
+    return places
 
 
 def sql_text(value):
@@ -53,14 +152,20 @@ def normalize(payload):
         fail("owner_id must be a real UUID from a private Supabase query, not the template placeholder.")
     if "<" in owner_email or ">" in owner_email or owner_email.endswith(".invalid"):
         fail("owner_email must be replaced with the private owner email before generating SQL.")
-    default_notes = str(payload.get("default_notes") or "Imported trip row.").strip()
+    default_notes = str(payload.get("default_notes") or "").strip()
     raw_trips = payload.get("trips")
+    if payload.get("auto_group_continuous_trips"):
+        source_places = payload.get("places") if isinstance(payload.get("places"), list) else places_from_trip_rows(raw_trips)
+        raw_trips = build_continuous_trips(source_places)
+    elif not isinstance(raw_trips, list) and isinstance(payload.get("places"), list):
+        raw_trips = build_continuous_trips(payload.get("places"))
+
     if not isinstance(raw_trips, list):
         fail("trips must be an array.")
 
     trips = []
     for trip_index, trip in enumerate(raw_trips):
-        label = require_text(trip.get("label"), f"trips[{trip_index}].label")
+        label = require_text(clean_label(trip.get("label")), f"trips[{trip_index}].label")
         start_date = require_date(trip.get("start_date"), f"trips[{trip_index}].start_date")
         end_date = require_date(trip.get("end_date") or start_date, f"trips[{trip_index}].end_date")
         raw_places = trip.get("places")
