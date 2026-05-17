@@ -1,4 +1,13 @@
 import { Api } from "./api.js";
+import {
+  cleanTripLabel,
+  eventStyles,
+  formatEventSize,
+  formatStyles,
+  isImportProvenanceNote,
+  isWatchlistEvent,
+  watchlistLabel
+} from "./event-metadata.js";
 
 const storageKey = "salsa-festivals-tracker-v1";
 const authStorageKey = "salsa-festivals-auth-session-v1";
@@ -49,87 +58,7 @@ const state = {
     calendarList: { all: false, expanded: new Set(), collapsed: new Set() },
     eventList: { all: false, expanded: new Set(), collapsed: new Set() }
   },
-  schengenCheckDate: localDateString(new Date()),
-  festivalSize: ""
-};
-
-const canonicalEventNames = {
-  "big 3 festival": "Big 3 Festival",
-  "dancehub": "The Dance Hub",
-  "dance hub": "The Dance Hub",
-  "the dancehub": "The Dance Hub",
-  "live 2 mambo first weekend": "Live 2 Mambo: Novotel",
-  "live 2 mambo: first weekend": "Live 2 Mambo: Novotel",
-  "live 2 mambo novotel": "Live 2 Mambo: Novotel",
-  "live 2 mambo: novotel": "Live 2 Mambo: Novotel",
-  "live 2 mambo carnival days": "Live 2 Mambo: Carnival Days",
-  "live 2 mambo: carnival days": "Live 2 Mambo: Carnival Days",
-  "live 2 mambo second weekend": "Live 2 Mambo: New York Palace",
-  "live 2 mambo: second weekend": "Live 2 Mambo: New York Palace",
-  "live 2 mambo new york palace": "Live 2 Mambo: New York Palace",
-  "live 2 mambo: new york palace": "Live 2 Mambo: New York Palace",
-  "live 2 mambo 2 weekends": "Live 2 Mambo: 2 Weekends",
-  "live 2 mambo 2 weekend": "Live 2 Mambo: 2 Weekends",
-  "live 2 mambo: 2 weekends": "Live 2 Mambo: 2 Weekends",
-  "magic": "Magic Slovenian Salsa Festival",
-  "magic slovenian salsa festival": "Magic Slovenian Salsa Festival",
-  "cobeatparty salsa rave": "SalsaRave by CoBeatParty",
-  "salsarave": "SalsaRave by CoBeatParty",
-  "salsa rave": "SalsaRave by CoBeatParty",
-  "salsarave by cobeatparty": "SalsaRave by CoBeatParty",
-  "mambo city": "5Star Congress",
-  "mambocity 5 star": "5Star Congress",
-  "mambocity 5 star congress": "5Star Congress",
-  "mambocity 5star congress": "5Star Congress",
-  "mambo city 5 star": "5Star Congress",
-  "mambo city 5 star congress": "5Star Congress",
-  "mambo city 5star congress": "5Star Congress",
-  "5 star congress": "5Star Congress",
-  "5star congress": "5Star Congress",
-  "amsterdam salsa weekender": "Amsterdam Salsa Weekend",
-  "beat passion mambo": "Beats Passion Mambo",
-  "beats passion mambo": "Beats Passion Mambo",
-  "mambo marathon": "Mambo Marathonios",
-  "m. mambo marathonios": "Mambo Marathonios"
-};
-
-const removedEventNames = new Set([
-  "caldac",
-  "cisc",
-  "csbf",
-  "chicago international salsa congress",
-  "chicago salsa bachata festival",
-  "reno latin dance festival",
-  "orlando salsa congress",
-  "sf sbk",
-  "sfsbkz",
-  "world salsa festival",
-  "live 2 mambo: 2 weekends",
-  "super mario birthday"
-]);
-
-const sharedEventFields = ["organizer", "website", "instagram", "facebook"];
-const editionSpecificEventFields = ["venue", "tickets", "price", "currency", "djs", "artists", "eventSize", "travel", "addedOn", "notes"];
-const eventMetadataFields = [...sharedEventFields, ...editionSpecificEventFields];
-
-const eventDateCorrections = {
-  "prague salsa marathon|2026-05-09|2026-05-11": ["2026-05-07", "2026-05-11"],
-  "prague salsa marathon - spring|2026-05-09|2026-05-11": ["2026-05-07", "2026-05-11"],
-  "smyrna mambo getaway|2026-05-22|2026-05-26": ["2026-05-21", "2026-05-24"],
-  "mambo y nada mas|2026-05-29|2026-06-02": ["2026-05-29", "2026-05-31"],
-  "porto salsa weekend|2025-10-02|2025-10-06": ["2025-10-02", "2025-10-05"],
-  "porto salsa weekend|2026-10-02|2026-10-06": ["2026-10-02", "2026-10-04"],
-  "pink marathon|2026-10-23|2026-10-26": ["2026-10-23", "2026-10-25"],
-  "mambo marathonios|2027-04-23|2027-04-26": ["2027-04-21", "2027-04-26"],
-  "zagreb salsa marathon|2026-04-23|2026-04-27": ["2026-04-24", "2026-04-26"],
-  "zagreb salsa marathon|2026-04-24|2026-04-27": ["2026-04-24", "2026-04-26"],
-  "zagreb salsa marathon|2026-04-30|2026-05-02": ["2026-04-24", "2026-04-26"],
-  "5star congress|2026-05-01|2026-05-05": ["2026-05-01", "2026-05-04"],
-  "5star congress|2026-05-08|2026-05-11": ["2026-05-01", "2026-05-04"],
-  "berlin salsa congress|2026-08-28|2026-08-31": ["2026-08-27", "2026-08-30"],
-  "brussels salsa marathon|2026-12-06|2026-12-09": ["2026-12-04", "2026-12-07"],
-  "magic slovenian salsa festival|2026-01-16|2026-01-20": ["2026-01-15", "2026-01-18"],
-  "agozar|2026-12-19|2026-12-21": ["2026-12-18", "2026-12-20"]
+  schengenCheckDate: localDateString(new Date())
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -222,35 +151,9 @@ const elements = {
 
 function loadState() {
   localStorage.removeItem(storageKey);
-  const raw = localStorage.getItem(storageKey);
-  if (raw) {
-    try {
-      const saved = JSON.parse(raw);
-      state.events = saved.events || [];
-      state.reviews = saved.reviews || [];
-      state.deletedReviewSourceIds = saved.deletedReviewSourceIds || [];
-      canonicalizeEventNames();
-      correctEventDates();
-      removeLegacySampleEvents();
-      deduplicateEvents();
-      mergeSeedEvents();
-      removeUnverifiedEditionDefaults();
-      deduplicateEvents();
-      deduplicateCalendarEditions();
-      mergeHardcodedReviews();
-      return;
-    } catch {
-      localStorage.removeItem(storageKey);
-    }
-  }
-
   state.events = [];
   state.reviews = [];
-  mergeSeedEvents();
-  removeUnverifiedEditionDefaults();
-  deduplicateEvents();
-  deduplicateCalendarEditions();
-  mergeHardcodedReviews();
+  state.deletedReviewSourceIds = [];
 }
 
 function loadAuthSession() {
@@ -498,7 +401,7 @@ function mapSupabaseEvents(rows) {
       .filter((edition) => edition.visibility === "public")
       .map((edition) => ({
         id: edition.id,
-        name: canonicalNameForEdition(event.name, edition.start_date || ""),
+        name: event.name || "",
         startDate: edition.start_date || "",
         endDate: edition.end_date || edition.start_date || "",
         city: edition.city || "",
@@ -508,6 +411,8 @@ function mapSupabaseEvents(rows) {
         website: event.website || "",
         instagram: event.instagram || "",
         facebook: event.facebook || "",
+        styles: eventStyles({ styles: event.styles }),
+        watchlist: Boolean(event.watchlist),
         tickets: edition.tickets || "",
         price: edition.price || "",
         currency: edition.currency || "",
@@ -517,6 +422,7 @@ function mapSupabaseEvents(rows) {
         travel: edition.travel || "",
         addedOn: edition.added_on || "",
         notes: edition.notes || "",
+        forceShowMonday: Boolean(edition.force_show_monday),
         createdAt: edition.created_at || event.created_at || new Date().toISOString(),
         updatedAt: edition.updated_at || event.updated_at || edition.created_at || event.created_at || new Date().toISOString()
       }));
@@ -566,13 +472,31 @@ function mapSupabaseTrip(row) {
     notes: row.notes || "",
     createdAt: row.created_at || "",
     updatedAt: row.updated_at || "",
-    places: places
-      .map(mapSupabaseTripPlace)
+    places: deduplicateTripPlaces(places.map(mapSupabaseTripPlace))
       .sort((a, b) => a.sequence - b.sequence || a.startDate.localeCompare(b.startDate) || a.city.localeCompare(b.city)),
     ptoDays: ptoDays
       .map(mapSupabasePtoDay)
       .sort((a, b) => a.date.localeCompare(b.date))
   };
+}
+
+function deduplicateTripPlaces(places) {
+  const seen = new Set();
+  return places.filter((place) => {
+    const key = [
+      place.tripId,
+      place.eventId,
+      place.startDate,
+      place.endDate,
+      normalizeText(place.city),
+      normalizeText(place.country),
+      normalizeText(place.role),
+      normalizeText(place.notes)
+    ].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function mapSupabaseTripPlace(row) {
@@ -684,366 +608,13 @@ async function refreshPublicEventsFromSupabase() {
   }
 
   state.events = supabaseEvents;
-  canonicalizeEventNames();
-  correctEventDates();
-  removeLegacySampleEvents();
-  deduplicateEvents();
-  deduplicateCalendarEditions();
   if (!isSignedIn()) clearPrivateSupabaseData();
   console.info("Supabase table load status", state.supabaseLoadStatus);
   render();
 }
 
-function canonicalizeEventNames() {
-  let changed = false;
-
-  state.events.forEach((event) => {
-    const canonicalName = canonicalNameForEdition(event.name, event.startDate);
-    const canonicalName = canonicalNameFor(event.name);
-    if (event.name !== canonicalName) {
-      event.name = canonicalName;
-      event.updatedAt = new Date().toISOString();
-      changed = true;
-    }
-  });
-
-  if (changed) {
-    saveState();
-  }
-}
-
-function correctEventDates() {
-  let changed = false;
-
-  state.events.forEach((event) => {
-    const correction = eventDateCorrections[[event.name, event.startDate, event.endDate].map(normalizeText).join("|")];
-    if (!correction) return;
-    event.startDate = correction[0];
-    event.endDate = correction[1];
-    event.updatedAt = new Date().toISOString();
-    changed = true;
-  });
-
-  if (changed) {
-    saveState();
-  }
-}
-
-function canonicalNameFor(name) {
-  return canonicalEventNames[normalizeText(name)] || name;
-}
-
-function canonicalNameForEdition(name, startDate = "") {
-  const canonicalName = canonicalNameFor(name);
-  if (normalizeText(canonicalName) !== "prague salsa marathon") {
-    return canonicalName;
-  }
-
-  const month = String(startDate || "").slice(5, 7);
-  if (month === "05") return "Prague Salsa Marathon - Spring";
-  if (month === "09") return "Prague Salsa Marathon - Autumn";
-  return canonicalName;
-}
-
-function removeLegacySampleEvents() {
-  const legacyKeys = new Set([
-    "mambocity 5 star congress|2026-05-08|2026-05-11|london|united kingdom",
-    "mambo city 5 star|2026-05-01|2026-05-05|london|united kingdom",
-    "mambo city 5 star congress|2026-05-01|2026-05-05|london|united kingdom",
-    "berlin salsa congress|2026-09-24|2026-09-28|berlin|germany",
-    "test salsa weekender|2026-06-12|2026-06-14|lisbon|portugal"
-  ]);
-  const beforeCount = state.events.length;
-
-  state.events = state.events.filter((event) => {
-    const isLegacyName = normalizeText(event.name).includes("mambo city 5 star");
-    const isRemovedEvent = removedEventNames.has(normalizeText(event.name));
-    const isNonNewYorkUsEvent = normalizeText(event.country) === "united states" && normalizeText(event.city) !== "new york";
-    return !legacyKeys.has(eventKey(event)) && !isLegacyName && !isRemovedEvent && !isNonNewYorkUsEvent;
-  });
-
-  if (state.events.length !== beforeCount) {
-    const eventIds = new Set(state.events.map((event) => event.id));
-    state.reviews = state.reviews.filter((review) => eventIds.has(review.eventId));
-    saveState();
-  }
-}
-
-function deduplicateEvents() {
-  const seen = new Map();
-  const idRedirects = new Map();
-  const deduped = [];
-
-  state.events.forEach((event) => {
-    const key = duplicateEventKey(event);
-    const existing = seen.get(key);
-
-    if (!existing) {
-      seen.set(key, event);
-      deduped.push(event);
-      return;
-    }
-
-    const keeper = richerEvent(existing, event);
-    const duplicate = keeper === existing ? event : existing;
-    const keeperIndex = deduped.findIndex((item) => item.id === existing.id);
-
-    mergeEventDetails(keeper, duplicate);
-    seen.set(key, keeper);
-    if (keeperIndex >= 0) {
-      deduped[keeperIndex] = keeper;
-    }
-    idRedirects.set(duplicate.id, keeper.id);
-  });
-
-  if (!idRedirects.size) return;
-
-  state.events = deduped;
-  state.reviews = state.reviews
-    .map((review) => ({ ...review, eventId: idRedirects.get(review.eventId) || review.eventId }))
-    .filter((review) => state.events.some((event) => event.id === review.eventId));
-  saveState();
-}
-
-function deduplicateCalendarEditions() {
-  const seen = new Map();
-  const idRedirects = new Map();
-  const deduped = [];
-
-  state.events
-    .sort((a, b) => eventDetailScore(b) - eventDetailScore(a))
-    .forEach((event) => {
-      const key = calendarEditionKey(event);
-      const existing = seen.get(key);
-      if (!existing) {
-        seen.set(key, event);
-        deduped.push(event);
-        return;
-      }
-
-      mergeEventDetails(existing, event);
-      idRedirects.set(event.id, existing.id);
-    });
-
-  if (!idRedirects.size) return;
-
-  state.events = deduped.sort((a, b) => a.startDate.localeCompare(b.startDate) || a.name.localeCompare(b.name));
-  state.reviews = state.reviews
-    .map((review) => ({ ...review, eventId: idRedirects.get(review.eventId) || review.eventId }))
-    .filter((review) => state.events.some((event) => event.id === review.eventId));
-  saveState();
-}
-
-function calendarEditionKey(event) {
-  return [
-    eventFamilyKey(event),
-    event.city,
-    event.country,
-    event.startDate.slice(0, 7)
-  ].map(normalizeText).join("|");
-}
-
-function mergeEventDetails(target, source) {
-  ["city", "country", "venue", "organizer", "website", "instagram", "facebook", "tickets", "price", "currency", "djs", "artists", "eventSize", "travel", "addedOn", "notes"].forEach((field) => {
-    if (!target[field] && source[field]) {
-      target[field] = source[field];
-    }
-  });
-}
-
-function richerEvent(first, second) {
-  return eventDetailScore(second) > eventDetailScore(first) ? second : first;
-}
-
-function eventDetailScore(event) {
-  return ["city", "country", "venue", "organizer", "website", "instagram", "facebook", "tickets", "price", "currency", "djs", "artists", "eventSize", "travel", "addedOn", "notes"]
-    .reduce((score, field) => score + (event[field] ? String(event[field]).length : 0), 0);
-}
-
-function pickFields(source, fields) {
-  return fields.reduce((picked, field) => {
-    if (source?.[field]) {
-      picked[field] = source[field];
-    }
-    return picked;
-  }, {});
-}
-
-function editionDetailsKey(event) {
-  return [canonicalNameFor(event.name), event.startDate].map(normalizeText).join("|");
-}
-
-function sharedEventDetails(event) {
-  const canonicalName = canonicalNameFor(event.name);
-  const linkData = window.eventLinks?.[canonicalName] || window.eventLinks?.[event.name] || {};
-  return pickFields(linkData, sharedEventFields);
-}
-
-function editionSpecificDetails(event) {
-  return window.eventEditionDetails?.[editionDetailsKey(event)] || {};
-}
-
-function hydrateEventDetails(event) {
-  return {
-    ...event,
-    ...sharedEventDetails(event),
-    ...editionSpecificDetails(event)
-  };
-}
-
-function mergeSeedEvents() {
-  if (!Array.isArray(window.seedEvents)) return;
-
-  let changed = false;
-  window.seedEvents.forEach((seed) => {
-    seed.name = canonicalNameFor(seed.name);
-    const hydratedSeed = hydrateEventDetails(seed);
-    const existing = state.events.find((event) => eventKey(event) === eventKey(seed));
-    if (existing) {
-      changed = updateMissingEventFields(existing, hydratedSeed) || changed;
-      return;
-    }
-
-    state.events.push({
-      id: crypto.randomUUID(),
-      name: hydratedSeed.name,
-      startDate: hydratedSeed.startDate,
-      endDate: hydratedSeed.endDate,
-      city: hydratedSeed.city || "",
-      country: hydratedSeed.country || "",
-      venue: hydratedSeed.venue || "",
-      organizer: hydratedSeed.organizer || "",
-      website: hydratedSeed.website || "",
-      instagram: hydratedSeed.instagram || "",
-      facebook: hydratedSeed.facebook || "",
-      tickets: hydratedSeed.tickets || "",
-      price: hydratedSeed.price || "",
-      currency: hydratedSeed.currency || "",
-      djs: hydratedSeed.djs || "",
-      artists: hydratedSeed.artists || "",
-      eventSize: hydratedSeed.eventSize || "",
-      travel: hydratedSeed.travel || "",
-      addedOn: hydratedSeed.addedOn || "",
-      notes: hydratedSeed.notes || "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    changed = true;
-  });
-
-  if (changed) {
-    saveState();
-  }
-}
-
-function removeUnverifiedEditionDefaults() {
-  let changed = false;
-
-  state.events.forEach((event) => {
-    let eventChanged = false;
-    event.name = canonicalNameFor(event.name);
-    const sharedData = window.eventLinks?.[event.name] || {};
-    const editionData = editionSpecificDetails(event);
-
-    editionSpecificEventFields.forEach((field) => {
-      if (!editionData[field] && sharedData[field] && event[field] === sharedData[field]) {
-        event[field] = "";
-        eventChanged = true;
-      }
-    });
-
-    if (!event.price && event.currency) {
-      event.currency = "";
-      eventChanged = true;
-    }
-
-    if (eventChanged) {
-      event.updatedAt = new Date().toISOString();
-      changed = true;
-    }
-  });
-
-  if (changed) {
-    saveState();
-  }
-}
-
-function mergeHardcodedReviews() {
-  if (!Array.isArray(window.hardcodedReviews)) return;
-
-  let changed = false;
-  window.hardcodedReviews.forEach((sourceReview) => {
-    if (state.deletedReviewSourceIds.includes(sourceReview.sourceId)) return;
-    const event = state.events.find((item) => (
-      eventFamilyKey(item) === normalizeText(sourceReview.eventName)
-      && item.startDate === sourceReview.eventStartDate
-      && item.endDate === sourceReview.eventEndDate
-    ));
-    if (!event) return;
-
-    const existing = state.reviews.find((review) => review.sourceId === sourceReview.sourceId);
-    const nextReview = {
-      sourceId: sourceReview.sourceId,
-      eventId: event.id,
-      scores: sourceReview.scores,
-      categoryComments: sourceReview.categoryComments || {},
-      topReason: sourceReview.topReason || "",
-      notes: sourceReview.notes || "",
-      reviewedAt: sourceReview.reviewedAt || new Date().toISOString(),
-      isPublished: true
-    };
-
-    if (existing) {
-      if (existing.userModified) return;
-      Object.assign(existing, nextReview, { id: existing.id, updatedAt: new Date().toISOString() });
-    } else {
-      state.reviews.push({ id: crypto.randomUUID(), ...nextReview });
-    }
-    changed = true;
-  });
-
-  if (changed) {
-    saveState();
-  }
-}
-
-function updateMissingEventFields(event, source) {
-  let changed = false;
-
-  eventMetadataFields.forEach((field) => {
-    if (source[field] && event[field] !== source[field]) {
-      event[field] = source[field];
-      changed = true;
-    }
-  });
-
-  if (changed) {
-    event.updatedAt = new Date().toISOString();
-  }
-
-  return changed;
-}
-
-function eventKey(event) {
-  return [
-    event.name,
-    event.startDate,
-    event.endDate,
-    event.city,
-    event.country
-  ].map(normalizeText).join("|");
-}
-
-function duplicateEventKey(event) {
-  return [
-    event.name,
-    event.startDate,
-    event.endDate
-  ].map(normalizeText).join("|");
-}
-
 function eventFamilyKey(event) {
-  return normalizeText(canonicalNameFor(event.name));
+  return normalizeText(event.name);
 }
 
 function normalizeText(value) {
@@ -1055,8 +626,6 @@ function normalizeText(value) {
 
 function saveState() {
   localStorage.setItem(storageKey, JSON.stringify({
-    events: state.events,
-    reviews: state.reviews
     reviews: state.reviews,
     deletedReviewSourceIds: state.deletedReviewSourceIds
   }));
@@ -1078,22 +647,6 @@ function formatDate(value) {
 function dateRange(event) {
   if (event.startDate === event.endDate) return formatDate(event.startDate);
   return `${formatDate(event.startDate)} - ${formatDate(event.endDate)}`;
-}
-
-function formatEventSize(value) {
-  const size = normalizeText(value);
-  if (!size) return "";
-  const labels = {
-    small: "Small (under 250)",
-    medium: "Medium (250-999)",
-    large: "Large (legacy)",
-    small: "Small (under 200)",
-    medium: "Medium (200-500)",
-    large: "Large (500-999)",
-    "extra large": "Extra large (1000+)",
-    xl: "Extra large (1000+)"
-  };
-  return labels[size] || value;
 }
 
 function eventLocation(event) {
@@ -1228,6 +781,8 @@ function eventDetailRows(event, { includeStatus = false, includeDates = false } 
   return [
     includeDates ? ["Dates", dateRange(event)] : null,
     includeStatus ? ["Status", isHistorical(event) ? "Past event" : "Upcoming"] : null,
+    ["Tracking", watchlistLabel(event)],
+    ["Styles", formatStyles(event)],
     ["Schengen", schengenLabel(event)],
     ["Organizer", event.organizer],
     ["Venue", event.venue],
@@ -1248,6 +803,8 @@ function editionBlock(event) {
   const rows = [
     detailRow("Dates", dateRange(event)),
     detailRow("Location", eventLocation(event)),
+    detailRow("Tracking", watchlistLabel(event)),
+    detailRow("Styles", formatStyles(event)),
     detailRow("Schengen", schengenLabel(event)),
     detailRow("Venue", event.venue),
     detailRow("Organizer", event.organizer),
@@ -1301,7 +858,7 @@ function priorEditionFor(event) {
 function detailActionButton(event, label = "Details", action = "details") {
   if (!event) return "";
   return `
-    <button type="button" data-action="${escapeHtml(action)}" data-id="${event.id}">
+    <button type="button" data-action="${escapeHtml(action)}" data-id="${escapeHtml(event.id)}">
       ${escapeHtml(label)}
     </button>
   `;
@@ -1381,15 +938,21 @@ function toggleCardCollapse(view, id) {
   if (view === "eventList") renderFestivalList();
 }
 
+function eventBadgeMarkup(event) {
+  return [
+    isWatchlistEvent(event) ? `<span class="pill watchlist-pill">${escapeHtml(watchlistLabel(event))}</span>` : "",
+    formatStyles(event) ? `<span class="pill style-pill">Styles: ${escapeHtml(formatStyles(event))}</span>` : ""
+  ].filter(Boolean).join("");
+}
+
 function renderEventCard(event, options = {}) {
   const collapseView = options.collapseView || "";
   const collapseId = event.id;
-function renderEventCard(event) {
   const score = reviewScoreForEvent(event);
   const location = eventLocation(event);
   const detailRows = eventDetailRows(event);
   const card = document.createElement("article");
-  card.className = "event-card";
+  card.className = `event-card ${isWatchlistEvent(event) ? "is-watchlist" : ""}`;
   card.innerHTML = `
     <div class="event-card-header">
       <div>
@@ -1397,15 +960,16 @@ function renderEventCard(event) {
         <p class="muted">${escapeHtml(dateRange(event))}</p>
       </div>
       <div class="card-header-actions">
+        ${eventBadgeMarkup(event)}
         ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
         ${cardCollapseButton(collapseView, collapseId)}
       </div>
-      ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
     </div>
     ${collapsibleCardBody(collapseView, collapseId, `
       ${location ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(location)}</span></div>` : ""}
       ${detailRows ? `<div class="event-detail">${detailRows}</div>` : ""}
       <div class="event-actions">
+        <button type="button" data-action="details" data-id="${escapeHtml(event.id)}">Details</button>
         ${sourceLink("Website", event.website)}
         ${sourceLink("Instagram", event.instagram)}
         ${sourceLink("Facebook", event.facebook)}
@@ -1413,16 +977,6 @@ function renderEventCard(event) {
         <span class="event-status">${isHistorical(event) ? "Past event" : "Upcoming"}</span>
       </div>
     `)}
-    ${location ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(location)}</span></div>` : ""}
-    ${detailRows ? `<div class="event-detail">${detailRows}</div>` : ""}
-    <div class="event-actions">
-      <button type="button" data-action="details" data-id="${event.id}">Details</button>
-      ${sourceLink("Website", event.website)}
-      ${sourceLink("Instagram", event.instagram)}
-      ${sourceLink("Facebook", event.facebook)}
-      ${sourceLink("Tickets", event.tickets)}
-      <span class="event-status">${isHistorical(event) ? "Past event" : "Upcoming"}</span>
-    </div>
   `;
   return card;
 }
@@ -1474,7 +1028,7 @@ function renderCalendar() {
 
         const haystack = [
           event.name, event.city, event.country, event.venue, event.organizer, 
-          event.djs, event.artists, event.notes, schengenLabel(event)
+          event.djs, event.artists, event.notes, formatStyles(event), watchlistLabel(event), schengenLabel(event)
         ].join(" ").toLowerCase();
         return haystack.includes(searchQuery);
       })
@@ -1498,7 +1052,7 @@ function renderCalendar() {
       const wrapper = document.createElement("div");
       wrapper.className = "calendar-event-card";
       const button = document.createElement("button");
-      button.className = "calendar-event";
+      button.className = `calendar-event ${isWatchlistEvent(event) ? "is-watchlist" : ""}`;
       button.type = "button";
       button.dataset.action = "details";
       button.dataset.id = event.id;
@@ -1506,7 +1060,6 @@ function renderCalendar() {
       button.innerHTML = calendarEventMarkup(event);
       wrapper.append(button);
       day.append(wrapper);
-      day.append(button);
     });
 
     dayTripPlaces.forEach((place) => {
@@ -1515,7 +1068,7 @@ function renderCalendar() {
       chip.type = "button";
       chip.dataset.action = "edit-trip";
       chip.dataset.id = place.trip.id;
-      chip.setAttribute("aria-label", `Edit trip ${place.trip.label}`);
+      chip.setAttribute("aria-label", `Edit trip ${cleanTripLabel(place.trip.label) || place.trip.label}`);
       chip.innerHTML = calendarTripMarkup(place);
       day.append(chip);
     });
@@ -1526,7 +1079,7 @@ function renderCalendar() {
       chip.type = "button";
       chip.dataset.action = "edit-trip";
       chip.dataset.id = ptoDay.trip.id;
-      chip.setAttribute("aria-label", `Edit PTO for ${ptoDay.trip.label}`);
+      chip.setAttribute("aria-label", `Edit PTO for ${cleanTripLabel(ptoDay.trip.label) || ptoDay.trip.label}`);
       chip.innerHTML = calendarPtoMarkup(ptoDay);
       day.append(chip);
     });
@@ -1587,6 +1140,8 @@ function calendarEventMarkup(event) {
   return `
     <strong>${escapeHtml(event.name)}</strong>
     ${eventLocation(event) ? `<span>${escapeHtml(eventLocation(event))}</span>` : ""}
+    ${isWatchlistEvent(event) ? `<span class="calendar-badge">${escapeHtml(watchlistLabel(event))}</span>` : ""}
+    ${formatStyles(event) ? `<span class="calendar-badge">Styles: ${escapeHtml(formatStyles(event))}</span>` : ""}
   `;
 }
 
@@ -1628,7 +1183,6 @@ function renderEvents() {
   }
 
   events.forEach((event) => elements.eventList.append(renderEventCard(event, { collapseView: "calendarList" })));
-  events.forEach((event) => elements.eventList.append(renderEventCard(event)));
 }
 
 function availableEventListYears() {
@@ -1760,6 +1314,8 @@ function filteredFestivalEditions() {
         event.djs,
         event.artists,
         event.notes,
+        formatStyles(event),
+        watchlistLabel(event),
         schengenLabel(event)
       ].join(" ").toLowerCase();
       const matchesYear = eventYear(event) === state.festivalYear;
@@ -1799,9 +1355,8 @@ function renderFestivalList() {
 
   groups.forEach((group) => {
     const card = document.createElement("article");
-    card.className = "event-card";
-    const filteredGroupEditions = filteredEditionsByKey.get(normalizeText(group.name)) || [];
-    const detailsTarget = group.upcoming[0] || filteredGroupEditions[0] || group.editions[group.editions.length - 1];
+    const hasWatchlistEdition = group.editions.some(isWatchlistEvent);
+    card.className = `event-card ${hasWatchlistEdition ? "is-watchlist" : ""}`;
     const selectedEditions = filteredEditionsByKey.get(normalizeText(group.name)) || [];
     const firstSelected = selectedEditions[0];
     const lastSelected = selectedEditions[selectedEditions.length - 1];
@@ -1812,6 +1367,7 @@ function renderFestivalList() {
     const detailsTarget = firstSelected || nextTrackedEdition || priorEdition || group.editions[group.editions.length - 1];
     const score = detailsTarget ? reviewScoreForEvent(detailsTarget) : null;
     const collapseId = normalizeText(group.name);
+    const groupStyles = [...new Set(group.editions.flatMap(eventStyles))].join(", ");
 
     card.innerHTML = `
       <div class="event-card-header">
@@ -1820,10 +1376,11 @@ function renderFestivalList() {
           <p class="muted">${escapeHtml(group.locations.join(" | "))}</p>
         </div>
         <div class="card-header-actions">
+          ${hasWatchlistEdition ? `<span class="pill watchlist-pill">Watchlist</span>` : ""}
+          ${groupStyles ? `<span class="pill style-pill">Styles: ${escapeHtml(groupStyles)}</span>` : ""}
           ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
           ${cardCollapseButton("eventList", collapseId)}
         </div>
-        ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
       </div>
       ${collapsibleCardBody("eventList", collapseId, `
         <div class="festival-editions">
@@ -1837,19 +1394,6 @@ function renderFestivalList() {
           ${sourceLink("Tickets", group.tickets)}
         </div>
       `)}
-      ${detailsTarget && eventLocation(detailsTarget) ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(eventLocation(detailsTarget))}</span></div>` : ""}
-      <div class="festival-editions">
-        ${selectedEditionBlocks(selectedEditions, state.festivalYear)}
-        ${editionBlock("Prior tracked edition", priorEdition, "No tracked prior edition yet. Add the verified older Facebook/event-page edition to Supabase when found.")}
-        ${editionBlock("Next tracked edition", nextTrackedEdition, "No later tracked edition yet.")}
-      </div>
-      <div class="event-actions">
-        ${detailsTarget ? `<button type="button" data-action="details" data-id="${detailsTarget.id}">Details</button>` : ""}
-        ${sourceLink("Website", group.website)}
-        ${sourceLink("Instagram", group.instagram)}
-        ${sourceLink("Facebook", group.facebook)}
-        ${sourceLink("Tickets", group.tickets)}
-      </div>
     `;
     elements.festivalList.append(card);
   });
@@ -2149,10 +1693,14 @@ function schengenTripStats(trip) {
 
   const sortedDates = [...dates].sort();
   const maxUsed = sortedDates.reduce((max, date) => Math.max(max, schengenUsedOn(date)), 0);
+  const firstSchengenDate = sortedDates[0] || "";
+  const lastSchengenDate = sortedDates.at(-1) || "";
   return {
     daysAdded: sortedDates.length,
-    entryUsed: schengenUsedOn(trip.startDate),
-    exitUsed: schengenUsedOn(trip.endDate),
+    entryUsed: firstSchengenDate ? schengenUsedOn(firstSchengenDate) : 0,
+    exitUsed: lastSchengenDate ? schengenUsedOn(lastSchengenDate) : 0,
+    entryDate: firstSchengenDate,
+    exitDate: lastSchengenDate,
     maxUsed
   };
 }
@@ -2172,7 +1720,7 @@ function renderTrips() {
     <article class="summary-card">
       <span class="detail-label">Check date</span>
       <strong>${escapeHtml(formatDate(state.schengenCheckDate))}</strong>
-      <p class="muted">Window: ${escapeHtml(formatDate(windowStart))} - ${escapeHtml(formatDate(state.schengenCheckDate))}</p>
+      <p class="muted">Inclusive 180-day window: ${escapeHtml(formatDate(windowStart))} - ${escapeHtml(formatDate(state.schengenCheckDate))}</p>
     </article>
     <article class="summary-card ${usedOnCheckDate > 90 ? "is-danger" : ""}">
       <span class="detail-label">Schengen days used</span>
@@ -2196,6 +1744,7 @@ function renderTrips() {
   trips.forEach((trip) => {
     const stats = schengenTripStats(trip);
     const ptoStats = tripPtoStats(trip);
+    const visibleTripNotes = isImportProvenanceNote(trip.notes) ? "" : trip.notes;
     const placesMarkup = trip.places.map((place) => `
       <div class="trip-place">
         <strong>${escapeHtml(tripDateRange(place))}</strong>
@@ -2218,17 +1767,17 @@ function renderTrips() {
     card.innerHTML = `
       <div class="event-card-header">
         <div>
-          <h3>${escapeHtml(trip.label)}</h3>
+          <h3>${escapeHtml(cleanTripLabel(trip.label) || trip.label)}</h3>
           <p class="muted">${escapeHtml(tripDateRange(trip))}</p>
         </div>
         <span class="pill score-pill">${stats.daysAdded} days</span>
       </div>
       <div class="event-detail">
-        ${detailRow("Entry day count", `${stats.entryUsed} / 90`)}
-        ${detailRow("Exit day count", `${stats.exitUsed} / 90`)}
+        ${detailRow("First Schengen day count", stats.entryDate ? `${stats.entryUsed} / 90 on ${formatDate(stats.entryDate)}` : "0 / 90")}
+        ${detailRow("Last Schengen day count", stats.exitDate ? `${stats.exitUsed} / 90 on ${formatDate(stats.exitDate)}` : "0 / 90")}
         ${detailRow("Max during trip", `${stats.maxUsed} / 90`)}
         ${detailRow("PTO count", `${formatPtoAmount(ptoStats.counted)}${ptoStats.holidays ? ` (${ptoStats.holidays} holiday${ptoStats.holidays === 1 ? "" : "s"} excluded)` : ""}`)}
-        ${trip.notes ? detailRow("Notes", trip.notes) : ""}
+        ${visibleTripNotes ? detailRow("Notes", visibleTripNotes) : ""}
       </div>
       <div class="trip-place-list">${placesMarkup}</div>
       ${ptoMarkup ? `<div class="trip-place-list pto-place-list">${ptoMarkup}</div>` : ""}
@@ -2249,7 +1798,7 @@ function renderPtoYearSummary() {
     return `
       <div class="pto-year-row ${holiday ? "is-holiday" : ""}">
         <strong>${escapeHtml(formatDate(ptoDay.date))}</strong>
-        <span>${escapeHtml(ptoDay.trip.label)}</span>
+        <span>${escapeHtml(cleanTripLabel(ptoDay.trip.label) || ptoDay.trip.label)}</span>
         <span class="pill ${holiday ? "location-pill" : "score-pill"}">${escapeHtml(holiday || formatPtoAmount(ptoDay.amount))}</span>
       </div>
     `;
@@ -2412,6 +1961,8 @@ function openEventDetails(eventId) {
   const priorEdition = priorEditionFor(event);
   elements.eventDetailsTitle.textContent = event.name;
   elements.eventDetailsMeta.innerHTML = [
+    isWatchlistEvent(event) ? `<span class="pill watchlist-pill">${escapeHtml(watchlistLabel(event))}</span>` : "",
+    formatStyles(event) ? `<span class="pill style-pill">Styles: ${escapeHtml(formatStyles(event))}</span>` : "",
     eventLocation(event) ? `<span class="pill location-pill">${escapeHtml(eventLocation(event))}</span>` : "",
     score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""
   ].filter(Boolean).join("");
@@ -2425,6 +1976,8 @@ function openEventDetails(eventId) {
           ${[
             detailRow("Dates", dateRange(priorEdition)),
             detailRow("Location", eventLocation(priorEdition)),
+            detailRow("Tracking", watchlistLabel(priorEdition)),
+            detailRow("Styles", formatStyles(priorEdition)),
             detailRow("Venue", priorEdition.venue),
             detailRow("Organizer", priorEdition.organizer),
             detailRow("Event size", formatEventSize(priorEdition.eventSize)),

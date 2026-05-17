@@ -92,6 +92,8 @@ export function mapSupabaseEvents(rows, canonicalizer) {
         website: event.website || "",
         instagram: event.instagram || "",
         facebook: event.facebook || "",
+        styles: event.styles || [],
+        watchlist: Boolean(event.watchlist),
         tickets: edition.tickets || "",
         price: edition.price || "",
         currency: edition.currency || "",

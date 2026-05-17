@@ -12,6 +12,38 @@ const maxSourcesPerEvent = Number(process.env.MAX_SOURCES_PER_EVENT || 4);
 
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "";
+const officialSchengenSourceUrl = "https://home-affairs.ec.europa.eu/policies/schengen-borders-and-visa/schengen-area_en";
+const officialSchengenCountries = [
+  "Austria",
+  "Belgium",
+  "Bulgaria",
+  "Croatia",
+  "Czechia",
+  "Denmark",
+  "Estonia",
+  "Finland",
+  "France",
+  "Germany",
+  "Greece",
+  "Hungary",
+  "Iceland",
+  "Italy",
+  "Latvia",
+  "Liechtenstein",
+  "Lithuania",
+  "Luxembourg",
+  "Malta",
+  "Netherlands",
+  "Norway",
+  "Poland",
+  "Portugal",
+  "Romania",
+  "Slovakia",
+  "Slovenia",
+  "Spain",
+  "Sweden",
+  "Switzerland"
+];
 const knownFutureNotAnnounced = new Set([
   "5star congress",
   "bucharest salsa revolution"
@@ -132,9 +164,30 @@ async function loadSupabaseEvents() {
   });
 }
 
+async function loadSupabaseSchengenCountries() {
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("SUPABASE_URL and a Supabase key are required.");
+  }
+
+  const endpoint = `${supabaseUrl.replace(/\/$/, "")}/rest/v1/schengen_countries?select=country_name,is_schengen&order=country_name.asc`;
+  const response = await fetch(endpoint, {
+    headers: {
+      apikey: supabaseKey,
+      Authorization: `Bearer ${supabaseKey}`
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`Supabase schengen_countries returned ${response.status}`);
+  }
+  return response.json();
+}
+
 async function loadAuditEvents() {
-  const supabaseEvents = await loadSupabaseEvents();
-  return { source: "Supabase", events: supabaseEvents };
+  const [supabaseEvents, schengenCountries] = await Promise.all([
+    loadSupabaseEvents(),
+    loadSupabaseSchengenCountries()
+  ]);
+  return { source: "Supabase", events: supabaseEvents, schengenCountries };
 }
 
 async function fetchText(url) {
@@ -357,7 +410,46 @@ async function auditEvent(events, event) {
   };
 }
 
-function renderMarkdown(results, source) {
+async function auditSchengenCountries(rows) {
+  const source = await fetchText(officialSchengenSourceUrl);
+  const expected = new Set(officialSchengenCountries.map(normalize));
+  const activeRows = rows.filter((row) => row.is_schengen === true);
+  const active = new Map(activeRows.map((row) => [normalize(row.country_name), row.country_name]));
+  const allRows = new Map(rows.map((row) => [normalize(row.country_name), row]));
+
+  const missingActiveCountries = officialSchengenCountries.filter((country) => !active.has(normalize(country)));
+  const inactiveOfficialCountries = officialSchengenCountries.filter((country) => {
+    const row = allRows.get(normalize(country));
+    return row && row.is_schengen !== true;
+  });
+  const unexpectedActiveCountries = activeRows
+    .map((row) => row.country_name)
+    .filter((country) => !expected.has(normalize(country)));
+
+  const sourceText = source.ok ? source.text : "";
+  const officialCountLooksCurrent = sourceText.includes("29 countries");
+  const latestJoinLooksCurrent = sourceText.toLowerCase().includes("bulgaria and romania") && sourceText.includes("1 January 2025");
+  const sourceWarning = source.ok && officialCountLooksCurrent && latestJoinLooksCurrent
+    ? ""
+    : "Official source wording changed or could not be fetched; manually re-check the Schengen country list.";
+
+  return {
+    sourceUrl: officialSchengenSourceUrl,
+    sourceOk: source.ok,
+    sourceStatus: source.status,
+    expectedCount: officialSchengenCountries.length,
+    databaseCount: activeRows.length,
+    missingActiveCountries,
+    inactiveOfficialCountries,
+    unexpectedActiveCountries,
+    sourceWarning,
+    proposedSql: missingActiveCountries.map((country) => (
+      `insert into schengen_countries (country_name, is_schengen) values ('${country.replaceAll("'", "''")}', true) on conflict (country_name) do update set is_schengen = excluded.is_schengen;`
+    ))
+  };
+}
+
+function renderMarkdown(results, source, schengenAudit) {
   const lines = [];
   lines.push("# Weekly Event Edition Refresh");
   lines.push("");
@@ -396,6 +488,26 @@ function renderMarkdown(results, source) {
     }
   }
 
+  lines.push("## Schengen Country Audit");
+  lines.push("");
+  lines.push(`Official source: ${schengenAudit.sourceUrl}`);
+  lines.push(`- Official source fetched: ${schengenAudit.sourceOk ? "yes" : `no (${schengenAudit.sourceStatus})`}`);
+  lines.push(`- Expected active Schengen countries: ${schengenAudit.expectedCount}`);
+  lines.push(`- Database active Schengen countries: ${schengenAudit.databaseCount}`);
+  lines.push(`- Missing active countries: ${schengenAudit.missingActiveCountries.length ? schengenAudit.missingActiveCountries.join(", ") : "none"}`);
+  lines.push(`- Official countries marked inactive: ${schengenAudit.inactiveOfficialCountries.length ? schengenAudit.inactiveOfficialCountries.join(", ") : "none"}`);
+  lines.push(`- Unexpected active countries: ${schengenAudit.unexpectedActiveCountries.length ? schengenAudit.unexpectedActiveCountries.join(", ") : "none"}`);
+  if (schengenAudit.sourceWarning) lines.push(`- Warning: ${schengenAudit.sourceWarning}`);
+  if (schengenAudit.proposedSql.length) {
+    lines.push("");
+    lines.push("Candidate SQL, verify before using:");
+    lines.push("");
+    lines.push("```sql");
+    lines.push(...schengenAudit.proposedSql);
+    lines.push("```");
+  }
+  lines.push("");
+
   lines.push("## All Recent Events Checked");
   lines.push("");
   for (const result of results) {
@@ -412,11 +524,12 @@ function renderMarkdown(results, source) {
 }
 
 fs.mkdirSync(outputDir, { recursive: true });
-const { source, events } = await loadAuditEvents();
+const { source, events, schengenCountries } = await loadAuditEvents();
 const results = [];
 for (const event of recentEvents(events)) {
   results.push(await auditEvent(events, event));
 }
+const schengenAudit = await auditSchengenCountries(schengenCountries);
 
 const summary = {
   runDate: isoDate(today),
@@ -424,9 +537,10 @@ const summary = {
   windowStart: isoDate(since),
   recentEventCount: results.length,
   needsReviewCount: results.filter((result) => result.suggestedRanges.length || (!result.alreadyTracked && !knownFutureNotAnnounced.has(eventFamilyKey(result.event)))).length,
+  schengenAudit,
   results
 };
 
 fs.writeFileSync(path.join(outputDir, "event-edition-refresh.json"), `${JSON.stringify(summary, null, 2)}\n`);
-fs.writeFileSync(path.join(outputDir, "event-edition-refresh.md"), renderMarkdown(results, source));
-console.log(`Checked ${summary.recentEventCount} recent events from ${source}; ${summary.needsReviewCount} need review.`);
+fs.writeFileSync(path.join(outputDir, "event-edition-refresh.md"), renderMarkdown(results, source, schengenAudit));
+console.log(`Checked ${summary.recentEventCount} recent events from ${source}; ${summary.needsReviewCount} need review. Schengen database active count: ${schengenAudit.databaseCount}/${schengenAudit.expectedCount}.`);
