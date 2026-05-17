@@ -1,8 +1,3 @@
-/**
- * API Module for Salsa Festivals Tracker
- * Handles all communication with Supabase
- */
-
 export const Api = {
   async request(path, { method = "GET", body, requiresAuth = false } = {}) {
     const config = window.supabaseConfig;
@@ -72,17 +67,40 @@ export const Api = {
 
   async fetchReviews() {
     return this.request("reviews?select=*&order=reviewed_at.desc", { requiresAuth: true });
+  },
+
+  async createReview(review) {
+    return this.request("reviews", {
+      method: "POST",
+      body: review,
+      requiresAuth: true
+    });
+  },
+
+  async updateReview(reviewId, review) {
+    return this.request(`reviews?id=eq.${reviewId}`, {
+      method: "PATCH",
+      body: review,
+      requiresAuth: true
+    });
+  },
+
+  async deleteReview(reviewId) {
+    return this.request(`reviews?id=eq.${reviewId}`, {
+      method: "DELETE",
+      requiresAuth: true
+    });
   }
 };
 
-export function mapSupabaseEvents(rows, canonicalizer) {
+export function mapSupabaseEvents(rows) {
   return rows.flatMap((event) => {
     const editions = Array.isArray(event.event_editions) ? event.event_editions : [];
     return editions
       .filter((edition) => edition.visibility === "public")
       .map((edition) => ({
         id: edition.id,
-        name: canonicalizer(event.name, edition.start_date || ""),
+        name: event.name || "",
         startDate: edition.start_date || "",
         endDate: edition.end_date || edition.start_date || "",
         city: edition.city || "",
@@ -104,8 +122,8 @@ export function mapSupabaseEvents(rows, canonicalizer) {
         addedOn: edition.added_on || "",
         notes: edition.notes || "",
         forceShowMonday: edition.force_show_monday || false,
-        createdAt: edition.created_at || event.created_at,
-        updatedAt: edition.updated_at || event.updated_at
+        createdAt: edition.created_at || event.created_at || new Date().toISOString(),
+        updatedAt: edition.updated_at || event.updated_at || edition.created_at || event.created_at || new Date().toISOString()
       }));
   });
 }

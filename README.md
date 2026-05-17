@@ -52,13 +52,10 @@ In GitHub:
 
 Your app will be available at `https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/`.
 
-The earlier native iOS prototype is still included in `SalsaFestivalsTracker.xcodeproj`, but it requires a Mac with Xcode 15 or newer.
-
 ## Likely Next Features
 
 - CSV import and export
 - Better calendar grouping by week/month
 - Country and date filters
 - Website text parser for semi-manual event import
-- iCloud sync with CloudKit
 - Community reviews after the private tracker is useful

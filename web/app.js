@@ -1,13 +1,25 @@
-import { Api } from "./api.js";
+import { Api, mapSupabaseEvents as mapApiSupabaseEvents } from "./api.js";
 import {
   cleanTripLabel,
-  eventStyles,
   formatEventSize,
   formatStyles,
   isImportProvenanceNote,
   isWatchlistEvent,
   watchlistLabel
 } from "./event-metadata.js";
+import {
+  addDays,
+  formatPtoAmount,
+  holidayForDate,
+  ptoYearStats as calculatePtoYearStats,
+  schengenTripStats as calculateSchengenTripStats,
+  schengenUsedOn as calculateSchengenUsedOn,
+  tripCountries,
+  tripHasSchengenImpact as calculateTripHasSchengenImpact,
+  tripMonths,
+  tripPtoStats,
+  tripYears
+} from "./trip-calculations.js";
 
 const storageKey = "salsa-festivals-tracker-v1";
 const authStorageKey = "salsa-festivals-auth-session-v1";
@@ -35,7 +47,6 @@ const state = {
   schengenCountries: new Map(),
   schengenCountriesLoaded: false,
   supabaseLoadStatus: {},
-  deletedReviewSourceIds: [],
   activeView: localStorage.getItem("salsa-festivals-active-view") || "calendar",
   search: "",
   sort: "date",
@@ -153,7 +164,6 @@ function loadState() {
   localStorage.removeItem(storageKey);
   state.events = [];
   state.reviews = [];
-  state.deletedReviewSourceIds = [];
 }
 
 function loadAuthSession() {
@@ -195,24 +205,6 @@ function isSignedIn() {
 
 function viewAllowed(view) {
   return view !== "reviews" || isSignedIn();
-}
-
-function authHeaders() {
-  const config = window.supabaseConfig;
-  return {
-    apikey: config.publishableKey,
-    Authorization: `Bearer ${state.authSession.accessToken}`,
-    "Content-Type": "application/json"
-  };
-}
-
-function publicSupabaseHeaders() {
-  const config = window.supabaseConfig;
-  return {
-    apikey: config.publishableKey,
-    Authorization: `Bearer ${config.publishableKey}`,
-    "Content-Type": "application/json"
-  };
 }
 
 function setSupabaseLoadStatus(table, status, count = 0) {
@@ -299,23 +291,17 @@ async function loadSupabaseEvents() {
     return [];
   }
 
-  const endpoint = `${config.url}/rest/v1/events?select=*,event_editions(*)&visibility=eq.public&order=name.asc`;
   try {
-    const response = await fetch(endpoint, {
-      headers: publicSupabaseHeaders()
-    });
-    if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
-    const rows = await response.json();
+    const rows = await Api.fetchPublicEvents();
     setSupabaseLoadStatus("events", "loaded", rows.length);
     setSupabaseLoadStatus(
       "event_editions",
       "loaded",
       rows.reduce((total, row) => total + (Array.isArray(row.event_editions) ? row.event_editions.length : 0), 0)
     );
-    return mapSupabaseEvents(rows);
+    return mapApiSupabaseEvents(rows);
   } catch (error) {
     console.warn("Supabase public events unavailable.", error);
-    console.warn("Supabase public events unavailable; using repo seed data.", error);
     setSupabaseLoadStatus("events", "error");
     setSupabaseLoadStatus("event_editions", "error");
     return [];
@@ -329,13 +315,8 @@ async function loadSupabaseSchengenCountries() {
     return new Map();
   }
 
-  const endpoint = `${config.url}/rest/v1/schengen_countries?select=country_name,is_schengen`;
   try {
-    const response = await fetch(endpoint, {
-      headers: publicSupabaseHeaders()
-    });
-    if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
-    const rows = await response.json();
+    const rows = await Api.fetchSchengenCountries();
     setSupabaseLoadStatus("schengen_countries", "loaded", rows.length);
     return new Map(rows.map((row) => [normalizeText(row.country_name), Boolean(row.is_schengen)]));
   } catch (error) {
@@ -343,90 +324,6 @@ async function loadSupabaseSchengenCountries() {
     setSupabaseLoadStatus("schengen_countries", "error");
     return new Map();
   }
-}
-
-async function loadSupabaseTable(table, { requiresAuth = false } = {}) {
-  const config = window.supabaseConfig;
-  if (!config?.url || !config?.publishableKey) {
-    setSupabaseLoadStatus(table, "not-configured");
-    return [];
-  }
-  if (requiresAuth && !isSignedIn()) {
-    setSupabaseLoadStatus(table, "signed-out");
-    return [];
-  }
-
-  const endpoint = `${config.url}/rest/v1/${table}?select=*`;
-  try {
-    const response = await fetch(endpoint, {
-      headers: requiresAuth ? authHeaders() : publicSupabaseHeaders()
-    });
-    if (!response.ok) throw new Error(`Supabase returned ${response.status}`);
-    const rows = await response.json();
-    setSupabaseLoadStatus(table, "loaded", rows.length);
-    return rows;
-  } catch (error) {
-    console.warn(`Supabase ${table} unavailable.`, error);
-    setSupabaseLoadStatus(table, "error");
-    return [];
-  }
-}
-
-async function supabaseRequest(path, { method = "GET", body, requiresAuth = false } = {}) {
-  const config = window.supabaseConfig;
-  if (!config?.url || !config?.publishableKey) {
-    throw new Error("Supabase is not configured.");
-  }
-  const headers = requiresAuth ? authHeaders() : publicSupabaseHeaders();
-  const response = await fetch(`${config.url}/rest/v1/${path}`, {
-    method,
-    headers: {
-      ...headers,
-      Prefer: method === "POST" || method === "PATCH" ? "return=representation" : "return=minimal"
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Supabase returned ${response.status}${text ? `: ${text}` : ""}`);
-  }
-  if (response.status === 204) return null;
-  return response.json();
-}
-
-function mapSupabaseEvents(rows) {
-  return rows.flatMap((event) => {
-    const editions = Array.isArray(event.event_editions) ? event.event_editions : [];
-    return editions
-      .filter((edition) => edition.visibility === "public")
-      .map((edition) => ({
-        id: edition.id,
-        name: event.name || "",
-        startDate: edition.start_date || "",
-        endDate: edition.end_date || edition.start_date || "",
-        city: edition.city || "",
-        country: edition.country || "",
-        venue: edition.venue || "",
-        organizer: event.organizer || "",
-        website: event.website || "",
-        instagram: event.instagram || "",
-        facebook: event.facebook || "",
-        styles: eventStyles({ styles: event.styles }),
-        watchlist: Boolean(event.watchlist),
-        tickets: edition.tickets || "",
-        price: edition.price || "",
-        currency: edition.currency || "",
-        djs: edition.djs || "",
-        artists: edition.artists || "",
-        eventSize: edition.event_size || "",
-        travel: edition.travel || "",
-        addedOn: edition.added_on || "",
-        notes: edition.notes || "",
-        forceShowMonday: Boolean(edition.force_show_monday),
-        createdAt: edition.created_at || event.created_at || new Date().toISOString(),
-        updatedAt: edition.updated_at || event.updated_at || edition.created_at || event.created_at || new Date().toISOString()
-      }));
-  });
 }
 
 async function loadSupabasePersonalTrips() {
@@ -438,7 +335,7 @@ async function loadSupabasePersonalTrips() {
 
   const endpoint = "personal_trips?select=*,personal_trip_places(*),personal_pto_days(*)&order=start_date.asc";
   try {
-    const rows = await supabaseRequest(endpoint, { requiresAuth: true });
+    const rows = await Api.request(endpoint, { requiresAuth: true });
     setSupabaseLoadStatus("personal_trips", "loaded", rows.length);
     setSupabaseLoadStatus(
       "personal_trip_places",
@@ -624,13 +521,6 @@ function normalizeText(value) {
     .replace(/\s+/g, " ");
 }
 
-function saveState() {
-  localStorage.setItem(storageKey, JSON.stringify({
-    reviews: state.reviews,
-    deletedReviewSourceIds: state.deletedReviewSourceIds
-  }));
-}
-
 function localDateString(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -777,12 +667,11 @@ function detailLinkRow(label, value, linkLabel = "Open link") {
   `;
 }
 
-function eventDetailRows(event, { includeStatus = false, includeDates = false } = {}) {
+function eventDetailRows(event, { includeStatus = false, includeDates = false, includeStyles = false } = {}) {
   return [
     includeDates ? ["Dates", dateRange(event)] : null,
     includeStatus ? ["Status", isHistorical(event) ? "Past event" : "Upcoming"] : null,
-    ["Tracking", watchlistLabel(event)],
-    ["Styles", formatStyles(event)],
+    includeStyles ? ["Styles", formatStyles(event)] : null,
     ["Schengen", schengenLabel(event)],
     ["Organizer", event.organizer],
     ["Venue", event.venue],
@@ -803,8 +692,6 @@ function editionBlock(event) {
   const rows = [
     detailRow("Dates", dateRange(event)),
     detailRow("Location", eventLocation(event)),
-    detailRow("Tracking", watchlistLabel(event)),
-    detailRow("Styles", formatStyles(event)),
     detailRow("Schengen", schengenLabel(event)),
     detailRow("Venue", event.venue),
     detailRow("Organizer", event.organizer),
@@ -940,8 +827,7 @@ function toggleCardCollapse(view, id) {
 
 function eventBadgeMarkup(event) {
   return [
-    isWatchlistEvent(event) ? `<span class="pill watchlist-pill">${escapeHtml(watchlistLabel(event))}</span>` : "",
-    formatStyles(event) ? `<span class="pill style-pill">Styles: ${escapeHtml(formatStyles(event))}</span>` : ""
+    isWatchlistEvent(event) ? `<span class="pill watchlist-pill">${escapeHtml(watchlistLabel(event))}</span>` : ""
   ].filter(Boolean).join("");
 }
 
@@ -1141,7 +1027,6 @@ function calendarEventMarkup(event) {
     <strong>${escapeHtml(event.name)}</strong>
     ${eventLocation(event) ? `<span>${escapeHtml(eventLocation(event))}</span>` : ""}
     ${isWatchlistEvent(event) ? `<span class="calendar-badge">${escapeHtml(watchlistLabel(event))}</span>` : ""}
-    ${formatStyles(event) ? `<span class="calendar-badge">Styles: ${escapeHtml(formatStyles(event))}</span>` : ""}
   `;
 }
 
@@ -1367,7 +1252,6 @@ function renderFestivalList() {
     const detailsTarget = firstSelected || nextTrackedEdition || priorEdition || group.editions[group.editions.length - 1];
     const score = detailsTarget ? reviewScoreForEvent(detailsTarget) : null;
     const collapseId = normalizeText(group.name);
-    const groupStyles = [...new Set(group.editions.flatMap(eventStyles))].join(", ");
 
     card.innerHTML = `
       <div class="event-card-header">
@@ -1377,7 +1261,6 @@ function renderFestivalList() {
         </div>
         <div class="card-header-actions">
           ${hasWatchlistEdition ? `<span class="pill watchlist-pill">Watchlist</span>` : ""}
-          ${groupStyles ? `<span class="pill style-pill">Styles: ${escapeHtml(groupStyles)}</span>` : ""}
           ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
           ${cardCollapseButton("eventList", collapseId)}
         </div>
@@ -1463,147 +1346,16 @@ function uniqueValues(values) {
   return [...new Set(values)];
 }
 
-function addDays(dateValue, offset) {
-  const date = new Date(`${dateValue}T12:00:00`);
-  date.setDate(date.getDate() + offset);
-  return localDateString(date);
-}
-
-function eachDate(startDate, endDate) {
-  const dates = [];
-  for (let date = startDate; date <= endDate; date = addDays(date, 1)) {
-    dates.push(date);
-  }
-  return dates;
-}
-
-function dateForYearMonthDay(year, month, day) {
-  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-function nthWeekdayOfMonth(year, month, weekday, occurrence) {
-  const date = new Date(year, month - 1, 1, 12);
-  const offset = (weekday - date.getDay() + 7) % 7;
-  date.setDate(1 + offset + (occurrence - 1) * 7);
-  return localDateString(date);
-}
-
-function lastWeekdayOfMonth(year, month, weekday) {
-  const date = new Date(year, month, 0, 12);
-  const offset = (date.getDay() - weekday + 7) % 7;
-  date.setDate(date.getDate() - offset);
-  return localDateString(date);
-}
-
-function observedFixedHoliday(year, month, day) {
-  const actual = new Date(year, month - 1, day, 12);
-  if (actual.getDay() === 0) return localDateString(new Date(year, month - 1, day + 1, 12));
-  if (actual.getDay() === 6) return localDateString(new Date(year, month - 1, day - 1, 12));
-  return localDateString(actual);
-}
-
-function federalHolidaysForYear(year) {
-  const holidays = new Map();
-  const addHoliday = (date, name) => holidays.set(date, name);
-  const addFixedHoliday = (month, day, name) => {
-    addHoliday(dateForYearMonthDay(year, month, day), name);
-    const observed = observedFixedHoliday(year, month, day);
-    if (observed !== dateForYearMonthDay(year, month, day)) {
-      addHoliday(observed, `${name} observed`);
-    }
-  };
-
-  addFixedHoliday(1, 1, "New Year's Day");
-  addHoliday(lastWeekdayOfMonth(year, 5, 1), "Memorial Day");
-  addFixedHoliday(6, 19, "Juneteenth");
-  addFixedHoliday(7, 4, "July 4th");
-  addHoliday(nthWeekdayOfMonth(year, 9, 1, 1), "Labor Day");
-  addHoliday(nthWeekdayOfMonth(year, 11, 4, 4), "Thanksgiving");
-  addFixedHoliday(12, 25, "Christmas");
-  return holidays;
-}
-
-function holidayForDate(dateValue) {
-  const year = Number(dateValue.slice(0, 4));
-  if (!year) return "";
-  return federalHolidaysForYear(year).get(dateValue) || federalHolidaysForYear(year + 1).get(dateValue) || "";
-}
-
-function ptoDayCount(ptoDay) {
-  return holidayForDate(ptoDay.date) ? 0 : Number(ptoDay.amount || 0);
-}
-
-function tripPtoStats(trip) {
-  const ptoDays = trip.ptoDays || [];
-  const holidays = ptoDays.filter((ptoDay) => holidayForDate(ptoDay.date));
-  const requested = ptoDays.reduce((total, ptoDay) => total + Number(ptoDay.amount || 0), 0);
-  const counted = ptoDays.reduce((total, ptoDay) => total + ptoDayCount(ptoDay), 0);
-  return {
-    requested,
-    counted,
-    holidays: holidays.length
-  };
-}
-
-function totalPtoUsed() {
-  return state.personalTrips.reduce((total, trip) => total + tripPtoStats(trip).counted, 0);
-}
-
-function formatPtoAmount(amount) {
-  const value = Number(amount || 0);
-  return `${Number.isInteger(value) ? value : value.toFixed(1)} day${value === 1 ? "" : "s"}`;
-}
-
 function currentYearValue() {
   return localDateString(new Date()).slice(0, 4);
 }
 
-function ptoDaysForYear(year) {
-  return state.personalTrips
-    .flatMap((trip) => (trip.ptoDays || []).map((ptoDay) => ({ ...ptoDay, trip })))
-    .filter((ptoDay) => ptoDay.date?.startsWith(`${year}-`))
-    .sort((a, b) => a.date.localeCompare(b.date) || a.trip.label.localeCompare(b.trip.label));
-}
-
 function ptoYearStats(year) {
-  const ptoDays = ptoDaysForYear(year);
-  const counted = ptoDays.reduce((total, ptoDay) => total + ptoDayCount(ptoDay), 0);
-  const requested = ptoDays.reduce((total, ptoDay) => total + Number(ptoDay.amount || 0), 0);
-  const holidays = ptoDays.filter((ptoDay) => holidayForDate(ptoDay.date));
-  const halfDays = ptoDays.filter((ptoDay) => !holidayForDate(ptoDay.date) && Number(ptoDay.amount) === 0.5).length;
-  const fullDays = ptoDays.filter((ptoDay) => !holidayForDate(ptoDay.date) && Number(ptoDay.amount) === 1).length;
-  return {
-    ptoDays,
-    counted,
-    requested,
-    holidays,
-    halfDays,
-    fullDays
-  };
-}
-
-function tripYears(trip) {
-  const years = new Set();
-  eachDate(trip.startDate, trip.endDate).forEach((date) => years.add(date.slice(0, 4)));
-  return [...years];
-}
-
-function tripMonths(trip) {
-  const months = new Set();
-  eachDate(trip.startDate, trip.endDate).forEach((date) => months.add(date.slice(5, 7)));
-  return [...months];
-}
-
-function tripCountries(trip) {
-  return uniqueValues((trip.places || []).map((place) => place.country).filter(Boolean));
+  return calculatePtoYearStats(state.personalTrips, year);
 }
 
 function tripHasSchengenImpact(trip) {
-  const windowStart = addDays(state.schengenCheckDate, -179);
-  return (trip.places || []).some((place) => {
-    if (schengenStatus(place) !== true) return false;
-    return eachDate(place.startDate, place.endDate).some((date) => date >= windowStart && date <= state.schengenCheckDate);
-  });
+  return calculateTripHasSchengenImpact(trip, state.schengenCheckDate, schengenStatus);
 }
 
 function tripMatchesFilters(trip) {
@@ -1651,58 +1403,12 @@ function tripDateRange(item) {
   return dateRange({ startDate: item.startDate, endDate: item.endDate });
 }
 
-function tripPlacesByDate() {
-  const days = new Map();
-  state.personalTrips.forEach((trip) => {
-    trip.places.forEach((place) => {
-      eachDate(place.startDate, place.endDate).forEach((date) => {
-        if (!days.has(date)) days.set(date, []);
-        days.get(date).push({ ...place, trip });
-      });
-    });
-  });
-  return days;
-}
-
-function schengenDayDetails() {
-  const days = tripPlacesByDate();
-  return [...days.entries()].map(([date, places]) => {
-    const schengenPlaces = places.filter((place) => schengenStatus(place) === true);
-    return {
-      date,
-      places,
-      schengenPlaces,
-      counts: schengenPlaces.length > 0
-    };
-  }).sort((a, b) => a.date.localeCompare(b.date));
-}
-
 function schengenUsedOn(dateValue) {
-  const windowStart = addDays(dateValue, -179);
-  return schengenDayDetails()
-    .filter((day) => day.counts && day.date >= windowStart && day.date <= dateValue)
-    .length;
+  return calculateSchengenUsedOn(state.personalTrips, dateValue, schengenStatus);
 }
 
 function schengenTripStats(trip) {
-  const dates = new Set();
-  trip.places.forEach((place) => {
-    if (schengenStatus(place) !== true) return;
-    eachDate(place.startDate, place.endDate).forEach((date) => dates.add(date));
-  });
-
-  const sortedDates = [...dates].sort();
-  const maxUsed = sortedDates.reduce((max, date) => Math.max(max, schengenUsedOn(date)), 0);
-  const firstSchengenDate = sortedDates[0] || "";
-  const lastSchengenDate = sortedDates.at(-1) || "";
-  return {
-    daysAdded: sortedDates.length,
-    entryUsed: firstSchengenDate ? schengenUsedOn(firstSchengenDate) : 0,
-    exitUsed: lastSchengenDate ? schengenUsedOn(lastSchengenDate) : 0,
-    entryDate: firstSchengenDate,
-    exitDate: lastSchengenDate,
-    maxUsed
-  };
+  return calculateSchengenTripStats(state.personalTrips, trip, schengenStatus);
 }
 
 function renderTrips() {
@@ -1962,12 +1668,11 @@ function openEventDetails(eventId) {
   elements.eventDetailsTitle.textContent = event.name;
   elements.eventDetailsMeta.innerHTML = [
     isWatchlistEvent(event) ? `<span class="pill watchlist-pill">${escapeHtml(watchlistLabel(event))}</span>` : "",
-    formatStyles(event) ? `<span class="pill style-pill">Styles: ${escapeHtml(formatStyles(event))}</span>` : "",
     eventLocation(event) ? `<span class="pill location-pill">${escapeHtml(eventLocation(event))}</span>` : "",
     score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""
   ].filter(Boolean).join("");
 
-  const detailRows = eventDetailRows(event, { includeDates: true, includeStatus: true });
+  const detailRows = eventDetailRows(event, { includeDates: true, includeStatus: true, includeStyles: true });
   const priorEditionSection = priorEdition
     ? `
       <section class="edition-block detail-edition-block">
@@ -1976,7 +1681,6 @@ function openEventDetails(eventId) {
           ${[
             detailRow("Dates", dateRange(priorEdition)),
             detailRow("Location", eventLocation(priorEdition)),
-            detailRow("Tracking", watchlistLabel(priorEdition)),
             detailRow("Styles", formatStyles(priorEdition)),
             detailRow("Venue", priorEdition.venue),
             detailRow("Organizer", priorEdition.organizer),
@@ -2173,21 +1877,21 @@ async function saveTrip(event) {
   let savedTrip;
   try {
     if (tripId) {
-      [savedTrip] = await supabaseRequest(`personal_trips?id=eq.${tripId}`, {
+      [savedTrip] = await Api.request(`personal_trips?id=eq.${tripId}`, {
         method: "PATCH",
         body: tripBody,
         requiresAuth: true
       });
-      await supabaseRequest(`personal_trip_places?trip_id=eq.${tripId}`, {
+      await Api.request(`personal_trip_places?trip_id=eq.${tripId}`, {
         method: "DELETE",
         requiresAuth: true
       });
-      await supabaseRequest(`personal_pto_days?trip_id=eq.${tripId}`, {
+      await Api.request(`personal_pto_days?trip_id=eq.${tripId}`, {
         method: "DELETE",
         requiresAuth: true
       });
     } else {
-      [savedTrip] = await supabaseRequest("personal_trips", {
+      [savedTrip] = await Api.request("personal_trips", {
         method: "POST",
         body: { id: crypto.randomUUID(), owner_id: currentUserId(), owner_email: currentUserEmail(), ...tripBody },
         requiresAuth: true
@@ -2209,7 +1913,7 @@ async function saveTrip(event) {
       notes: place.notes,
       access_level: "owner"
     }));
-    await supabaseRequest("personal_trip_places", {
+    await Api.request("personal_trip_places", {
       method: "POST",
       body: placeRows,
       requiresAuth: true
@@ -2225,7 +1929,7 @@ async function saveTrip(event) {
       access_level: "owner"
     }));
     if (ptoRows.length) {
-      await supabaseRequest("personal_pto_days", {
+      await Api.request("personal_pto_days", {
         method: "POST",
         body: ptoRows,
         requiresAuth: true
@@ -2245,7 +1949,7 @@ async function deleteTrip(tripId) {
   const confirmed = window.confirm(`Delete ${trip?.label || "this trip"}?`);
   if (!confirmed) return;
   try {
-    await supabaseRequest(`personal_trips?id=eq.${tripId}`, {
+    await Api.request(`personal_trips?id=eq.${tripId}`, {
       method: "DELETE",
       requiresAuth: true
     });
@@ -2281,43 +1985,7 @@ function openEventDialog(eventId) {
 }
 
 function saveEvent() {
-  if (!elements.eventForm.reportValidity()) return;
-
-  const id = $("#eventId").value || crypto.randomUUID();
-  const startDate = $("#startDate").value;
-  const endDate = $("#endDate").value < startDate ? startDate : $("#endDate").value;
-  const existing = state.events.find((event) => event.id === id);
-  const nextEvent = {
-    id,
-    name: $("#eventName").value.trim(),
-    startDate,
-    endDate,
-    city: $("#city").value.trim(),
-    country: $("#country").value.trim(),
-    venue: $("#venue").value.trim(),
-    organizer: $("#organizer").value.trim(),
-    website: $("#website").value.trim(),
-    instagram: $("#instagram").value.trim(),
-    facebook: $("#facebook").value.trim(),
-    price: $("#price").value.trim(),
-    currency: $("#currency").value.trim(),
-    djs: $("#djs").value.trim(),
-    artists: $("#artists").value.trim(),
-    notes: $("#notes").value.trim(),
-    createdAt: existing?.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
-
-  if (existing) {
-    state.events = state.events.map((event) => event.id === id ? nextEvent : event);
-  } else {
-    state.events.push(nextEvent);
-  }
-
-  state.selectedMonth = nextEvent.startDate.slice(0, 7);
-  saveState();
-  elements.eventDialog.close();
-  render();
+  window.alert("Events are managed in Supabase. Use the SQL/upsert workflow instead of local browser edits.");
 }
 
 function buildScoreFields() {
@@ -2393,7 +2061,42 @@ function openReviewEditor(reviewId) {
   elements.reviewDialog.showModal();
 }
 
-function saveReview() {
+function reviewPayloadFromForm(scores, categoryComments, existing = null) {
+  return {
+    ...(existing ? {} : { id: crypto.randomUUID() }),
+    user_id: currentUserId(),
+    event_edition_id: elements.reviewEventId.value,
+    reviewed_at: existing?.reviewedAt || new Date().toISOString(),
+    music_score: scores.music,
+    dancing_level_score: scores.dancingLevel,
+    stage_impact_score: scores.stageImpact,
+    floor_score: scores.floor,
+    vibe_score: scores.vibe,
+    event_cost_score: scores.eventCost,
+    services_score: scores.servicesProvided,
+    event_hours_score: scores.eventHours,
+    host_city_score: scores.hostCity,
+    event_size_score: scores.eventSize,
+    travel_score: scores.travelToEvent,
+    music_comment: categoryComments.music || "",
+    dancing_level_comment: categoryComments.dancingLevel || "",
+    stage_impact_comment: categoryComments.stageImpact || "",
+    floor_comment: categoryComments.floor || "",
+    vibe_comment: categoryComments.vibe || "",
+    event_cost_comment: categoryComments.eventCost || "",
+    services_comment: categoryComments.servicesProvided || "",
+    event_hours_comment: categoryComments.eventHours || "",
+    host_city_comment: categoryComments.hostCity || "",
+    event_size_comment: categoryComments.eventSize || "",
+    travel_comment: categoryComments.travelToEvent || "",
+    top_reason: elements.topReason.value.trim(),
+    notes: elements.reviewNotes.value.trim(),
+    visibility: "owner"
+  };
+}
+
+async function saveReview() {
+  if (!isSignedIn()) return;
   const scores = {};
   document.querySelectorAll("[data-score]").forEach((input) => {
     scores[input.dataset.score] = Number(input.value);
@@ -2408,54 +2111,42 @@ function saveReview() {
 
   const reviewId = elements.reviewId.value;
   const existing = state.reviews.find((review) => review.id === reviewId);
-  if (existing) {
-    existing.scores = scores;
-    existing.categoryComments = categoryComments;
-    existing.topReason = elements.topReason.value.trim();
-    existing.notes = elements.reviewNotes.value.trim();
-    existing.userModified = Boolean(existing.sourceId);
-    existing.updatedAt = new Date().toISOString();
-  } else {
-    state.reviews.push({
-      id: crypto.randomUUID(),
-      eventId: elements.reviewEventId.value,
-      scores,
-      categoryComments,
-      topReason: elements.topReason.value.trim(),
-      notes: elements.reviewNotes.value.trim(),
-      reviewedAt: new Date().toISOString()
-    });
+  const payload = reviewPayloadFromForm(scores, categoryComments, existing);
+  try {
+    if (existing) {
+      await Api.updateReview(reviewId, payload);
+    } else {
+      await Api.createReview(payload);
+    }
+    state.reviews = await loadSupabaseReviews();
+    elements.reviewDialog.close();
+    render();
+    switchView("reviews");
+  } catch (error) {
+    window.alert(error.message);
   }
-
-  saveState();
-  elements.reviewDialog.close();
-  render();
-  switchView("reviews");
 }
 
-function deleteReview(reviewId) {
+async function deleteReview(reviewId) {
+  if (!isSignedIn()) return;
   const review = state.reviews.find((item) => item.id === reviewId);
   if (!review) return;
   const event = state.events.find((item) => item.id === review.eventId);
   const confirmed = window.confirm(`Delete review for ${event?.name || "this event"}?`);
   if (!confirmed) return;
-  if (review.sourceId && !state.deletedReviewSourceIds.includes(review.sourceId)) {
-    state.deletedReviewSourceIds.push(review.sourceId);
+  try {
+    await Api.deleteReview(reviewId);
+    state.reviews = await loadSupabaseReviews();
+    render();
+  } catch (error) {
+    window.alert(error.message);
   }
-  state.reviews = state.reviews.filter((item) => item.id !== reviewId);
-  saveState();
-  render();
 }
 
 function deleteEvent(eventId) {
   const event = state.events.find((item) => item.id === eventId);
   if (!event) return;
-  const confirmed = window.confirm(`Delete ${event.name}? This also removes its reviews.`);
-  if (!confirmed) return;
-  state.events = state.events.filter((item) => item.id !== eventId);
-  state.reviews = state.reviews.filter((review) => review.eventId !== eventId);
-  saveState();
-  render();
+  window.alert("Events are managed in Supabase. Delete or archive event rows through the reviewed SQL workflow.");
 }
 
 function handleAction(event) {
