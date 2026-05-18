@@ -42,6 +42,10 @@
           </div>
         </div>
         <div class="calendar-filters">
+          <label class="field compact">
+            <span>Jump</span>
+            <select id="calendarMonthJump"></select>
+          </label>
           <label class="toggle-field">
             <input id="hideDuplicateAttendedToggle" type="checkbox">
             <span>Hide duplicate attended events</span>
@@ -51,6 +55,7 @@
             <span>Hide non-attended events</span>
           </label>
         </div>
+        <div class="month-jump-rail" id="monthJumpRail" aria-label="Quick month jump"></div>
         <div class="calendar-weekdays" aria-hidden="true">
           <span>Sun</span>
           <span>Mon</span>
@@ -84,7 +89,6 @@
                 <option value="date">Date</option>
                 <option value="name">Name</option>
                 <option value="country">Country</option>
-                <option value="score">Score</option>
               </select>
             </label>
             <label class="toggle-field">
@@ -129,7 +133,7 @@
                 <option value="">All sizes</option>
                 <option value="small">Small</option>
                 <option value="medium">Medium</option>
-                <option value="large">Large (legacy)</option>
+                <option value="large">Large</option>
                 <option value="extra large">Extra large</option>
               </select>
             </label>
@@ -149,6 +153,10 @@
           <div>
             <h2 id="recentlyAddedTitle">Recently Added</h2>
             <p class="muted">New festival editions added to the tracker.</p>
+          </div>
+          <div class="toolbar-controls">
+            <button class="secondary-action" id="collapseRecentlyAddedBtn" type="button">Collapse all</button>
+            <button class="secondary-action" id="expandRecentlyAddedBtn" type="button">Expand all</button>
           </div>
         </div>
         <div id="recentlyAddedList" class="event-list"></div>
@@ -221,6 +229,7 @@
         <div id="reviewList" class="review-list"></div>
       </section>
     </main>
+    <button class="back-to-top" id="backToTopBtn" type="button" hidden>Back to top</button>
 
     <dialog id="authDialog" class="modal auth-modal">
       <form id="authForm">
