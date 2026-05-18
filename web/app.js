@@ -66,8 +66,9 @@ const state = {
   tripYear: "",
   tripMonth: "",
   collapsedCards: {
-    calendarList: { all: false, expanded: new Set(), collapsed: new Set() },
-    eventList: { all: false, expanded: new Set(), collapsed: new Set() }
+    calendarList: { all: true, expanded: new Set(), collapsed: new Set() },
+    eventList: { all: true, expanded: new Set(), collapsed: new Set() },
+    recentlyAdded: { all: true, expanded: new Set(), collapsed: new Set() }
   },
   schengenCheckDate: localDateString(new Date())
 };
@@ -89,6 +90,8 @@ const elements = {
   reviewAuthPanel: $("#reviewAuthPanel"),
   tripsAuthPanel: $("#tripsAuthPanel"),
   monthPicker: $("#monthPicker"),
+  calendarMonthJump: $("#calendarMonthJump"),
+  monthJumpRail: $("#monthJumpRail"),
   hideDuplicateAttendedToggle: $("#hideDuplicateAttendedToggle"),
   attendedOnlyToggle: $("#attendedOnlyToggle"),
   prevMonthBtn: $("#prevMonthBtn"),
@@ -143,6 +146,9 @@ const elements = {
   festivalMonthSelect: $("#festivalMonthSelect"),
   collapseFestivalListBtn: $("#collapseFestivalListBtn"),
   expandFestivalListBtn: $("#expandFestivalListBtn"),
+  collapseRecentlyAddedBtn: $("#collapseRecentlyAddedBtn"),
+  expandRecentlyAddedBtn: $("#expandRecentlyAddedBtn"),
+  backToTopBtn: $("#backToTopBtn"),
   eventDialog: $("#eventDialog"),
   eventDialogTitle: $("#eventDialogTitle"),
   eventForm: $("#eventForm"),
@@ -567,6 +573,72 @@ function shiftSelectedMonth(offset) {
   renderCalendar();
 }
 
+function setSelectedMonth(monthValue) {
+  if (!/^\d{4}-\d{2}$/.test(String(monthValue || ""))) return;
+  state.selectedMonth = monthValue;
+  renderCalendar();
+}
+
+function monthLabel(monthValue, { short = false } = {}) {
+  const [year, month] = monthValue.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleDateString(undefined, {
+    month: short ? "short" : "long",
+    year: "numeric"
+  });
+}
+
+function availableCalendarMonths() {
+  const months = new Set();
+  state.events.forEach((event) => {
+    if (!event.startDate) return;
+    let cursor = event.startDate.slice(0, 7);
+    const end = (event.endDate || event.startDate).slice(0, 7);
+    while (cursor <= end) {
+      months.add(cursor);
+      const [year, month] = cursor.split("-").map(Number);
+      cursor = localDateString(new Date(year, month, 1)).slice(0, 7);
+    }
+  });
+  if (isSignedIn()) {
+    state.personalTrips.forEach((trip) => {
+      let cursor = trip.startDate.slice(0, 7);
+      const end = trip.endDate.slice(0, 7);
+      while (cursor <= end) {
+        months.add(cursor);
+        const [year, month] = cursor.split("-").map(Number);
+        cursor = localDateString(new Date(year, month, 1)).slice(0, 7);
+      }
+    });
+  }
+  months.add(state.selectedMonth);
+  return [...months].sort();
+}
+
+function renderCalendarMonthJump() {
+  if (elements.calendarMonthJump) {
+    const months = availableCalendarMonths();
+    setSelectOptions(
+      elements.calendarMonthJump,
+      months.map((month) => ({ value: month, label: monthLabel(month) })),
+      state.selectedMonth
+    );
+  }
+
+  if (!elements.monthJumpRail) return;
+  const [year, month] = state.selectedMonth.split("-").map(Number);
+  elements.monthJumpRail.innerHTML = "";
+  for (let offset = -3; offset <= 8; offset += 1) {
+    const monthValue = localDateString(new Date(year, month - 1 + offset, 1)).slice(0, 7);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `month-jump-button ${monthValue === state.selectedMonth ? "is-active" : ""}`;
+    button.dataset.month = monthValue;
+    button.textContent = monthLabel(monthValue, { short: true });
+    button.setAttribute("aria-label", `Jump to ${monthLabel(monthValue)}`);
+    elements.monthJumpRail.append(button);
+  }
+}
+
 function eventOccursOnDate(event, dateValue) {
   return event.startDate <= dateValue && calendarDisplayEndDate(event) >= dateValue;
 }
@@ -717,7 +789,6 @@ function missingEditionBlock(year) {
     <section class="edition-block is-empty">
       <h4>${escapeHtml(year)} edition</h4>
       <p class="muted">Not tracked.</p>
-      <p class="muted">Not tracked in Supabase yet.</p>
     </section>
   `;
 }
@@ -823,11 +894,29 @@ function toggleCardCollapse(view, id) {
   }
   if (view === "calendarList") renderEvents();
   if (view === "eventList") renderFestivalList();
+  if (view === "recentlyAdded") renderRecentlyAdded();
+}
+
+function isAttendingEvent(event) {
+  if (!isSignedIn()) return false;
+  return state.personalTrips.some((trip) =>
+    trip.places.some((place) => tripPlaceMatchesEvent({ ...place, trip }, event))
+  );
+}
+
+function eventVisualState(event) {
+  const attending = isAttendingEvent(event);
+  return {
+    attending,
+    watchlistOnly: isWatchlistEvent(event) && !attending
+  };
 }
 
 function eventBadgeMarkup(event) {
+  const visualState = eventVisualState(event);
   return [
-    isWatchlistEvent(event) ? `<span class="pill watchlist-pill">${escapeHtml(watchlistLabel(event))}</span>` : ""
+    visualState.attending ? `<span class="pill attending-pill">Attending</span>` : "",
+    visualState.watchlistOnly ? `<span class="pill watchlist-pill">${escapeHtml(watchlistLabel(event))}</span>` : ""
   ].filter(Boolean).join("");
 }
 
@@ -837,8 +926,9 @@ function renderEventCard(event, options = {}) {
   const score = reviewScoreForEvent(event);
   const location = eventLocation(event);
   const detailRows = eventDetailRows(event);
+  const visualState = eventVisualState(event);
   const card = document.createElement("article");
-  card.className = `event-card ${isWatchlistEvent(event) ? "is-watchlist" : ""}`;
+  card.className = `event-card ${visualState.attending ? "is-attending" : ""} ${visualState.watchlistOnly ? "is-watchlist" : ""}`;
   card.innerHTML = `
     <div class="event-card-header">
       <div>
@@ -869,6 +959,7 @@ function renderEventCard(event, options = {}) {
 
 function renderCalendar() {
   elements.monthPicker.value = state.selectedMonth;
+  renderCalendarMonthJump();
   if (elements.hideDuplicateAttendedToggle) {
     elements.hideDuplicateAttendedToggle.checked = state.hideDuplicateAttendedEvents;
     elements.hideDuplicateAttendedToggle.disabled = !isSignedIn();
@@ -878,6 +969,9 @@ function renderCalendar() {
     elements.attendedOnlyToggle.disabled = !isSignedIn();
   }
   elements.calendarGrid.innerHTML = "";
+  elements.calendarGrid.classList.remove("is-refreshing");
+  void elements.calendarGrid.offsetWidth;
+  elements.calendarGrid.classList.add("is-refreshing");
 
   const [year, month] = state.selectedMonth.split("-").map(Number);
   const firstOfMonth = new Date(year, month - 1, 1);
@@ -938,7 +1032,8 @@ function renderCalendar() {
       const wrapper = document.createElement("div");
       wrapper.className = "calendar-event-card";
       const button = document.createElement("button");
-      button.className = `calendar-event ${isWatchlistEvent(event) ? "is-watchlist" : ""}`;
+      const visualState = eventVisualState(event);
+      button.className = `calendar-event ${visualState.attending ? "is-attending" : ""} ${visualState.watchlistOnly ? "is-watchlist" : ""}`;
       button.type = "button";
       button.dataset.action = "details";
       button.dataset.id = event.id;
@@ -952,9 +1047,8 @@ function renderCalendar() {
       const chip = document.createElement("button");
       chip.className = `calendar-trip ${place.eventId ? "is-event-linked" : "is-travel"}`;
       chip.type = "button";
-      chip.dataset.action = "edit-trip";
-      chip.dataset.id = place.trip.id;
-      chip.setAttribute("aria-label", `Edit trip ${cleanTripLabel(place.trip.label) || place.trip.label}`);
+      chip.disabled = true;
+      chip.setAttribute("aria-label", `Trip ${cleanTripLabel(place.trip.label) || place.trip.label}`);
       chip.innerHTML = calendarTripMarkup(place);
       day.append(chip);
     });
@@ -963,9 +1057,8 @@ function renderCalendar() {
       const chip = document.createElement("button");
       chip.className = `calendar-trip calendar-pto ${holidayForDate(ptoDay.date) ? "is-holiday" : ""}`;
       chip.type = "button";
-      chip.dataset.action = "edit-trip";
-      chip.dataset.id = ptoDay.trip.id;
-      chip.setAttribute("aria-label", `Edit PTO for ${cleanTripLabel(ptoDay.trip.label) || ptoDay.trip.label}`);
+      chip.disabled = true;
+      chip.setAttribute("aria-label", `PTO for ${cleanTripLabel(ptoDay.trip.label) || ptoDay.trip.label}`);
       chip.innerHTML = calendarPtoMarkup(ptoDay);
       day.append(chip);
     });
@@ -1023,15 +1116,21 @@ function calendarPtoMarkup(ptoDay) {
 }
 
 function calendarEventMarkup(event) {
+  const visualState = eventVisualState(event);
   return `
     <strong>${escapeHtml(event.name)}</strong>
     ${eventLocation(event) ? `<span>${escapeHtml(eventLocation(event))}</span>` : ""}
-    ${isWatchlistEvent(event) ? `<span class="calendar-badge">${escapeHtml(watchlistLabel(event))}</span>` : ""}
+    ${visualState.attending ? `<span class="calendar-badge">Attending</span>` : ""}
+    ${visualState.watchlistOnly ? `<span class="calendar-badge">${escapeHtml(watchlistLabel(event))}</span>` : ""}
   `;
 }
 
 function renderEvents() {
   elements.eventList.innerHTML = "";
+  if (state.sort === "score") state.sort = "date";
+  if (elements.sortSelect && elements.sortSelect.value !== state.sort) {
+    elements.sortSelect.value = state.sort;
+  }
   const listYears = availableEventListYears();
   if (state.listYear && !listYears.includes(state.listYear)) state.listYear = "";
   setSelectOptions(
@@ -1058,7 +1157,6 @@ function renderEvents() {
   events = events.sort((a, b) => {
     if (state.sort === "name") return a.name.localeCompare(b.name);
     if (state.sort === "country") return `${a.country} ${a.city}`.localeCompare(`${b.country} ${b.city}`);
-    if (state.sort === "score") return (reviewScoreForEvent(b)?.average || 0) - (reviewScoreForEvent(a)?.average || 0);
     return a.startDate.localeCompare(b.startDate);
   });
 
@@ -1174,7 +1272,6 @@ function populateFestivalFilters() {
       { value: "", label: "All sizes" },
       { value: "small", label: "Small" },
       { value: "medium", label: "Medium" },
-      { value: "large", label: "Large (legacy)" },
       { value: "large", label: "Large" },
       { value: "extra large", label: "Extra large" }
     ],
@@ -1240,8 +1337,9 @@ function renderFestivalList() {
 
   groups.forEach((group) => {
     const card = document.createElement("article");
-    const hasWatchlistEdition = group.editions.some(isWatchlistEvent);
-    card.className = `event-card ${hasWatchlistEdition ? "is-watchlist" : ""}`;
+    const hasAttendingEdition = group.editions.some(isAttendingEvent);
+    const hasWatchlistEdition = group.editions.some((event) => eventVisualState(event).watchlistOnly);
+    card.className = `event-card ${hasAttendingEdition ? "is-attending" : ""} ${hasWatchlistEdition ? "is-watchlist" : ""}`;
     const selectedEditions = filteredEditionsByKey.get(normalizeText(group.name)) || [];
     const firstSelected = selectedEditions[0];
     const lastSelected = selectedEditions[selectedEditions.length - 1];
@@ -1260,6 +1358,7 @@ function renderFestivalList() {
           <p class="muted">${escapeHtml(group.locations.join(" | "))}</p>
         </div>
         <div class="card-header-actions">
+          ${hasAttendingEdition ? `<span class="pill attending-pill">Attending</span>` : ""}
           ${hasWatchlistEdition ? `<span class="pill watchlist-pill">Watchlist</span>` : ""}
           ${score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""}
           ${cardCollapseButton("eventList", collapseId)}
@@ -1294,7 +1393,7 @@ function renderRecentlyAdded() {
   }
 
   events.forEach((event) => {
-    const card = renderEventCard(event);
+    const card = renderEventCard(event, { collapseView: "recentlyAdded" });
     const details = card.querySelector(".event-detail");
     const addedRow = detailRow("Added", formatDate(recentAddedDate(event)));
     if (details) {
@@ -1487,9 +1586,6 @@ function renderTrips() {
       </div>
       <div class="trip-place-list">${placesMarkup}</div>
       ${ptoMarkup ? `<div class="trip-place-list pto-place-list">${ptoMarkup}</div>` : ""}
-      <div class="event-actions">
-        <button type="button" data-action="edit-trip" data-id="${escapeHtml(trip.id)}">Edit</button>
-      </div>
     `;
     elements.tripList.append(card);
   });
@@ -1575,6 +1671,9 @@ function renderAuth() {
   }
   if (elements.ptoYearSummary) {
     elements.ptoYearSummary.hidden = !isSignedIn();
+  }
+  if (elements.addTripBtn) {
+    elements.addTripBtn.hidden = true;
   }
   [
     elements.tripHistoryToggle,
@@ -1665,9 +1764,11 @@ function openEventDetails(eventId) {
 
   const score = reviewScoreForEvent(event);
   const priorEdition = priorEditionFor(event);
+  const visualState = eventVisualState(event);
   elements.eventDetailsTitle.textContent = event.name;
   elements.eventDetailsMeta.innerHTML = [
-    isWatchlistEvent(event) ? `<span class="pill watchlist-pill">${escapeHtml(watchlistLabel(event))}</span>` : "",
+    visualState.attending ? `<span class="pill attending-pill">Attending</span>` : "",
+    visualState.watchlistOnly ? `<span class="pill watchlist-pill">${escapeHtml(watchlistLabel(event))}</span>` : "",
     eventLocation(event) ? `<span class="pill location-pill">${escapeHtml(eventLocation(event))}</span>` : "",
     score ? `<span class="pill score-pill">${score.average.toFixed(1)}${score.isPrior ? " prior" : ""}</span>` : ""
   ].filter(Boolean).join("");
@@ -2154,8 +2255,17 @@ function handleAction(event) {
   if (!target) return;
   const { action, id } = target.dataset;
   if (action === "details") openEventDetails(id);
-  if (action === "edit-trip") openTripDialog(id);
+  if (action === "edit-trip") return;
   if (action === "toggle-card-collapse") toggleCardCollapse(target.dataset.view, id);
+}
+
+function updateBackToTopVisibility() {
+  if (!elements.backToTopBtn) return;
+  elements.backToTopBtn.hidden = window.scrollY < 600;
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function handleAuthSubmit(event) {
@@ -2209,8 +2319,12 @@ function bindEvents() {
   elements.recentlyAddedList.addEventListener("click", handleAction);
   elements.reviewList.addEventListener("click", handleAction);
   elements.monthPicker.addEventListener("change", (event) => {
-    state.selectedMonth = event.target.value;
-    renderCalendar();
+    setSelectedMonth(event.target.value);
+  });
+  elements.calendarMonthJump?.addEventListener("change", (event) => setSelectedMonth(event.target.value));
+  elements.monthJumpRail?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-month]");
+    if (button) setSelectedMonth(button.dataset.month);
   });
   elements.hideDuplicateAttendedToggle?.addEventListener("change", (event) => {
     state.hideDuplicateAttendedEvents = event.target.checked;
@@ -2260,6 +2374,10 @@ function bindEvents() {
   });
   elements.collapseFestivalListBtn?.addEventListener("click", () => setCollapseMode("eventList", true));
   elements.expandFestivalListBtn?.addEventListener("click", () => setCollapseMode("eventList", false));
+  elements.collapseRecentlyAddedBtn?.addEventListener("click", () => setCollapseMode("recentlyAdded", true));
+  elements.expandRecentlyAddedBtn?.addEventListener("click", () => setCollapseMode("recentlyAdded", false));
+  elements.backToTopBtn?.addEventListener("click", scrollToTop);
+  window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
   elements.schengenCheckDate?.addEventListener("change", (event) => {
     state.schengenCheckDate = event.target.value || localDateString(new Date());
     renderTrips();
@@ -2328,6 +2446,7 @@ function bindEvents() {
     tab.addEventListener("click", () => switchView(tab.dataset.view));
   });
   elements.scoreFields?.addEventListener("input", updateLiveScore);
+  updateBackToTopVisibility();
 }
 
 async function init() {
