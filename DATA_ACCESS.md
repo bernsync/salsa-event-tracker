@@ -9,12 +9,14 @@ Working names in conversation:
 - `public`: public app/reference data.
 - `owner`: my user only.
 - `authenticated`: any signed-in user.
+- `app role`: app-wide role granted through `app_user_roles`.
 
 | Access level | Meaning | Examples |
 | --- | --- | --- |
 | `public` | Anyone can read it, including logged-out visitors. Writes should come from admin scripts or service-role workflows only. | Festival names, public event editions, official websites, public Schengen country lookup |
 | `authenticated` | Any signed-in app user can read it. Logged-out visitors cannot. Writes depend on the feature and should be discussed first. | Future community-only rankings, signed-in-only shared notes |
 | `owner` | Only the owning user can read or change it. For Noam-only data, the row owner should be Noam's Supabase auth user. | Personal trips, Schengen day tracking, events I am attending, private notes |
+| `app role` | A signed-in user with a role in `app_user_roles`. Current roles are `owner`, `admin`, and `viewer`; private-data reads are granted to `owner` and `admin`. | Temporary helper access, admin-only support workflows |
 
 Default to `owner` if the data includes personal travel, attendance plans, visa-day calculations, private reviews, or anything that could reveal location/history/preferences. Default to `public` only when the data is already public official festival information.
 
@@ -41,6 +43,16 @@ access_level text not null default 'owner'
 ```
 
 Always set `owner_id` for `owner` rows. `public` system tables such as `events`, `event_editions`, and `schengen_countries` may use simpler RLS policies without `owner_id` if they only contain public reference data.
+
+## App Role Pattern
+
+Use `scripts/sql/003_add_app_user_roles.sql` to add role-based access. The current policy is intentionally conservative:
+
+- `owner` and `admin` roles can read private trips, trip places, PTO days, and reviews.
+- Private writes still require the signed-in user to own the row.
+- `viewer` is reserved for future signed-in features and does not read private travel/review data by default.
+
+Bootstrap role assignments from the Supabase SQL editor or another service-role workflow. Do not put role-management secrets in frontend files.
 
 ## RLS Pattern For Mixed-Access Tables
 
@@ -96,4 +108,6 @@ Use service-role scripts or manually reviewed SQL for admin-managed public refer
 | `reviews` | `owner` | Personal review data behind login. Revisit access before any community review launch. |
 | `personal_trips` | `owner` | Private travel and visa planning data. |
 | `personal_trip_places` | `owner` | Private city/date rows for trip and Schengen calculations. |
+| `personal_pto_days` | `owner` | Private PTO rows linked to personal travel. |
+| `app_user_roles` | `authenticated` / admin-managed | Signed-in users can read their own role; `owner`/`admin` roles can manage app role rows. |
 | `trips` | `owner` | Private travel and visa planning data unless explicitly reclassified. |

@@ -16,7 +16,14 @@ Only the publishable key belongs there. Never add the secret key or database pas
 2. Request public `schengen_countries` from Supabase and compute event badges from that table.
 3. Use `event_editions.added_on` for the Recently Added view; rows disappear from that view after 7 days.
 4. When signed in, request private/auth-gated `reviews`, `trips`, and `personal_trips`.
-5. When signed out, clear private/auth-gated table data from browser state and hide the Reviews tab.
+5. Private trip/review reads are controlled by RLS. The row owner can read their own rows; `owner` and `admin` users in `app_user_roles` can read private rows for support workflows.
+6. When signed out, clear private/auth-gated table data from browser state and hide the Reviews tab.
+
+## Role-Based Access
+
+Run `scripts/sql/003_add_app_user_roles.sql` to install the app role table and private-data policies. Bootstrap your own Supabase Auth user as `owner` from the SQL editor, then add temporary helper users as `admin` when needed.
+
+Do not share your password, database password, service-role key, or long-lived auth token. Create a separate Supabase Auth user for helper access and remove or downgrade that role when the work is done.
 
 ## Data Rule
 
