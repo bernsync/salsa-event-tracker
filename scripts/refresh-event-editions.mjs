@@ -562,7 +562,6 @@ function renderUpcomingMarkdown(results, source) {
     lines.push(`- Sources checked: ${result.sources.length ? result.sources.join(", ") : "none"}`);
     lines.push(`- Source fetch failures: ${failedSources.length ? failedSources.map((source) => `${source.url} (${source.status})`).join(", ") : "none"}`);
     lines.push(`- Future date mentions seen in sources: ${result.futureDates.length ? result.futureDates.join(", ") : "none"}`);
-    lines.push(`- Non-duplicate future ranges seen: ${result.suggestedRanges.length ? result.suggestedRanges.map((range) => `${range.startDate} to ${range.endDate}`).join(", ") : "none"}`);
     lines.push("");
   }
 
