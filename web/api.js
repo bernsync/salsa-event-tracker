@@ -1,3 +1,5 @@
+import { mapSupabaseEvents } from "./supabase-mappers.js";
+
 export const Api = {
   async request(path, { method = "GET", body, requiresAuth = false } = {}) {
     const config = window.supabaseConfig;
@@ -93,37 +95,4 @@ export const Api = {
   }
 };
 
-export function mapSupabaseEvents(rows) {
-  return rows.flatMap((event) => {
-    const editions = Array.isArray(event.event_editions) ? event.event_editions : [];
-    return editions
-      .filter((edition) => edition.visibility === "public")
-      .map((edition) => ({
-        id: edition.id,
-        name: event.name || "",
-        startDate: edition.start_date || "",
-        endDate: edition.end_date || edition.start_date || "",
-        city: edition.city || "",
-        country: edition.country || "",
-        venue: edition.venue || "",
-        organizer: event.organizer || "",
-        website: event.website || "",
-        instagram: event.instagram || "",
-        facebook: event.facebook || "",
-        styles: event.styles || [],
-        watchlist: Boolean(event.watchlist),
-        tickets: edition.tickets || "",
-        price: edition.price || "",
-        currency: edition.currency || "",
-        djs: edition.djs || "",
-        artists: edition.artists || "",
-        eventSize: edition.event_size || "",
-        travel: edition.travel || "",
-        addedOn: edition.added_on || "",
-        notes: edition.notes || "",
-        forceShowMonday: edition.force_show_monday || false,
-        createdAt: edition.created_at || event.created_at || new Date().toISOString(),
-        updatedAt: edition.updated_at || event.updated_at || edition.created_at || event.created_at || new Date().toISOString()
-      }));
-  });
-}
+export { mapSupabaseEvents };

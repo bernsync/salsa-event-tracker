@@ -1,6 +1,9 @@
+import { normalizeExternalUrl } from "../web/link-utils.js";
+
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const payloadText = process.env.EVENT_UPSERT_JSON || "";
+const eventSizes = new Set(["small", "medium", "large", "extra large", "xl"]);
 
 const eventFields = ["organizer", "website", "instagram", "facebook", "styles", "watchlist"];
 const editionFields = [
@@ -41,6 +44,28 @@ function requireDate(value, label) {
   return value;
 }
 
+function requireValidDateRange(startDate, endDate, label) {
+  if (endDate < startDate) {
+    fail(`${label}.end_date must not be before start_date. Got: ${startDate} to ${endDate}`);
+  }
+}
+
+function requireValidUrl(value, label) {
+  if (!value) return;
+  if (!normalizeExternalUrl(value)) {
+    fail(`${label} must be an http(s) URL or Instagram @handle. Got: ${value}`);
+  }
+}
+
+function normalizeSize(value, label) {
+  if (!value) return value;
+  const size = normalize(value);
+  if (!eventSizes.has(size)) {
+    fail(`${label} must be one of: ${[...eventSizes].join(", ")}. Got: ${value}`);
+  }
+  return size === "xl" ? "extra large" : size;
+}
+
 function parsePayload() {
   if (!payloadText.trim()) fail("EVENT_UPSERT_JSON is required.");
   try {
@@ -59,6 +84,11 @@ function validatePayload(payload) {
     if (!Array.isArray(event.editions) || !event.editions.length) {
       fail(`events[${eventIndex}].editions must contain at least one edition.`);
     }
+    requireValidUrl(event.website, `events[${eventIndex}].website`);
+    requireValidUrl(event.instagram, `events[${eventIndex}].instagram`);
+    requireValidUrl(event.facebook, `events[${eventIndex}].facebook`);
+
+    const payloadEditionKeys = new Set();
 
     return {
       ...event,
@@ -67,12 +97,30 @@ function validatePayload(payload) {
       editions: event.editions.map((edition, editionIndex) => {
         if (!edition.city?.trim()) fail(`events[${eventIndex}].editions[${editionIndex}].city is required.`);
         if (!edition.country?.trim()) fail(`events[${eventIndex}].editions[${editionIndex}].country is required.`);
+        const startDate = requireDate(edition.start_date, `events[${eventIndex}].editions[${editionIndex}].start_date`);
+        const endDate = requireDate(edition.end_date || edition.start_date, `events[${eventIndex}].editions[${editionIndex}].end_date`);
+        requireValidDateRange(startDate, endDate, `events[${eventIndex}].editions[${editionIndex}]`);
+        requireValidUrl(edition.tickets, `events[${eventIndex}].editions[${editionIndex}].tickets`);
+        const eventSize = normalizeSize(edition.event_size, `events[${eventIndex}].editions[${editionIndex}].event_size`);
+        const editionKey = [
+          normalize(event.name),
+          startDate,
+          endDate,
+          normalize(edition.city),
+          normalize(edition.country)
+        ].join("|");
+        if (payloadEditionKeys.has(editionKey)) {
+          fail(`Duplicate edition in payload: ${event.name} ${startDate} to ${endDate}, ${edition.city}, ${edition.country}`);
+        }
+        payloadEditionKeys.add(editionKey);
+
         return {
           ...edition,
-          start_date: requireDate(edition.start_date, `events[${eventIndex}].editions[${editionIndex}].start_date`),
-          end_date: requireDate(edition.end_date || edition.start_date, `events[${eventIndex}].editions[${editionIndex}].end_date`),
+          start_date: startDate,
+          end_date: endDate,
           city: edition.city.trim(),
           country: edition.country.trim(),
+          event_size: eventSize || edition.event_size,
           visibility: edition.visibility || event.visibility || "public"
         };
       })
