@@ -309,11 +309,14 @@ select:focus-visible {
   margin: -2px 0 12px;
   overflow-x: auto;
   padding-bottom: 4px;
+  scroll-padding-inline: 2px;
+  scroll-snap-type: x proximity;
   scrollbar-width: thin;
 }
 
 .month-jump-button {
   flex: 0 0 auto;
+  scroll-snap-align: start;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #fff;
@@ -514,6 +517,10 @@ select:focus-visible {
   margin-bottom: 7px;
   font-size: 0.8rem;
   font-weight: 900;
+}
+
+.calendar-date-label {
+  display: none;
 }
 
 .calendar-event-card {
@@ -1216,6 +1223,21 @@ select:focus-visible {
     margin: 0 0 10px;
   }
 
+  .calendar-filters .toggle-field {
+    min-height: 44px;
+    white-space: normal;
+  }
+
+  .month-jump-rail {
+    margin-inline: -8px;
+    padding: 0 8px 8px;
+  }
+
+  .month-jump-button {
+    min-height: 40px;
+    padding-inline: 14px;
+  }
+
   .trip-filters {
     grid-template-columns: 1fr;
   }
@@ -1251,21 +1273,42 @@ select:focus-visible {
 
   .calendar-day {
     min-height: auto;
-    padding: 10px;
+    padding: 11px;
   }
 
   .calendar-day.is-outside {
     display: none;
   }
 
+  .calendar-day.is-empty:not(.is-today),
+  .calendar-grid.is-agenda-empty .calendar-day.is-outside {
+    display: none;
+  }
+
+  .calendar-grid.is-agenda-empty .calendar-day.is-empty:not(.is-outside) {
+    display: block;
+  }
+
   .calendar-date {
+    align-items: baseline;
     margin-bottom: 8px;
     border-bottom: 1px solid var(--line);
     padding-bottom: 6px;
+    font-size: 0.95rem;
+  }
+
+  .calendar-date > span:first-child {
+    display: none;
+  }
+
+  .calendar-date-label {
+    display: block;
+    color: var(--ink);
   }
 
   .calendar-event,
   .calendar-trip {
+    min-height: 44px;
     padding: 10px;
     font-size: 0.86rem;
   }
