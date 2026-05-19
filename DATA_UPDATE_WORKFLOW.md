@@ -16,11 +16,16 @@ Default to `owner` for anything personal, travel-related, review-related, or vis
 
 ## Remote Update Options
 
-### 1. Weekly Audit
+### 1. Sunday Audits
 
-The existing workflow `.github/workflows/weekly-event-edition-refresh.yml` runs every Monday and can also be started manually from GitHub Actions. It reads Supabase, checks official sources, and opens or updates an audit issue. It does not mutate Supabase automatically.
+The existing workflow `.github/workflows/weekly-event-edition-refresh.yml` runs every Sunday and can also be started manually from GitHub Actions. It reads Supabase, checks official sources, and opens or updates audit issues. It does not mutate Supabase automatically.
 
-Use this for discovery and review.
+It currently produces:
+
+- `Weekly next-edition discovery`: events that ended from January 1 of the current year through today, with missing future editions flagged.
+- `Upcoming event refresh`: events starting in the next three months, with source-fetch and date-mention checks.
+
+Use these for discovery and review. This path intentionally uses no OpenAI API calls.
 
 ### 2. Manual Supabase Upsert Workflow
 
@@ -68,11 +73,9 @@ Recommended for phone-first use:
 1. Open a GitHub issue using a simple template, for example `Update Amsterdam Salsa Weekend 2027`.
 2. Add source links and fields in the issue body.
 3. Apply a label such as `data-update`.
-4. A GitHub Action parses the issue, creates an audit artifact, and either:
-   - posts SQL/JSON for review, or
-   - opens a PR with repo/code/docs changes.
+4. For now, review the issue manually or with Codex in the IDE, then use the manual upsert workflow or SQL editor.
 
-This is safer than letting an issue mutate production data immediately.
+This is safer than letting an issue mutate production data immediately. Future self-hosted runner automation is documented in `MINI_PC_RUNNER_PLAN.md`.
 
 ### 4. PR Automation
 
@@ -81,7 +84,7 @@ For repo changes, use issue-triggered or manual Actions to create branches and P
 ## Safety Rules
 
 - Never put a Supabase service-role key in `web/` or any frontend file.
-- Public festival data can be written by service-role workflows after review.
+- Public festival data can be written by service-role workflows after review; future autonomous writes should use a restricted insert/update-only role instead.
 - Owner data must include `owner_id` and be protected by RLS.
 - Any automated upsert must log exactly what it inserted or updated.
 - Deletions should stay manual until the workflow has a strong review step.

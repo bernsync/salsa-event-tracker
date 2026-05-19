@@ -4,8 +4,9 @@ import path from "node:path";
 const root = process.cwd();
 const outputDir = process.env.OUTPUT_DIR || path.join(root, "audit");
 const today = process.env.AUDIT_TODAY ? new Date(`${process.env.AUDIT_TODAY}T00:00:00Z`) : new Date();
-const since = new Date(today);
-since.setUTCMonth(since.getUTCMonth() - 6);
+const currentYearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
+const upcomingUntil = new Date(today);
+upcomingUntil.setUTCMonth(upcomingUntil.getUTCMonth() + 3);
 
 const sourceTimeoutMs = Number(process.env.SOURCE_TIMEOUT_MS || 12000);
 const maxSourcesPerEvent = Number(process.env.MAX_SOURCES_PER_EVENT || 4);
@@ -333,9 +334,18 @@ function recentEvents(events) {
   return events
     .filter((event) => {
       const end = toDate(event.endDate);
-      return end >= since && end <= today;
+      return end >= currentYearStart && end <= today;
     })
     .sort((a, b) => a.endDate.localeCompare(b.endDate));
+}
+
+function upcomingEvents(events) {
+  return events
+    .filter((event) => {
+      const start = toDate(event.startDate);
+      return start >= today && start <= upcomingUntil;
+    })
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
 }
 
 function eventAliasGroups(event) {
@@ -449,21 +459,23 @@ async function auditSchengenCountries(rows) {
   };
 }
 
-function renderMarkdown(results, source, schengenAudit) {
+function reviewNeeded(result) {
+  const knownNotAnnounced = knownFutureNotAnnounced.has(eventFamilyKey(result.event));
+  return result.suggestedRanges.length || (!result.alreadyTracked && !knownNotAnnounced);
+}
+
+function renderNextEditionMarkdown(results, source, schengenAudit) {
   const lines = [];
-  lines.push("# Weekly Event Edition Refresh");
+  lines.push("# Weekly Next-Edition Discovery");
   lines.push("");
   lines.push(`Run date: ${isoDate(today)}`);
   lines.push(`Data source: ${source}.`);
-  lines.push(`Reviewing events that ended from ${isoDate(since)} through ${isoDate(today)}.`);
+  lines.push(`Reviewing events that ended from ${isoDate(currentYearStart)} through ${isoDate(today)}.`);
   lines.push("");
   lines.push("This report is intentionally conservative. It does not edit Supabase automatically; verify official sources before inserting or updating rows.");
   lines.push("");
 
-  const needsReview = results.filter((result) => {
-    const knownNotAnnounced = knownFutureNotAnnounced.has(eventFamilyKey(result.event));
-    return result.suggestedRanges.length || (!result.alreadyTracked && !knownNotAnnounced);
-  });
+  const needsReview = results.filter(reviewNeeded);
   if (!needsReview.length) {
     lines.push("No missing next-edition candidates were found.");
     lines.push("");
@@ -523,24 +535,66 @@ function renderMarkdown(results, source, schengenAudit) {
   return lines.join("\n");
 }
 
+function renderUpcomingMarkdown(results, source) {
+  const lines = [];
+  lines.push("# Upcoming Event Refresh");
+  lines.push("");
+  lines.push(`Run date: ${isoDate(today)}`);
+  lines.push(`Data source: ${source}.`);
+  lines.push(`Reviewing events starting from ${isoDate(today)} through ${isoDate(upcomingUntil)}.`);
+  lines.push("");
+  lines.push("This report is audit-only. It checks source pages for date mentions and fetch status, but does not update Supabase.");
+  lines.push("");
+
+  if (!results.length) {
+    lines.push("No upcoming events are tracked in the next three months.");
+    lines.push("");
+    return lines.join("\n");
+  }
+
+  lines.push("## Upcoming Events Checked");
+  lines.push("");
+  for (const result of results) {
+    const failedSources = result.fetched.filter((source) => !source.ok);
+    lines.push(`### ${result.event.name} (${result.event.startDate} to ${result.event.endDate})`);
+    lines.push("");
+    lines.push(`- Location: ${result.location || "Unknown"}`);
+    lines.push(`- Sources checked: ${result.sources.length ? result.sources.join(", ") : "none"}`);
+    lines.push(`- Source fetch failures: ${failedSources.length ? failedSources.map((source) => `${source.url} (${source.status})`).join(", ") : "none"}`);
+    lines.push(`- Future date mentions seen in sources: ${result.futureDates.length ? result.futureDates.join(", ") : "none"}`);
+    lines.push(`- Non-duplicate future ranges seen: ${result.suggestedRanges.length ? result.suggestedRanges.map((range) => `${range.startDate} to ${range.endDate}`).join(", ") : "none"}`);
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
+
 fs.mkdirSync(outputDir, { recursive: true });
 const { source, events, schengenCountries } = await loadAuditEvents();
 const results = [];
 for (const event of recentEvents(events)) {
   results.push(await auditEvent(events, event));
 }
+const upcomingResults = [];
+for (const event of upcomingEvents(events)) {
+  upcomingResults.push(await auditEvent(events, event));
+}
 const schengenAudit = await auditSchengenCountries(schengenCountries);
 
 const summary = {
   runDate: isoDate(today),
   dataSource: source,
-  windowStart: isoDate(since),
+  windowStart: isoDate(currentYearStart),
+  upcomingWindowEnd: isoDate(upcomingUntil),
   recentEventCount: results.length,
-  needsReviewCount: results.filter((result) => result.suggestedRanges.length || (!result.alreadyTracked && !knownFutureNotAnnounced.has(eventFamilyKey(result.event)))).length,
+  upcomingEventCount: upcomingResults.length,
+  needsReviewCount: results.filter(reviewNeeded).length,
   schengenAudit,
-  results
+  results,
+  upcomingResults
 };
 
 fs.writeFileSync(path.join(outputDir, "event-edition-refresh.json"), `${JSON.stringify(summary, null, 2)}\n`);
-fs.writeFileSync(path.join(outputDir, "event-edition-refresh.md"), renderMarkdown(results, source, schengenAudit));
-console.log(`Checked ${summary.recentEventCount} recent events from ${source}; ${summary.needsReviewCount} need review. Schengen database active count: ${schengenAudit.databaseCount}/${schengenAudit.expectedCount}.`);
+fs.writeFileSync(path.join(outputDir, "event-edition-refresh.md"), renderNextEditionMarkdown(results, source, schengenAudit));
+fs.writeFileSync(path.join(outputDir, "upcoming-event-refresh.md"), renderUpcomingMarkdown(upcomingResults, source));
+console.log(`Checked ${summary.recentEventCount} current-year past events from ${source}; ${summary.needsReviewCount} need next-edition review. Checked ${summary.upcomingEventCount} upcoming events. Schengen database active count: ${schengenAudit.databaseCount}/${schengenAudit.expectedCount}.`);
