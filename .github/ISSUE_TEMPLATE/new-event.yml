@@ -1,0 +1,55 @@
+name: New event data request
+description: Request a public salsa festival/event to be verified and added.
+title: "New event: "
+labels:
+  - data-update
+  - new-event
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for public festival/event data only. Do not include private trip or visa details here.
+  - type: input
+    id: event_name
+    attributes:
+      label: Event name
+      placeholder: BIG Salsa Festival New York
+    validations:
+      required: true
+  - type: input
+    id: website
+    attributes:
+      label: Official website
+      placeholder: https://example.com
+    validations:
+      required: false
+  - type: input
+    id: instagram
+    attributes:
+      label: Instagram
+      placeholder: https://www.instagram.com/example/
+    validations:
+      required: false
+  - type: input
+    id: facebook
+    attributes:
+      label: Facebook
+      placeholder: https://www.facebook.com/example/
+    validations:
+      required: false
+  - type: textarea
+    id: known_details
+    attributes:
+      label: Known dates/location/details
+      description: Add anything you already know. The audit will still verify official sources.
+      placeholder: "Dates, city, venue, ticket link, styles, notes..."
+    validations:
+      required: false
+  - type: checkboxes
+    id: data_classification
+    attributes:
+      label: Data classification
+      options:
+        - label: This issue contains only public event data.
+          required: true
+
