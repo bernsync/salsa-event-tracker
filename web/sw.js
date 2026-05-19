@@ -24,6 +24,8 @@ self.addEventListener("install", (event) => {
     new URL("./styles.css", root),
     new URL("./app.js", root),
     new URL("./api.js", root),
+    new URL("./audit-review.js", root),
+    new URL("./auth-session.js", root),
     new URL("./date-utils.js", root),
     new URL("./dom-utils.js", root),
     new URL("./event-metadata.js", root),
@@ -32,6 +34,8 @@ self.addEventListener("install", (event) => {
     new URL("./supabase-mappers.js", root),
     new URL("./text-utils.js", root),
     new URL("./trip-calculations.js", root),
+    new URL("./trip-api.js", root),
+    new URL("./upsert-payload.js", root),
     new URL("./manifest.json", root),
     new URL("./icons/app-icon.svg", root)
   ].map((u) => u.href);

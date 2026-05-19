@@ -103,6 +103,19 @@ select:focus-visible {
   margin: 18px auto 48px;
 }
 
+.data-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #6b4b0c;
+  font-size: 0.92rem;
+}
+
 .tabs {
   display: flex;
   gap: 4px;
@@ -732,6 +745,19 @@ select:focus-visible {
   margin-top: 14px;
 }
 
+.audit-card {
+  gap: 12px;
+}
+
+.audit-payload {
+  width: 100%;
+  min-height: 180px;
+  margin-top: 10px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.84rem;
+  resize: vertical;
+}
+
 .review-comment {
   border-left: 3px solid #c9d7e6;
   padding-left: 10px;
@@ -779,6 +805,16 @@ select:focus-visible {
 .score-pill {
   background: #fff4d6;
   color: #8a5a00;
+}
+
+.success-pill {
+  background: #e9f8f3;
+  color: var(--green);
+}
+
+.warning-pill {
+  background: #fff8e6;
+  color: #8a5a0a;
 }
 
 .location-pill {

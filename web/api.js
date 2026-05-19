@@ -1,4 +1,5 @@
 import { mapSupabaseEvents } from "./supabase-mappers.js";
+import { authSessionFromStorage } from "./auth-session.js";
 
 export const Api = {
   async request(path, { method = "GET", body, requiresAuth = false } = {}) {
@@ -7,11 +8,12 @@ export const Api = {
       throw new Error("Supabase is not configured.");
     }
 
+    const session = requiresAuth ? authSessionFromStorage() : null;
     const headers = {
       apikey: config.publishableKey,
       "Content-Type": "application/json",
       Authorization: requiresAuth 
-        ? `Bearer ${JSON.parse(localStorage.getItem("salsa-festivals-auth-session-v1"))?.accessToken}`
+        ? `Bearer ${session?.accessToken || ""}`
         : `Bearer ${config.publishableKey}`
     };
 
@@ -63,8 +65,19 @@ export const Api = {
     return this.request("schengen_countries?select=country_name,is_schengen");
   },
 
+  async fetchDanceStyles() {
+    return this.request("dance_styles?select=name,slug,is_active,sort_order&is_active=eq.true&order=sort_order.asc,name.asc");
+  },
+
   async fetchPersonalTrips() {
     return this.request("personal_trips?select=*,personal_trip_places(*),personal_pto_days(*)&order=start_date.asc", { requiresAuth: true });
+  },
+
+  async deletePersonalTrip(tripId) {
+    return this.request(`personal_trips?id=eq.${tripId}`, {
+      method: "DELETE",
+      requiresAuth: true
+    });
   },
 
   async fetchReviews() {

@@ -17,6 +17,7 @@
     </header>
 
     <main class="app-shell">
+      <div class="data-status" id="dataStatus" hidden></div>
       <nav class="tabs" aria-label="Main views">
         <button class="tab is-active" data-view="calendar" type="button">Event Calendar</button>
         <button class="tab" data-view="events" type="button">Calendar List</button>
@@ -24,6 +25,7 @@
         <button class="tab" data-view="recentlyAdded" type="button">Recently Added</button>
         <button class="tab" data-view="trips" type="button">Trips</button>
         <button class="tab" data-view="reviews" type="button">Reviews</button>
+        <button class="tab" data-view="audit" type="button">Audit Review</button>
       </nav>
 
       <section class="view is-active" id="calendarView" aria-labelledby="calendarTitle">
@@ -233,6 +235,23 @@
           </div>
         </div>
         <div id="reviewList" class="review-list"></div>
+      </section>
+
+      <section class="view" id="auditView" aria-labelledby="auditTitle">
+        <div class="toolbar">
+          <div>
+            <h2 id="auditTitle">Audit Review</h2>
+            <p class="muted">Review weekly audit JSON and draft safe upsert payloads.</p>
+          </div>
+          <div class="toolbar-controls">
+            <button class="primary-action" id="loadAuditBtn" type="button">Load audit</button>
+          </div>
+        </div>
+        <label class="field">
+          <span>Weekly audit JSON</span>
+          <textarea id="auditJsonInput" rows="8" placeholder="Paste audit/event-edition-refresh.json"></textarea>
+        </label>
+        <div id="auditReviewList" class="event-list"></div>
       </section>
     </main>
     <button class="back-to-top" id="backToTopBtn" type="button" hidden>Back to top</button>

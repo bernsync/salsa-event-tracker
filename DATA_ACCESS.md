@@ -46,7 +46,7 @@ Always set `owner_id` for `owner` rows. `public` system tables such as `events`,
 
 ## App Role Pattern
 
-Use `scripts/sql/003_add_app_user_roles.sql` to add role-based access. The current policy is intentionally conservative:
+The current role-based access policy is intentionally conservative. The role table and policies have been managed directly in Supabase so far:
 
 - `owner` and `admin` roles can read private trips, trip places, PTO days, and reviews.
 - Private writes still require the signed-in user to own the row.
@@ -104,6 +104,7 @@ Use service-role scripts or manually reviewed SQL for admin-managed public refer
 | --- | --- | --- |
 | `events` | `public` | Festival brand/reference data, style tags, and public watchlist flag. |
 | `event_editions` | `public` | Public edition dates and official details. |
+| `dance_styles` | `public` | Public style taxonomy used to normalize event style tags. |
 | `schengen_countries` | `public` | Public reference lookup. |
 | `reviews` | `owner` | Personal review data behind login. Revisit access before any community review launch. |
 | `personal_trips` | `owner` | Private travel and visa planning data. |
