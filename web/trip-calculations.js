@@ -1,9 +1,4 @@
-function localDateString(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+import { localDateString } from "./date-utils.js";
 
 export function addDays(dateValue, offset) {
   const date = new Date(`${dateValue}T12:00:00`);

@@ -24,6 +24,7 @@ It currently produces:
 
 - `Weekly next-edition discovery`: events that ended from January 1 of the current year through today, with missing future editions flagged.
 - `Upcoming event refresh`: events starting in the next three months, with source-fetch and date-mention checks.
+- `Data quality report`: missing/stale festival fields, invalid links, suspicious date ranges, and possible duplicate public editions.
 
 Use these for discovery and review. This path intentionally uses no OpenAI API calls.
 

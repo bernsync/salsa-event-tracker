@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { mapSupabaseEvents } from "../web/supabase-mappers.js";
 
 const root = process.cwd();
 const outputDir = process.env.OUTPUT_DIR || path.join(root, "audit");
@@ -142,27 +143,7 @@ async function loadSupabaseEvents() {
     throw new Error(`Supabase returned ${response.status}`);
   }
   const rows = await response.json();
-  return rows.flatMap((event) => {
-    const editions = Array.isArray(event.event_editions) ? event.event_editions : [];
-    return editions
-      .filter((edition) => edition.visibility === "public")
-      .map((edition) => ({
-        name: event.name,
-        startDate: edition.start_date || "",
-        endDate: edition.end_date || edition.start_date || "",
-        city: edition.city || "",
-        country: edition.country || "",
-        venue: edition.venue || "",
-        website: event.website || "",
-        instagram: event.instagram || "",
-        facebook: event.facebook || "",
-        tickets: edition.tickets || "",
-        organizer: event.organizer || "",
-        djs: edition.djs || "",
-        artists: edition.artists || "",
-        notes: edition.notes || ""
-      }));
-  });
+  return mapSupabaseEvents(rows);
 }
 
 async function loadSupabaseSchengenCountries() {

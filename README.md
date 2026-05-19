@@ -37,6 +37,17 @@ If you prefer Python, run this from the `web` folder instead:
 python -m http.server 8000
 ```
 
+## Checks And Reports
+
+Run the lightweight syntax and unit checks with:
+
+```powershell
+npm.cmd run check
+npm.cmd test
+```
+
+Use `npm.cmd run data-quality` with Supabase environment variables set to write `audit/data-quality-report.md`.
+
 ## GitHub Pages
 
 This project includes a root `index.html` that redirects to the app in `web/`, so GitHub Pages can publish from the repository root.

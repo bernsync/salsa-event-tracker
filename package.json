@@ -1,0 +1,13 @@
+{
+  "name": "salsa-event-tracker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check web/app.js && node --check web/api.js && node --check web/server.js && node --check web/trip-calculations.js && node --check scripts/refresh-event-editions.mjs && node --check scripts/upsert-supabase-events.mjs && node --check scripts/data-quality-report.mjs",
+    "data-quality": "node scripts/data-quality-report.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

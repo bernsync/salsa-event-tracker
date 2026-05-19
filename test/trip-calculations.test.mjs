@@ -1,0 +1,56 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  addDays,
+  formatPtoAmount,
+  holidayForDate,
+  ptoDayCount,
+  ptoYearStats,
+  schengenUsedOn,
+  tripHasSchengenImpact
+} from "../web/trip-calculations.js";
+
+test("addDays uses local calendar dates without UTC drift", () => {
+  assert.equal(addDays("2026-03-08", 1), "2026-03-09");
+  assert.equal(addDays("2026-01-01", -1), "2025-12-31");
+});
+
+test("US holidays do not count against PTO", () => {
+  assert.equal(holidayForDate("2026-07-03"), "July 4th observed");
+  assert.equal(ptoDayCount({ date: "2026-07-03", amount: 1 }), 0);
+  assert.equal(ptoDayCount({ date: "2026-07-06", amount: 0.5 }), 0.5);
+});
+
+test("PTO year stats separate requested and counted days", () => {
+  const stats = ptoYearStats([
+    {
+      label: "Trip 1",
+      ptoDays: [
+        { date: "2026-07-03", amount: 1 },
+        { date: "2026-07-06", amount: 1 },
+        { date: "2026-07-07", amount: 0.5 }
+      ]
+    }
+  ], "2026");
+
+  assert.equal(stats.requested, 2.5);
+  assert.equal(stats.counted, 1.5);
+  assert.equal(stats.holidays.length, 1);
+  assert.equal(formatPtoAmount(stats.counted), "1.5 days");
+});
+
+test("Schengen rolling usage counts unique Schengen calendar days", () => {
+  const trips = [
+    {
+      places: [
+        { startDate: "2026-01-01", endDate: "2026-01-03", country: "Spain" },
+        { startDate: "2026-02-01", endDate: "2026-02-02", country: "United States" }
+      ]
+    }
+  ];
+  const schengenStatus = (place) => place.country === "Spain";
+
+  assert.equal(schengenUsedOn(trips, "2026-01-03", schengenStatus), 3);
+  assert.equal(tripHasSchengenImpact(trips[0], "2026-06-29", schengenStatus), true);
+  assert.equal(tripHasSchengenImpact(trips[0], "2026-07-02", schengenStatus), false);
+});
