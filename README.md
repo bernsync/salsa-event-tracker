@@ -8,8 +8,10 @@ A low-cost tracker for salsa festivals. The current practical version is a brows
 - Event list with search
 - Festival detail pages with website, Instagram, and Facebook links
 - Supabase-backed public event data
+- Supabase-backed dance style taxonomy
 - Supabase-backed Schengen country status
 - Private reviews behind login
+- Audit Review tab for turning weekly audit JSON into reviewed upsert payload drafts
 
 ## Cost-Saving Approach
 
@@ -46,7 +48,9 @@ npm.cmd run check
 npm.cmd test
 ```
 
-Use `npm.cmd run data-quality` with Supabase environment variables set to write `audit/data-quality-report.md`.
+Use `npm.cmd run data-quality` with Supabase environment variables set to write `audit/data-quality-report.md` and `audit/data-quality-report.json`.
+
+The weekly event-edition refresh workflow writes `audit/event-edition-refresh.json`; paste that JSON or the data-quality JSON into the app's Audit Review tab to inspect candidates and draft manual upsert payloads.
 
 ## GitHub Pages
 

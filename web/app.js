@@ -26,9 +26,18 @@ import { eventLocation, eventPrice } from "./event-view-utils.js";
 import { sourceLink } from "./link-utils.js";
 import { mapSupabaseReview, mapSupabaseTrip } from "./supabase-mappers.js";
 import { normalizeText } from "./text-utils.js";
+import {
+  authSessionFromStorage,
+  authSessionFromUrlHash,
+  clearAuthSession,
+  currentUserEmail as sessionUserEmail,
+  currentUserId as sessionUserId,
+  saveAuthSession
+} from "./auth-session.js";
+import { buildTripSavePayload, deletePersonalTrip, savePersonalTrip } from "./trip-api.js";
+import { hasLoadWarnings, renderAuditReviewMarkup, tableStatusItems } from "./audit-review.js";
 
 const storageKey = "salsa-festivals-tracker-v1";
-const authStorageKey = "salsa-festivals-auth-session-v1";
 
 const scoreCategories = [
   ["music", "Music"],
@@ -49,7 +58,9 @@ const state = {
   reviews: [],
   trips: [],
   personalTrips: [],
+  auditSummary: null,
   authSession: null,
+  danceStyles: [],
   schengenCountries: new Map(),
   schengenCountriesLoaded: false,
   supabaseLoadStatus: {},
@@ -89,7 +100,9 @@ const elements = {
   views: document.querySelectorAll(".view"),
   reviewTab: document.querySelector('[data-view="reviews"]'),
   tripsTab: document.querySelector('[data-view="trips"]'),
+  auditTab: document.querySelector('[data-view="audit"]'),
   authStatus: $("#authStatus"),
+  dataStatus: $("#dataStatus"),
   authDialog: $("#authDialog"),
   authForm: $("#authForm"),
   authEmail: $("#authEmail"),
@@ -144,6 +157,9 @@ const elements = {
   eventDetailsBody: $("#eventDetailsBody"),
   eventDetailsLinks: $("#eventDetailsLinks"),
   reviewList: $("#reviewList"),
+  auditJsonInput: $("#auditJsonInput"),
+  loadAuditBtn: $("#loadAuditBtn"),
+  auditReviewList: $("#auditReviewList"),
   searchInput: $("#searchInput"),
   listYearSelect: $("#listYearSelect"),
   listMonthSelect: $("#listMonthSelect"),
@@ -185,36 +201,14 @@ function loadState() {
 }
 
 function loadAuthSession() {
-  const urlSession = authSessionFromUrl();
+  const urlSession = authSessionFromUrlHash(location.hash);
   if (urlSession) {
     state.authSession = urlSession;
-    localStorage.setItem(authStorageKey, JSON.stringify(urlSession));
+    saveAuthSession(urlSession);
     history.replaceState(null, "", `${location.pathname}${location.search}`);
     return;
   }
-
-  try {
-    const saved = JSON.parse(localStorage.getItem(authStorageKey) || "null");
-    if (saved?.accessToken && (!saved.expiresAt || saved.expiresAt * 1000 > Date.now())) {
-      state.authSession = saved;
-    } else {
-      localStorage.removeItem(authStorageKey);
-    }
-  } catch {
-    localStorage.removeItem(authStorageKey);
-  }
-}
-
-function authSessionFromUrl() {
-  const params = new URLSearchParams(location.hash.slice(1));
-  const accessToken = params.get("access_token");
-  if (!accessToken) return null;
-  return {
-    accessToken,
-    refreshToken: params.get("refresh_token") || "",
-    expiresAt: Number(params.get("expires_at") || 0),
-    tokenType: params.get("token_type") || "bearer"
-  };
+  state.authSession = authSessionFromStorage();
 }
 
 function isSignedIn() {
@@ -222,7 +216,7 @@ function isSignedIn() {
 }
 
 function viewAllowed(view) {
-  return view !== "reviews" || isSignedIn();
+  return !["reviews", "trips"].includes(view) || isSignedIn();
 }
 
 function setSupabaseLoadStatus(table, status, count = 0) {
@@ -239,37 +233,12 @@ function clearPrivateSupabaseData() {
   setSupabaseLoadStatus("personal_pto_days", "signed-out");
 }
 
-function normalizeAuthSession(payload) {
-  return {
-    accessToken: payload.access_token,
-    refreshToken: payload.refresh_token || "",
-    expiresAt: Number(payload.expires_at || Math.floor(Date.now() / 1000) + (payload.expires_in || 3600)),
-    tokenType: payload.token_type || "bearer"
-  };
-}
-
 function currentUserId() {
-  if (!state.authSession?.accessToken) return "";
-  try {
-    const [, payload] = state.authSession.accessToken.split(".");
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
-    const decoded = JSON.parse(atob(normalized));
-    return decoded.sub || "";
-  } catch {
-    return "";
-  }
+  return sessionUserId(state.authSession);
 }
 
 function currentUserEmail() {
-  if (!state.authSession?.accessToken) return "";
-  try {
-    const [, payload] = state.authSession.accessToken.split(".");
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payload.length / 4) * 4, "=");
-    const decoded = JSON.parse(atob(normalized));
-    return decoded.email || "";
-  } catch {
-    return "";
-  }
+  return sessionUserEmail(state.authSession);
 }
 
 async function signInWithPassword(email, password) {
@@ -279,7 +248,7 @@ async function signInWithPassword(email, password) {
 function signOut() {
   state.authSession = null;
   clearPrivateSupabaseData();
-  localStorage.removeItem(authStorageKey);
+  clearAuthSession();
   closeAuthDialog();
   renderAuth();
   render();
@@ -344,6 +313,26 @@ async function loadSupabaseSchengenCountries() {
   }
 }
 
+async function loadSupabaseDanceStyles() {
+  const config = window.supabaseConfig;
+  if (!config?.url || !config?.publishableKey) {
+    setSupabaseLoadStatus("dance_styles", "not-configured");
+    return [];
+  }
+
+  try {
+    const rows = await Api.fetchDanceStyles();
+    setSupabaseLoadStatus("dance_styles", "loaded", rows.length);
+    return rows
+      .map((row) => ({ name: row.name || "", slug: row.slug || "", sortOrder: Number(row.sort_order || 0) }))
+      .filter((style) => style.name);
+  } catch (error) {
+    console.warn("Supabase dance style data unavailable.", error);
+    setSupabaseLoadStatus("dance_styles", "error");
+    return [];
+  }
+}
+
 async function loadSupabasePersonalTrips() {
   if (!isSignedIn()) {
     setSupabaseLoadStatus("personal_trips", "signed-out");
@@ -351,9 +340,8 @@ async function loadSupabasePersonalTrips() {
     return [];
   }
 
-  const endpoint = "personal_trips?select=*,personal_trip_places(*),personal_pto_days(*)&order=start_date.asc";
   try {
-    const rows = await Api.request(endpoint, { requiresAuth: true });
+    const rows = await Api.fetchPersonalTrips();
     setSupabaseLoadStatus("personal_trips", "loaded", rows.length);
     setSupabaseLoadStatus(
       "personal_trip_places",
@@ -407,12 +395,14 @@ async function refreshPrivateTablesFromSupabase() {
 }
 
 async function refreshPublicEventsFromSupabase() {
-  const [supabaseEvents, schengenCountries] = await Promise.all([
+  const [supabaseEvents, schengenCountries, danceStyles] = await Promise.all([
     loadSupabaseEvents(),
-    loadSupabaseSchengenCountries()
+    loadSupabaseSchengenCountries(),
+    loadSupabaseDanceStyles()
   ]);
   state.schengenCountries = schengenCountries;
   state.schengenCountriesLoaded = schengenCountries.size > 0;
+  state.danceStyles = danceStyles;
   if (!supabaseEvents.length) {
     if (!isSignedIn()) clearPrivateSupabaseData();
     console.info("Supabase table load status", state.supabaseLoadStatus);
@@ -614,7 +604,7 @@ function eventDetailRows(event, { includeStatus = false, includeDates = false, i
   return [
     includeDates ? ["Dates", dateRange(event)] : null,
     includeStatus ? ["Status", isHistorical(event) ? "Past event" : "Upcoming"] : null,
-    includeStyles ? ["Styles", formatStyles(event)] : null,
+    includeStyles ? ["Styles", formatStyles(event, state.danceStyles)] : null,
     ["Schengen", schengenLabel(event)],
     ["Organizer", event.organizer],
     ["Venue", event.venue],
@@ -877,7 +867,7 @@ function renderCalendar() {
 
         const haystack = [
           event.name, event.city, event.country, event.venue, event.organizer, 
-          event.djs, event.artists, event.notes, formatStyles(event), watchlistLabel(event), schengenLabel(event)
+          event.djs, event.artists, event.notes, formatStyles(event, state.danceStyles), watchlistLabel(event), schengenLabel(event)
         ].join(" ").toLowerCase();
         return haystack.includes(searchQuery);
       })
@@ -1160,7 +1150,7 @@ function filteredFestivalEditions() {
         event.djs,
         event.artists,
         event.notes,
-        formatStyles(event),
+        formatStyles(event, state.danceStyles),
         watchlistLabel(event),
         schengenLabel(event)
       ].join(" ").toLowerCase();
@@ -1502,6 +1492,25 @@ function renderPtoYearSummary() {
   `;
 }
 
+function renderDataStatus() {
+  if (!elements.dataStatus) return;
+  const items = tableStatusItems(state.supabaseLoadStatus);
+  if (!items.length || !hasLoadWarnings(state.supabaseLoadStatus)) {
+    elements.dataStatus.hidden = true;
+    elements.dataStatus.innerHTML = "";
+    return;
+  }
+
+  elements.dataStatus.hidden = false;
+  elements.dataStatus.innerHTML = `
+    <strong>Data status</strong>
+    <span>${items
+      .filter((item) => item.status === "error" || item.status === "not-configured")
+      .map((item) => `${escapeHtml(item.table)}: ${escapeHtml(item.label)}`)
+      .join(" · ")}</span>
+  `;
+}
+
 function renderAuth() {
   if (elements.authStatus) {
     elements.authStatus.innerHTML = isSignedIn()
@@ -1599,6 +1608,11 @@ function renderReviews() {
   });
 }
 
+function renderAuditReview() {
+  if (!elements.auditReviewList) return;
+  elements.auditReviewList.innerHTML = renderAuditReviewMarkup(state.auditSummary);
+}
+
 function renderCategoryComments(review) {
   const comments = review.categoryComments || {};
   const rows = scoreCategories
@@ -1618,12 +1632,14 @@ function renderCategoryComments(review) {
 
 function render() {
   renderAuth();
+  renderDataStatus();
   renderCalendar();
   renderEvents();
   renderFestivalList();
   renderRecentlyAdded();
   renderTrips();
   renderReviews();
+  renderAuditReview();
 }
 
 function switchView(view) {
@@ -1658,7 +1674,7 @@ function openEventDetails(eventId) {
           ${[
             detailRow("Dates", dateRange(priorEdition)),
             detailRow("Location", eventLocation(priorEdition)),
-            detailRow("Styles", formatStyles(priorEdition)),
+            detailRow("Styles", formatStyles(priorEdition, state.danceStyles)),
             detailRow("Venue", priorEdition.venue),
             detailRow("Organizer", priorEdition.organizer),
             detailRow("Event size", formatEventSize(priorEdition.eventSize)),
@@ -1843,75 +1859,20 @@ async function saveTrip(event) {
   const startDate = elements.tripStartDate.value;
   const endDate = elements.tripEndDate.value < startDate ? startDate : elements.tripEndDate.value;
   const tripId = elements.tripId.value;
-  const tripBody = {
-    label: elements.tripLabel.value.trim(),
-    start_date: startDate,
-    end_date: endDate,
-    notes: elements.tripNotes.value.trim(),
-    access_level: "owner"
-  };
+  const payload = buildTripSavePayload({
+    tripId,
+    label: elements.tripLabel.value,
+    startDate,
+    endDate,
+    notes: elements.tripNotes.value,
+    places,
+    ptoDays,
+    ownerId: currentUserId(),
+    ownerEmail: currentUserEmail()
+  });
 
-  let savedTrip;
   try {
-    if (tripId) {
-      [savedTrip] = await Api.request(`personal_trips?id=eq.${tripId}`, {
-        method: "PATCH",
-        body: tripBody,
-        requiresAuth: true
-      });
-      await Api.request(`personal_trip_places?trip_id=eq.${tripId}`, {
-        method: "DELETE",
-        requiresAuth: true
-      });
-      await Api.request(`personal_pto_days?trip_id=eq.${tripId}`, {
-        method: "DELETE",
-        requiresAuth: true
-      });
-    } else {
-      [savedTrip] = await Api.request("personal_trips", {
-        method: "POST",
-        body: { id: crypto.randomUUID(), owner_id: currentUserId(), owner_email: currentUserEmail(), ...tripBody },
-        requiresAuth: true
-      });
-    }
-
-    const placeRows = places.map((place) => ({
-      id: crypto.randomUUID(),
-      trip_id: savedTrip.id,
-      owner_id: currentUserId(),
-      owner_email: currentUserEmail(),
-      event_edition_id: place.eventId || null,
-      start_date: place.startDate,
-      end_date: place.endDate,
-      city: place.city,
-      country: place.country,
-      travel_role: place.role,
-      sequence: place.sequence,
-      notes: place.notes,
-      access_level: "owner"
-    }));
-    await Api.request("personal_trip_places", {
-      method: "POST",
-      body: placeRows,
-      requiresAuth: true
-    });
-    const ptoRows = ptoDays.map((ptoDay) => ({
-      id: crypto.randomUUID(),
-      trip_id: savedTrip.id,
-      owner_id: currentUserId(),
-      owner_email: currentUserEmail(),
-      pto_date: ptoDay.date,
-      amount: ptoDay.amount,
-      notes: ptoDay.notes,
-      access_level: "owner"
-    }));
-    if (ptoRows.length) {
-      await Api.request("personal_pto_days", {
-        method: "POST",
-        body: ptoRows,
-        requiresAuth: true
-      });
-    }
+    await savePersonalTrip(Api, payload);
     closeTripDialog();
     state.personalTrips = await loadSupabasePersonalTrips();
     render();
@@ -1926,10 +1887,7 @@ async function deleteTrip(tripId) {
   const confirmed = window.confirm(`Delete ${trip?.label || "this trip"}?`);
   if (!confirmed) return;
   try {
-    await Api.request(`personal_trips?id=eq.${tripId}`, {
-      method: "DELETE",
-      requiresAuth: true
-    });
+    await deletePersonalTrip(Api, tripId);
     closeTripDialog();
     state.personalTrips = await loadSupabasePersonalTrips();
     render();
@@ -2153,7 +2111,7 @@ async function handleAuthSubmit(event) {
   elements.authMessage.textContent = "Signing in...";
   try {
     state.authSession = await signInWithPassword(email, password);
-    localStorage.setItem(authStorageKey, JSON.stringify(state.authSession));
+    saveAuthSession(state.authSession);
     elements.authForm.reset();
     elements.authMessage.textContent = "";
     closeAuthDialog();
@@ -2167,6 +2125,17 @@ async function handleAuthSubmit(event) {
 
 async function refreshReviews() {
   await refreshPrivateTablesFromSupabase();
+}
+
+function loadAuditReviewFromInput() {
+  if (!elements.auditJsonInput || !elements.auditReviewList) return;
+  try {
+    state.auditSummary = JSON.parse(elements.auditJsonInput.value || "null");
+    renderAuditReview();
+  } catch (error) {
+    state.auditSummary = null;
+    elements.auditReviewList.innerHTML = `<div class="empty-state"><strong>Invalid audit JSON</strong><p>${escapeHtml(error.message)}</p></div>`;
+  }
 }
 
 function handleAuthAction(event) {
@@ -2195,6 +2164,7 @@ function bindEvents() {
   elements.recentlyAddedList.addEventListener("click", handleAction);
   elements.tripList.addEventListener("click", handleAction);
   elements.reviewList.addEventListener("click", handleAction);
+  elements.loadAuditBtn?.addEventListener("click", loadAuditReviewFromInput);
   elements.monthPicker.addEventListener("change", (event) => {
     setSelectedMonth(event.target.value);
   });

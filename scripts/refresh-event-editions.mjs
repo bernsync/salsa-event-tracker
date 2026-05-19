@@ -46,11 +46,6 @@ const officialSchengenCountries = [
   "Sweden",
   "Switzerland"
 ];
-const knownFutureNotAnnounced = new Set([
-  "5star congress",
-  "bucharest salsa revolution"
-]);
-
 const monthNames = {
   january: 1,
   february: 2,
@@ -441,8 +436,7 @@ async function auditSchengenCountries(rows) {
 }
 
 function reviewNeeded(result) {
-  const knownNotAnnounced = knownFutureNotAnnounced.has(eventFamilyKey(result.event));
-  return result.suggestedRanges.length || (!result.alreadyTracked && !knownNotAnnounced);
+  return result.suggestedRanges.length || !result.alreadyTracked;
 }
 
 function renderNextEditionMarkdown(results, source, schengenAudit) {
@@ -504,12 +498,9 @@ function renderNextEditionMarkdown(results, source, schengenAudit) {
   lines.push("## All Recent Events Checked");
   lines.push("");
   for (const result of results) {
-    const knownNotAnnounced = knownFutureNotAnnounced.has(eventFamilyKey(result.event));
     const status = result.alreadyTracked
       ? "future edition already tracked"
-      : knownNotAnnounced
-        ? "future edition not announced yet"
-        : "no future edition in tracker";
+      : "no future edition in tracker";
     lines.push(`- ${result.event.name} (${result.event.startDate} to ${result.event.endDate}) - ${status}`);
   }
   lines.push("");

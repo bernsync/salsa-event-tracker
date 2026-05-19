@@ -1,10 +1,8 @@
-import { normalizeExternalUrl } from "../web/link-utils.js";
+import { parseAndValidateEventUpsertPayload } from "../web/upsert-payload.js";
 
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 const payloadText = process.env.EVENT_UPSERT_JSON || "";
-const eventSizes = new Set(["small", "medium", "large", "extra large", "xl"]);
-
 const eventFields = ["organizer", "website", "instagram", "facebook", "styles", "watchlist"];
 const editionFields = [
   "venue",
@@ -25,107 +23,12 @@ function fail(message) {
   process.exit(1);
 }
 
-function normalize(value) {
-  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
-}
-
 function compactObject(source, fields) {
   return Object.fromEntries(
     fields
       .filter((field) => source[field] !== undefined && source[field] !== null && source[field] !== "")
       .map((field) => [field, source[field]])
   );
-}
-
-function requireDate(value, label) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) {
-    fail(`${label} must be YYYY-MM-DD. Got: ${value || "(empty)"}`);
-  }
-  return value;
-}
-
-function requireValidDateRange(startDate, endDate, label) {
-  if (endDate < startDate) {
-    fail(`${label}.end_date must not be before start_date. Got: ${startDate} to ${endDate}`);
-  }
-}
-
-function requireValidUrl(value, label) {
-  if (!value) return;
-  if (!normalizeExternalUrl(value)) {
-    fail(`${label} must be an http(s) URL or Instagram @handle. Got: ${value}`);
-  }
-}
-
-function normalizeSize(value, label) {
-  if (!value) return value;
-  const size = normalize(value);
-  if (!eventSizes.has(size)) {
-    fail(`${label} must be one of: ${[...eventSizes].join(", ")}. Got: ${value}`);
-  }
-  return size === "xl" ? "extra large" : size;
-}
-
-function parsePayload() {
-  if (!payloadText.trim()) fail("EVENT_UPSERT_JSON is required.");
-  try {
-    const payload = JSON.parse(payloadText);
-    if (Array.isArray(payload)) return { events: payload };
-    if (Array.isArray(payload.events)) return payload;
-    fail("Payload must be an array or an object with an events array.");
-  } catch (error) {
-    fail(`Invalid JSON payload: ${error.message}`);
-  }
-}
-
-function validatePayload(payload) {
-  return payload.events.map((event, eventIndex) => {
-    if (!event.name?.trim()) fail(`events[${eventIndex}].name is required.`);
-    if (!Array.isArray(event.editions) || !event.editions.length) {
-      fail(`events[${eventIndex}].editions must contain at least one edition.`);
-    }
-    requireValidUrl(event.website, `events[${eventIndex}].website`);
-    requireValidUrl(event.instagram, `events[${eventIndex}].instagram`);
-    requireValidUrl(event.facebook, `events[${eventIndex}].facebook`);
-
-    const payloadEditionKeys = new Set();
-
-    return {
-      ...event,
-      name: event.name.trim(),
-      visibility: event.visibility || "public",
-      editions: event.editions.map((edition, editionIndex) => {
-        if (!edition.city?.trim()) fail(`events[${eventIndex}].editions[${editionIndex}].city is required.`);
-        if (!edition.country?.trim()) fail(`events[${eventIndex}].editions[${editionIndex}].country is required.`);
-        const startDate = requireDate(edition.start_date, `events[${eventIndex}].editions[${editionIndex}].start_date`);
-        const endDate = requireDate(edition.end_date || edition.start_date, `events[${eventIndex}].editions[${editionIndex}].end_date`);
-        requireValidDateRange(startDate, endDate, `events[${eventIndex}].editions[${editionIndex}]`);
-        requireValidUrl(edition.tickets, `events[${eventIndex}].editions[${editionIndex}].tickets`);
-        const eventSize = normalizeSize(edition.event_size, `events[${eventIndex}].editions[${editionIndex}].event_size`);
-        const editionKey = [
-          normalize(event.name),
-          startDate,
-          endDate,
-          normalize(edition.city),
-          normalize(edition.country)
-        ].join("|");
-        if (payloadEditionKeys.has(editionKey)) {
-          fail(`Duplicate edition in payload: ${event.name} ${startDate} to ${endDate}, ${edition.city}, ${edition.country}`);
-        }
-        payloadEditionKeys.add(editionKey);
-
-        return {
-          ...edition,
-          start_date: startDate,
-          end_date: endDate,
-          city: edition.city.trim(),
-          country: edition.country.trim(),
-          event_size: eventSize || edition.event_size,
-          visibility: edition.visibility || event.visibility || "public"
-        };
-      })
-    };
-  });
 }
 
 async function supabaseRequest(path, { method = "GET", body } = {}) {
@@ -229,8 +132,8 @@ async function updateEdition(existing, edition) {
   return rows[0] || existing;
 }
 
-const payload = parsePayload();
-const events = validatePayload(payload);
+const { events, errors } = parseAndValidateEventUpsertPayload(payloadText);
+if (errors.length) fail(errors.join("\n"));
 const summary = [];
 
 for (const event of events) {

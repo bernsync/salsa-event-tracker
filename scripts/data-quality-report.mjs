@@ -109,5 +109,11 @@ const events = mapSupabaseEvents(rows);
 const issues = qualityIssues(events);
 fs.mkdirSync(outputDir, { recursive: true });
 fs.writeFileSync(path.join(outputDir, "data-quality-report.md"), renderMarkdown(events, issues));
+fs.writeFileSync(path.join(outputDir, "data-quality-report.json"), `${JSON.stringify({
+  generatedAt: new Date().toISOString(),
+  trackedPublicEditions: events.length,
+  openQualityFindings: issues.length,
+  issues
+}, null, 2)}\n`);
 
 console.log(`Data quality report complete: ${issues.length} finding(s).`);

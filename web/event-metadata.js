@@ -1,10 +1,20 @@
-export const danceStyles = ["Salsa", "Bachata", "Kizomba", "Zouk"];
-
 export function normalizeEventText(value) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-export function normalizeDanceStyles(value) {
+function rawStyleValues(value) {
+  return (Array.isArray(value)
+    ? value
+    : String(value || "").split(/[,\|/]+/))
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function styleName(style) {
+  return typeof style === "string" ? style : style?.name || "";
+}
+
+export function normalizeDanceStyles(value, styleOptions = []) {
   const raw = Array.isArray(value)
     ? value
     : String(value || "")
@@ -12,15 +22,17 @@ export function normalizeDanceStyles(value) {
       .map((item) => item.trim())
       .filter(Boolean);
   const normalized = new Set(raw.map((item) => normalizeEventText(item)));
-  return danceStyles.filter((style) => normalized.has(normalizeEventText(style)));
+  const canonicalStyles = styleOptions.map(styleName).filter(Boolean);
+  if (!canonicalStyles.length) return rawStyleValues(value);
+  return canonicalStyles.filter((style) => normalized.has(normalizeEventText(style)));
 }
 
-export function eventStyles(event) {
-  return normalizeDanceStyles(event?.styles || "");
+export function eventStyles(event, styleOptions = []) {
+  return normalizeDanceStyles(event?.styles || "", styleOptions);
 }
 
-export function formatStyles(event) {
-  return eventStyles(event).join(", ");
+export function formatStyles(event, styleOptions = []) {
+  return eventStyles(event, styleOptions).join(", ");
 }
 
 export function isWatchlistEvent(event) {
