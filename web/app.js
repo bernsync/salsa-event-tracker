@@ -643,12 +643,11 @@ function detailActionButton(event, label = "Details", action = "details") {
   `;
 }
 
-function calendarActionMenu(event, { compact = false } = {}) {
+function calendarActionMenu(event) {
   if (!event) return "";
-  const label = compact ? "Add" : "Add to calendar";
   return `
-    <details class="calendar-add-menu ${compact ? "is-compact" : ""}">
-      <summary>${escapeHtml(label)}</summary>
+    <details class="calendar-add-menu">
+      <summary>Add to calendar</summary>
       <div class="calendar-add-options">
         <button type="button" data-action="add-google-calendar" data-id="${escapeHtml(event.id)}">Google Calendar</button>
         <button type="button" data-action="download-calendar-file" data-id="${escapeHtml(event.id)}">Phone calendar file</button>
@@ -667,6 +666,12 @@ function downloadCalendarFileForEvent(eventId) {
   const event = state.events.find((item) => item.id === eventId);
   if (!event) return;
   downloadCalendarFile(event);
+}
+
+function collapseHeaderButtonFromClick(event) {
+  if (event.target.closest("a, button, details, input, label, select, summary, textarea")) return null;
+  const header = event.target.closest(".event-card-header");
+  return header?.querySelector('[data-action="toggle-card-collapse"]') || null;
 }
 
 function recentAddedDate(event) {
@@ -788,12 +793,11 @@ function renderEventCard(event, options = {}) {
       ${location ? `<div class="event-meta"><span class="pill location-pill">${escapeHtml(location)}</span></div>` : ""}
       ${detailRows ? `<div class="event-detail">${detailRows}</div>` : ""}
       <div class="event-actions">
-        <button type="button" data-action="details" data-id="${escapeHtml(event.id)}">Details</button>
-        ${calendarActionMenu(event)}
         ${sourceLink("Website", event.website)}
         ${sourceLink("Instagram", event.instagram)}
         ${sourceLink("Facebook", event.facebook)}
         ${sourceLink("Tickets", event.tickets)}
+        ${calendarActionMenu(event)}
         <span class="event-status">${isHistorical(event) ? "Past event" : "Upcoming"}</span>
       </div>
     `)}
@@ -891,7 +895,6 @@ function renderCalendar() {
       button.setAttribute("aria-label", `View details for ${event.name}`);
       button.innerHTML = calendarEventMarkup(event);
       wrapper.append(button);
-      wrapper.insertAdjacentHTML("beforeend", calendarActionMenu(event, { compact: true }));
       day.append(wrapper);
     });
 
@@ -1653,7 +1656,8 @@ function openEventDetails(eventId) {
     sourceLink("Website", event.website),
     sourceLink("Tickets", event.tickets),
     sourceLink("Instagram", event.instagram),
-    sourceLink("Facebook", event.facebook)
+    sourceLink("Facebook", event.facebook),
+    calendarActionMenu(event)
   ].filter(Boolean).join("") || "<span class=\"event-status\">No source links yet</span>";
 
   elements.eventDetailsDialog.showModal();
@@ -2024,13 +2028,17 @@ async function deleteReview(reviewId) {
 
 function handleAction(event) {
   const target = event.target.closest("[data-action]");
-  if (!target) return;
+  if (!target) {
+    const collapseButton = collapseHeaderButtonFromClick(event);
+    if (collapseButton) toggleCardCollapse(collapseButton.dataset.view, collapseButton.dataset.id);
+    return;
+  }
   const { action, id } = target.dataset;
-  if (action === "details") openEventDetails(id);
-  if (action === "add-google-calendar") openGoogleCalendar(id);
-  if (action === "download-calendar-file") downloadCalendarFileForEvent(id);
+  if (action === "details") return openEventDetails(id);
+  if (action === "add-google-calendar") return openGoogleCalendar(id);
+  if (action === "download-calendar-file") return downloadCalendarFileForEvent(id);
   if (action === "edit-trip") return;
-  if (action === "toggle-card-collapse") toggleCardCollapse(target.dataset.view, id);
+  if (action === "toggle-card-collapse") return toggleCardCollapse(target.dataset.view, id);
 }
 
 function updateBackToTopVisibility() {

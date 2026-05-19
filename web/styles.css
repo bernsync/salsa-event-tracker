@@ -506,12 +506,10 @@ select:focus-visible {
 }
 
 .calendar-grid {
-  align-items: start;
   gap: 9px;
 }
 
 .calendar-day {
-  align-self: start;
   min-height: 138px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -544,10 +542,7 @@ select:focus-visible {
 }
 
 .calendar-event-card {
-  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
   gap: 4px;
   margin-top: 5px;
 }
@@ -703,23 +698,6 @@ select:focus-visible {
   background: #f8fafc;
 }
 
-.calendar-add-menu.is-compact {
-  align-self: stretch;
-}
-
-.calendar-add-menu.is-compact summary {
-  min-width: 48px;
-  min-height: 100%;
-  border-color: #f4d8a0;
-  color: #694600;
-  font-size: 0.72rem;
-  padding: 0 7px;
-}
-
-.calendar-add-menu.is-compact summary::after {
-  margin-left: 4px;
-}
-
 .calendar-add-options {
   position: absolute;
   top: calc(100% + 6px);
@@ -815,6 +793,10 @@ select:focus-visible {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.event-card-header:has(.card-collapse-button) {
+  cursor: pointer;
 }
 
 .card-header-actions {
