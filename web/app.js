@@ -35,9 +35,16 @@ import {
   saveAuthSession
 } from "./auth-session.js";
 import { buildTripSavePayload, deletePersonalTrip, savePersonalTrip } from "./trip-api.js";
-import { hasLoadWarnings, renderAuditReviewMarkup, tableStatusItems } from "./audit-review.js";
 
 const storageKey = "salsa-festivals-tracker-v1";
+
+const loadStatusLabels = {
+  loaded: "Loaded",
+  error: "Error",
+  "not-configured": "Not configured",
+  "signed-out": "Signed out",
+  "optional-unavailable": "Optional data unavailable"
+};
 
 const scoreCategories = [
   ["music", "Music"],
@@ -58,7 +65,6 @@ const state = {
   reviews: [],
   trips: [],
   personalTrips: [],
-  auditSummary: null,
   authSession: null,
   danceStyles: [],
   schengenCountries: new Map(),
@@ -100,7 +106,6 @@ const elements = {
   views: document.querySelectorAll(".view"),
   reviewTab: document.querySelector('[data-view="reviews"]'),
   tripsTab: document.querySelector('[data-view="trips"]'),
-  auditTab: document.querySelector('[data-view="audit"]'),
   authStatus: $("#authStatus"),
   dataStatus: $("#dataStatus"),
   authDialog: $("#authDialog"),
@@ -157,9 +162,6 @@ const elements = {
   eventDetailsBody: $("#eventDetailsBody"),
   eventDetailsLinks: $("#eventDetailsLinks"),
   reviewList: $("#reviewList"),
-  auditJsonInput: $("#auditJsonInput"),
-  loadAuditBtn: $("#loadAuditBtn"),
-  auditReviewList: $("#auditReviewList"),
   searchInput: $("#searchInput"),
   listYearSelect: $("#listYearSelect"),
   listMonthSelect: $("#listMonthSelect"),
@@ -221,6 +223,19 @@ function viewAllowed(view) {
 
 function setSupabaseLoadStatus(table, status, count = 0) {
   state.supabaseLoadStatus[table] = { status, count };
+}
+
+function tableStatusItems(status = {}) {
+  return Object.entries(status).map(([table, value]) => ({
+    table,
+    status: value.status,
+    count: value.count || 0,
+    label: loadStatusLabels[value.status] || value.status
+  }));
+}
+
+function hasLoadWarnings(status = {}) {
+  return tableStatusItems(status).some((item) => item.status === "error" || item.status === "not-configured");
 }
 
 function clearPrivateSupabaseData() {
@@ -328,7 +343,7 @@ async function loadSupabaseDanceStyles() {
       .filter((style) => style.name);
   } catch (error) {
     console.warn("Supabase dance style data unavailable.", error);
-    setSupabaseLoadStatus("dance_styles", "error");
+    setSupabaseLoadStatus("dance_styles", "optional-unavailable");
     return [];
   }
 }
@@ -1608,11 +1623,6 @@ function renderReviews() {
   });
 }
 
-function renderAuditReview() {
-  if (!elements.auditReviewList) return;
-  elements.auditReviewList.innerHTML = renderAuditReviewMarkup(state.auditSummary);
-}
-
 function renderCategoryComments(review) {
   const comments = review.categoryComments || {};
   const rows = scoreCategories
@@ -1639,7 +1649,6 @@ function render() {
   renderRecentlyAdded();
   renderTrips();
   renderReviews();
-  renderAuditReview();
 }
 
 function switchView(view) {
@@ -2127,17 +2136,6 @@ async function refreshReviews() {
   await refreshPrivateTablesFromSupabase();
 }
 
-function loadAuditReviewFromInput() {
-  if (!elements.auditJsonInput || !elements.auditReviewList) return;
-  try {
-    state.auditSummary = JSON.parse(elements.auditJsonInput.value || "null");
-    renderAuditReview();
-  } catch (error) {
-    state.auditSummary = null;
-    elements.auditReviewList.innerHTML = `<div class="empty-state"><strong>Invalid audit JSON</strong><p>${escapeHtml(error.message)}</p></div>`;
-  }
-}
-
 function handleAuthAction(event) {
   const target = event.target.closest("[data-auth-action]");
   if (!target) return;
@@ -2164,7 +2162,6 @@ function bindEvents() {
   elements.recentlyAddedList.addEventListener("click", handleAction);
   elements.tripList.addEventListener("click", handleAction);
   elements.reviewList.addEventListener("click", handleAction);
-  elements.loadAuditBtn?.addEventListener("click", loadAuditReviewFromInput);
   elements.monthPicker.addEventListener("change", (event) => {
     setSelectedMonth(event.target.value);
   });
