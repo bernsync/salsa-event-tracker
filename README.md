@@ -11,7 +11,6 @@ A low-cost tracker for salsa festivals. The current practical version is a brows
 - Supabase-backed dance style taxonomy
 - Supabase-backed Schengen country status
 - Private reviews behind login
-- Audit Review tab for turning weekly audit JSON into reviewed upsert payload drafts
 
 ## Cost-Saving Approach
 
@@ -22,6 +21,10 @@ This version uses GitHub Pages for free hosting and Supabase for the small amoun
 Supabase is the source of truth for durable app data. Do not add new hardcoded local lists or seed-style datasets for production features. New data-backed features should use Supabase tables first, with local files reserved for UI code and cleanup helpers.
 
 See `DATA_ACCESS.md` for public/authenticated/owner data rules and `DATA_UPDATE_WORKFLOW.md` for remote update and automation options.
+
+## Development Notes
+
+Default new JavaScript functionality to small modules instead of adding more logic to `web/app.js`. Keep `app.js` focused on rendering, state coordination, and event wiring; put reusable formatting, parsing, link generation, API helpers, and other isolated behavior in dedicated files under `web/`, with focused tests when the behavior is non-trivial.
 
 ## How To Open
 
@@ -50,7 +53,7 @@ npm.cmd test
 
 Use `npm.cmd run data-quality` with Supabase environment variables set to write `audit/data-quality-report.md` and `audit/data-quality-report.json`.
 
-The weekly event-edition refresh workflow writes `audit/event-edition-refresh.json`; paste that JSON or the data-quality JSON into the app's Audit Review tab to inspect candidates and draft manual upsert payloads.
+The weekly event-edition refresh workflow writes `audit/event-edition-refresh.json`; review that artifact directly when you need to inspect candidates.
 
 ## GitHub Pages
 

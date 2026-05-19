@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "check": "node --check web/app.js && node --check web/api.js && node --check web/audit-review.js && node --check web/auth-session.js && node --check web/server.js && node --check web/trip-api.js && node --check web/trip-calculations.js && node --check web/upsert-payload.js && node --check scripts/refresh-event-editions.mjs && node --check scripts/upsert-supabase-events.mjs && node --check scripts/data-quality-report.mjs",
+    "check": "node --check web/app.js && node --check web/api.js && node --check web/auth-session.js && node --check web/calendar-links.js && node --check web/event-date-utils.js && node --check web/review-scoring.js && node --check web/server.js && node --check web/trip-api.js && node --check web/trip-calculations.js && node --check web/upsert-payload.js && node --check scripts/refresh-event-editions.mjs && node --check scripts/upsert-supabase-events.mjs && node --check scripts/data-quality-report.mjs",
     "data-quality": "node scripts/data-quality-report.mjs"
   },
   "engines": {
