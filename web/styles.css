@@ -186,6 +186,11 @@ select:focus-visible {
   margin-bottom: 0;
 }
 
+.today-button {
+  min-height: 38px;
+  padding-inline: 12px;
+}
+
 .muted {
   margin: 4px 0 0;
   color: var(--muted);
@@ -501,10 +506,12 @@ select:focus-visible {
 }
 
 .calendar-grid {
+  align-items: start;
   gap: 9px;
 }
 
 .calendar-day {
+  align-self: start;
   min-height: 138px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -537,7 +544,10 @@ select:focus-visible {
 }
 
 .calendar-event-card {
+  position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 4px;
   margin-top: 5px;
 }
@@ -653,6 +663,99 @@ select:focus-visible {
   border-color: #e7bd64;
 }
 
+.calendar-add-menu {
+  position: relative;
+  z-index: 5;
+}
+
+.calendar-add-menu summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 800;
+  list-style: none;
+  padding: 0 11px;
+  user-select: none;
+}
+
+.calendar-add-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.calendar-add-menu summary::after {
+  content: "v";
+  margin-left: 7px;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 900;
+}
+
+.calendar-add-menu[open] summary,
+.calendar-add-menu summary:hover {
+  border-color: #b8c6d6;
+  background: #f8fafc;
+}
+
+.calendar-add-menu.is-compact {
+  align-self: stretch;
+}
+
+.calendar-add-menu.is-compact summary {
+  min-width: 48px;
+  min-height: 100%;
+  border-color: #f4d8a0;
+  color: #694600;
+  font-size: 0.72rem;
+  padding: 0 7px;
+}
+
+.calendar-add-menu.is-compact summary::after {
+  margin-left: 4px;
+}
+
+.calendar-add-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  min-width: 180px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.calendar-add-options button,
+.event-actions .calendar-add-options button {
+  display: block;
+  width: 100%;
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0 10px;
+  text-align: left;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.calendar-add-options button:hover,
+.calendar-add-options button:focus-visible,
+.event-actions .calendar-add-options button:hover,
+.event-actions .calendar-add-options button:focus-visible {
+  background: #f2f6fa;
+}
+
 .calendar-event.is-watchlist:hover {
   background: #def3e4;
   border-color: #4fa766;
@@ -743,19 +846,6 @@ select:focus-visible {
   display: grid;
   gap: 10px;
   margin-top: 14px;
-}
-
-.audit-card {
-  gap: 12px;
-}
-
-.audit-payload {
-  width: 100%;
-  min-height: 180px;
-  margin-top: 10px;
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  font-size: 0.84rem;
-  resize: vertical;
 }
 
 .review-comment {
@@ -1245,7 +1335,7 @@ select:focus-visible {
 
   .month-controls {
     display: grid;
-    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    grid-template-columns: 42px auto minmax(0, 1fr) 42px;
   }
 
   .month-controls .field {
@@ -1283,9 +1373,17 @@ select:focus-visible {
   .danger-action,
   .event-actions button,
   .event-actions a,
+  .event-actions .calendar-add-menu,
+  .event-actions .calendar-add-menu summary,
   .event-status {
     width: 100%;
     min-height: 44px;
+  }
+
+  .event-actions .calendar-add-options {
+    left: 0;
+    right: auto;
+    width: 100%;
   }
 
   .icon-button {

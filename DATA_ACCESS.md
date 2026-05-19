@@ -98,6 +98,16 @@ using (owner_id = (select auth.uid()));
 
 Use service-role scripts or manually reviewed SQL for admin-managed public reference data. Never put service-role keys in frontend files.
 
+## RLS Smoke Tests
+
+Before shipping features that touch private or owner-scoped data, verify the Supabase policies with the public app key:
+
+- Signed-out requests cannot read `reviews`, `personal_trips`, `personal_trip_places`, or `personal_pto_days`.
+- A signed-in non-owner user cannot read, update, or delete another user's owner rows.
+- Owner-scoped inserts must set `owner_id = auth.uid()` and must not allow spoofing another owner.
+- The publishable key cannot insert, update, or delete public event tables such as `events` or `event_editions`.
+- Service-role workflows remain manual/reviewed and never expose `SUPABASE_SERVICE_ROLE_KEY` to frontend code.
+
 ## Current Table Classification
 
 | Table | Access level | Notes |

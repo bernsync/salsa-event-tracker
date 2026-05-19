@@ -26,6 +26,19 @@ import { eventLocation, eventPrice } from "./event-view-utils.js";
 import { sourceLink } from "./link-utils.js";
 import { mapSupabaseReview, mapSupabaseTrip } from "./supabase-mappers.js";
 import { normalizeText } from "./text-utils.js";
+import { downloadCalendarFile, googleCalendarUrl } from "./calendar-links.js";
+import {
+  eventMonthValue,
+  eventOccursOnDate,
+  eventYear,
+  isHistorical,
+  monthOptions
+} from "./event-date-utils.js";
+import {
+  reviewScoreForEvent as calculateReviewScoreForEvent,
+  scoreCategories,
+  totalScore
+} from "./review-scoring.js";
 import {
   authSessionFromStorage,
   authSessionFromUrlHash,
@@ -45,20 +58,6 @@ const loadStatusLabels = {
   "signed-out": "Signed out",
   "optional-unavailable": "Optional data unavailable"
 };
-
-const scoreCategories = [
-  ["music", "Music"],
-  ["dancingLevel", "Dancing Level"],
-  ["stageImpact", "Stage Impact"],
-  ["floor", "Floor"],
-  ["vibe", "Vibe"],
-  ["eventCost", "Event Cost"],
-  ["servicesProvided", "Services Provided"],
-  ["eventHours", "Event Hours"],
-  ["hostCity", "Host City"],
-  ["eventSize", "Event Size"],
-  ["travelToEvent", "Travel to Event"]
-];
 
 const state = {
   events: [],
@@ -101,7 +100,6 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 
 const elements = {
-  addEventBtn: $("#addEventBtn"),
   tabs: document.querySelectorAll(".tab"),
   views: document.querySelectorAll(".view"),
   reviewTab: document.querySelector('[data-view="reviews"]'),
@@ -162,6 +160,7 @@ const elements = {
   eventDetailsBody: $("#eventDetailsBody"),
   eventDetailsLinks: $("#eventDetailsLinks"),
   reviewList: $("#reviewList"),
+  todayBtn: $("#todayBtn"),
   searchInput: $("#searchInput"),
   listYearSelect: $("#listYearSelect"),
   listMonthSelect: $("#listMonthSelect"),
@@ -179,11 +178,6 @@ const elements = {
   collapseReviewsBtn: $("#collapseReviewsBtn"),
   expandReviewsBtn: $("#expandReviewsBtn"),
   backToTopBtn: $("#backToTopBtn"),
-  eventDialog: $("#eventDialog"),
-  eventDialogTitle: $("#eventDialogTitle"),
-  eventForm: $("#eventForm"),
-  saveEventBtn: $("#saveEventBtn"),
-  deleteEventBtn: $("#deleteEventBtn"),
   reviewDialog: $("#reviewDialog"),
   reviewEventName: $("#reviewEventName"),
   reviewEventId: $("#reviewEventId"),
@@ -459,6 +453,10 @@ function setSelectedMonth(monthValue) {
   renderCalendar();
 }
 
+function goToCurrentDate() {
+  setSelectedMonth(localDateString(new Date()).slice(0, 7));
+}
+
 function monthLabel(monthValue, { short = false } = {}) {
   const [year, month] = monthValue.split("-").map(Number);
   return new Date(year, month - 1, 1).toLocaleDateString(undefined, {
@@ -527,65 +525,12 @@ function renderCalendarMonthJump() {
   }
 }
 
-function eventOccursOnDate(event, dateValue) {
-  return event.startDate <= dateValue && calendarDisplayEndDate(event) >= dateValue;
-}
-
-function calendarDisplayEndDate(event) {
-  const start = new Date(`${event.startDate}T12:00:00`);
-  const end = new Date(`${event.endDate}T12:00:00`);
-  const endsMonday = end.getDay() === 1;
-  const keepsMonday = event.forceShowMonday === true;
-
-  if (endsMonday && event.startDate !== event.endDate && !keepsMonday) {
-    end.setDate(end.getDate() - 1);
-    return localDateString(end);
-  }
-
-  return event.endDate;
-}
-
-function isHistorical(event) {
-  return event.endDate < localDateString(new Date());
-}
-
-function eventReviews(eventId) {
-  return state.reviews.filter((review) => review.eventId === eventId);
-}
-
-function eventFamilyReviews(event) {
-  return state.reviews.filter((review) => {
-    const reviewedEvent = state.events.find((item) => item.id === review.eventId);
-    return reviewedEvent && eventFamilyKey(reviewedEvent) === eventFamilyKey(event);
-  });
-}
-
-function priorEditionReviews(event) {
-  return eventFamilyReviews(event).filter((review) => {
-    const reviewedEvent = state.events.find((item) => item.id === review.eventId);
-    return reviewedEvent && reviewedEvent.endDate < event.startDate;
-  });
-}
-
-function totalScore(review) {
-  const sum = scoreCategories.reduce((total, [key]) => total + Number(review.scores[key] || 0), 0);
-  return sum / scoreCategories.length;
-}
-
-function latestScore(eventId) {
-  const reviews = eventReviews(eventId).sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt));
-  return reviews.length ? totalScore(reviews[0]) : null;
-}
-
 function reviewScoreForEvent(event) {
-  const reviews = isHistorical(event) ? eventReviews(event.id) : priorEditionReviews(event);
-  if (!reviews.length) return null;
-  const average = reviews.reduce((sum, review) => sum + totalScore(review), 0) / reviews.length;
-  return {
-    average,
-    count: reviews.length,
-    isPrior: !isHistorical(event)
-  };
+  return calculateReviewScoreForEvent(event, {
+    events: state.events,
+    reviews: state.reviews,
+    eventFamilyKey
+  });
 }
 
 function emptyState(label = "No festivals yet", help = "Add your first festival to start building your tracker.") {
@@ -696,6 +641,32 @@ function detailActionButton(event, label = "Details", action = "details") {
       ${escapeHtml(label)}
     </button>
   `;
+}
+
+function calendarActionMenu(event, { compact = false } = {}) {
+  if (!event) return "";
+  const label = compact ? "Add" : "Add to calendar";
+  return `
+    <details class="calendar-add-menu ${compact ? "is-compact" : ""}">
+      <summary>${escapeHtml(label)}</summary>
+      <div class="calendar-add-options">
+        <button type="button" data-action="add-google-calendar" data-id="${escapeHtml(event.id)}">Google Calendar</button>
+        <button type="button" data-action="download-calendar-file" data-id="${escapeHtml(event.id)}">Phone calendar file</button>
+      </div>
+    </details>
+  `;
+}
+
+function openGoogleCalendar(eventId) {
+  const event = state.events.find((item) => item.id === eventId);
+  if (!event) return;
+  window.open(googleCalendarUrl(event), "_blank", "noopener,noreferrer");
+}
+
+function downloadCalendarFileForEvent(eventId) {
+  const event = state.events.find((item) => item.id === eventId);
+  if (!event) return;
+  downloadCalendarFile(event);
 }
 
 function recentAddedDate(event) {
@@ -818,6 +789,7 @@ function renderEventCard(event, options = {}) {
       ${detailRows ? `<div class="event-detail">${detailRows}</div>` : ""}
       <div class="event-actions">
         <button type="button" data-action="details" data-id="${escapeHtml(event.id)}">Details</button>
+        ${calendarActionMenu(event)}
         ${sourceLink("Website", event.website)}
         ${sourceLink("Instagram", event.instagram)}
         ${sourceLink("Facebook", event.facebook)}
@@ -919,6 +891,7 @@ function renderCalendar() {
       button.setAttribute("aria-label", `View details for ${event.name}`);
       button.innerHTML = calendarEventMarkup(event);
       wrapper.append(button);
+      wrapper.insertAdjacentHTML("beforeend", calendarActionMenu(event, { compact: true }));
       day.append(wrapper);
     });
 
@@ -1054,43 +1027,6 @@ function availableEventListYears() {
     .map(eventYear)
     .filter(Boolean)
   ).sort();
-}
-
-const monthNames = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December"
-];
-
-function eventYear(event) {
-  return event.startDate.slice(0, 4);
-}
-
-function eventMonthIndex(event) {
-  return Number(event.startDate.slice(5, 7)) - 1;
-}
-
-function eventMonthValue(event) {
-  return event.startDate.slice(5, 7);
-}
-
-function monthOptions(allLabel = "All months") {
-  return [
-    { value: "", label: allLabel },
-    ...monthNames.map((name, index) => ({
-      value: String(index + 1).padStart(2, "0"),
-      label: name
-    }))
-  ];
 }
 
 function availableFestivalYears() {
@@ -1528,9 +1464,19 @@ function renderDataStatus() {
 
 function renderAuth() {
   if (elements.authStatus) {
-    elements.authStatus.innerHTML = isSignedIn()
-      ? "<span class=\"auth-label\">Signed in</span><button class=\"secondary-action\" type=\"button\" data-auth-action=\"signout\">Sign out</button>"
-      : "<button class=\"secondary-action\" type=\"button\" data-auth-action=\"signin\">Sign in</button>";
+    elements.authStatus.replaceChildren();
+    if (isSignedIn()) {
+      const label = document.createElement("span");
+      label.className = "auth-label";
+      label.textContent = "Signed in";
+      elements.authStatus.append(label);
+    }
+    const button = document.createElement("button");
+    button.className = "secondary-action";
+    button.type = "button";
+    button.dataset.authAction = isSignedIn() ? "signout" : "signin";
+    button.textContent = isSignedIn() ? "Sign out" : "Sign in";
+    elements.authStatus.append(button);
   }
 
   if (elements.reviewTab) {
@@ -1905,44 +1851,33 @@ async function deleteTrip(tripId) {
   }
 }
 
-function openEventDialog(eventId) {
-  const event = state.events.find((item) => item.id === eventId);
-  elements.eventDialogTitle.textContent = event ? "Edit event" : "Add event";
-  elements.deleteEventBtn.hidden = !event;
-  $("#eventId").value = event?.id || "";
-  $("#eventName").value = event?.name || "";
-  $("#startDate").value = event?.startDate || new Date().toISOString().slice(0, 10);
-  $("#endDate").value = event?.endDate || new Date().toISOString().slice(0, 10);
-  $("#city").value = event?.city || "";
-  $("#country").value = event?.country || "";
-  $("#venue").value = event?.venue || "";
-  $("#organizer").value = event?.organizer || "";
-  $("#website").value = event?.website || "";
-  $("#instagram").value = event?.instagram || "";
-  $("#facebook").value = event?.facebook || "";
-  $("#price").value = event?.price || "";
-  $("#currency").value = event?.currency || "EUR";
-  $("#djs").value = event?.djs || "";
-  $("#artists").value = event?.artists || "";
-  $("#notes").value = event?.notes || "";
-  elements.eventDialog.showModal();
-}
-
-function saveEvent() {
-  window.alert("Events are managed in Supabase. Use the SQL/upsert workflow instead of local browser edits.");
-}
-
 function buildScoreFields() {
-  elements.scoreFields.innerHTML = "";
+  elements.scoreFields.replaceChildren();
   scoreCategories.forEach(([key, label]) => {
     const row = document.createElement("label");
     row.className = "score-row";
-    row.innerHTML = `
-      <span>${label}</span>
-      <span class="score-value" id="${key}Value">5</span>
-      <input data-score="${key}" type="range" min="1" max="10" value="5">
-      <textarea data-comment="${key}" rows="2" placeholder="${label} comments"></textarea>
-    `;
+
+    const labelText = document.createElement("span");
+    labelText.textContent = label;
+
+    const value = document.createElement("span");
+    value.className = "score-value";
+    value.id = `${key}Value`;
+    value.textContent = "5";
+
+    const input = document.createElement("input");
+    input.dataset.score = key;
+    input.type = "range";
+    input.min = "1";
+    input.max = "10";
+    input.value = "5";
+
+    const textarea = document.createElement("textarea");
+    textarea.dataset.comment = key;
+    textarea.rows = 2;
+    textarea.placeholder = `${label} comments`;
+
+    row.append(labelText, value, input, textarea);
     elements.scoreFields.append(row);
   });
 }
@@ -2087,17 +2022,13 @@ async function deleteReview(reviewId) {
   }
 }
 
-function deleteEvent(eventId) {
-  const event = state.events.find((item) => item.id === eventId);
-  if (!event) return;
-  window.alert("Events are managed in Supabase. Delete or archive event rows through the reviewed SQL workflow.");
-}
-
 function handleAction(event) {
   const target = event.target.closest("[data-action]");
   if (!target) return;
   const { action, id } = target.dataset;
   if (action === "details") openEventDetails(id);
+  if (action === "add-google-calendar") openGoogleCalendar(id);
+  if (action === "download-calendar-file") downloadCalendarFileForEvent(id);
   if (action === "edit-trip") return;
   if (action === "toggle-card-collapse") toggleCardCollapse(target.dataset.view, id);
 }
@@ -2146,13 +2077,6 @@ function handleAuthAction(event) {
 }
 
 function bindEvents() {
-  elements.saveEventBtn?.addEventListener("click", saveEvent);
-  elements.deleteEventBtn?.addEventListener("click", () => {
-    const eventId = $("#eventId").value;
-    if (!eventId) return;
-    elements.eventDialog.close();
-    deleteEvent(eventId);
-  });
   elements.saveReviewBtn?.addEventListener("click", saveReview);
   elements.authForm?.addEventListener("submit", handleAuthSubmit);
   document.addEventListener("click", handleAuthAction);
@@ -2166,6 +2090,7 @@ function bindEvents() {
     setSelectedMonth(event.target.value);
   });
   elements.calendarMonthJump?.addEventListener("change", (event) => setSelectedMonth(event.target.value));
+  elements.todayBtn?.addEventListener("click", goToCurrentDate);
   elements.monthJumpRail?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-month]");
     if (button) setSelectedMonth(button.dataset.month);
