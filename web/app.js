@@ -74,7 +74,9 @@ const state = {
   collapsedCards: {
     calendarList: { all: true, expanded: new Set(), collapsed: new Set() },
     eventList: { all: true, expanded: new Set(), collapsed: new Set() },
-    recentlyAdded: { all: true, expanded: new Set(), collapsed: new Set() }
+    recentlyAdded: { all: true, expanded: new Set(), collapsed: new Set() },
+    trips: { all: true, expanded: new Set(), collapsed: new Set() },
+    reviews: { all: true, expanded: new Set(), collapsed: new Set() }
   },
   schengenCheckDate: localDateString(new Date())
 };
@@ -154,6 +156,10 @@ const elements = {
   expandFestivalListBtn: $("#expandFestivalListBtn"),
   collapseRecentlyAddedBtn: $("#collapseRecentlyAddedBtn"),
   expandRecentlyAddedBtn: $("#expandRecentlyAddedBtn"),
+  collapseTripsBtn: $("#collapseTripsBtn"),
+  expandTripsBtn: $("#expandTripsBtn"),
+  collapseReviewsBtn: $("#collapseReviewsBtn"),
+  expandReviewsBtn: $("#expandReviewsBtn"),
   backToTopBtn: $("#backToTopBtn"),
   eventDialog: $("#eventDialog"),
   eventDialogTitle: $("#eventDialogTitle"),
@@ -456,6 +462,14 @@ function monthLabel(monthValue, { short = false } = {}) {
   });
 }
 
+function mobileCalendarDayLabel(date) {
+  return date.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric"
+  });
+}
+
 function availableCalendarMonths() {
   const months = new Set();
   state.events.forEach((event) => {
@@ -723,8 +737,15 @@ function setCollapseMode(view, collapsed) {
   collapseState.all = collapsed;
   collapseState.expanded.clear();
   collapseState.collapsed.clear();
-  renderEvents();
-  renderFestivalList();
+  renderCollapseView(view);
+}
+
+function renderCollapseView(view) {
+  if (view === "calendarList") renderEvents();
+  if (view === "eventList") renderFestivalList();
+  if (view === "recentlyAdded") renderRecentlyAdded();
+  if (view === "trips") renderTrips();
+  if (view === "reviews") renderReviews();
 }
 
 function toggleCardCollapse(view, id) {
@@ -740,9 +761,7 @@ function toggleCardCollapse(view, id) {
   } else {
     collapseState.collapsed.add(id);
   }
-  if (view === "calendarList") renderEvents();
-  if (view === "eventList") renderFestivalList();
-  if (view === "recentlyAdded") renderRecentlyAdded();
+  renderCollapseView(view);
 }
 
 function isAttendingEvent(event) {
@@ -817,6 +836,7 @@ function renderCalendar() {
     elements.attendedOnlyToggle.disabled = !isSignedIn();
   }
   elements.calendarGrid.innerHTML = "";
+  elements.calendarGrid.classList.remove("is-agenda-empty");
   elements.calendarGrid.classList.remove("is-refreshing");
   void elements.calendarGrid.offsetWidth;
   elements.calendarGrid.classList.add("is-refreshing");
@@ -825,6 +845,7 @@ function renderCalendar() {
   const firstOfMonth = new Date(year, month - 1, 1);
   const start = new Date(firstOfMonth);
   start.setDate(firstOfMonth.getDate() - firstOfMonth.getDay());
+  let hasVisibleAgendaItems = false;
 
   for (let index = 0; index < 42; index += 1) {
     const date = new Date(start);
@@ -870,9 +891,14 @@ function renderCalendar() {
     day.className = "calendar-day";
     if (date.getMonth() !== month - 1) day.classList.add("is-outside");
     if (dateValue === localDateString(new Date())) day.classList.add("is-today");
+    if (!dayEvents.length && !dayTripPlaces.length && !dayPtoDays.length) day.classList.add("is-empty");
+    if (date.getMonth() === month - 1 && (dayEvents.length || dayTripPlaces.length || dayPtoDays.length)) {
+      hasVisibleAgendaItems = true;
+    }
     day.innerHTML = `
       <div class="calendar-date">
         <span>${date.getDate()}</span>
+        <span class="calendar-date-label">${escapeHtml(mobileCalendarDayLabel(date))}</span>
       </div>
     `;
 
@@ -913,6 +939,8 @@ function renderCalendar() {
 
     elements.calendarGrid.append(day);
   }
+
+  elements.calendarGrid.classList.toggle("is-agenda-empty", !hasVisibleAgendaItems);
 }
 
 function calendarTripPlacesForDate(dateValue) {
@@ -1386,6 +1414,7 @@ function renderTrips() {
     const stats = schengenTripStats(trip);
     const ptoStats = tripPtoStats(trip);
     const visibleTripNotes = isImportProvenanceNote(trip.notes) ? "" : trip.notes;
+    const collapseId = trip.id;
     const placesMarkup = trip.places.map((place) => `
       <div class="trip-place">
         <strong>${escapeHtml(tripDateRange(place))}</strong>
@@ -1411,17 +1440,22 @@ function renderTrips() {
           <h3>${escapeHtml(cleanTripLabel(trip.label) || trip.label)}</h3>
           <p class="muted">${escapeHtml(tripDateRange(trip))}</p>
         </div>
-        <span class="pill score-pill">${stats.daysAdded} days</span>
+        <div class="card-header-actions">
+          <span class="pill score-pill">${stats.daysAdded} days</span>
+          ${cardCollapseButton("trips", collapseId)}
+        </div>
       </div>
-      <div class="event-detail">
-        ${detailRow("First Schengen day count", stats.entryDate ? `${stats.entryUsed} / 90 on ${formatDate(stats.entryDate)}` : "0 / 90")}
-        ${detailRow("Last Schengen day count", stats.exitDate ? `${stats.exitUsed} / 90 on ${formatDate(stats.exitDate)}` : "0 / 90")}
-        ${detailRow("Max during trip", `${stats.maxUsed} / 90`)}
-        ${detailRow("PTO count", `${formatPtoAmount(ptoStats.counted)}${ptoStats.holidays ? ` (${ptoStats.holidays} holiday${ptoStats.holidays === 1 ? "" : "s"} excluded)` : ""}`)}
-        ${visibleTripNotes ? detailRow("Notes", visibleTripNotes) : ""}
-      </div>
-      <div class="trip-place-list">${placesMarkup}</div>
-      ${ptoMarkup ? `<div class="trip-place-list pto-place-list">${ptoMarkup}</div>` : ""}
+      ${collapsibleCardBody("trips", collapseId, `
+        <div class="event-detail">
+          ${detailRow("First Schengen day count", stats.entryDate ? `${stats.entryUsed} / 90 on ${formatDate(stats.entryDate)}` : "0 / 90")}
+          ${detailRow("Last Schengen day count", stats.exitDate ? `${stats.exitUsed} / 90 on ${formatDate(stats.exitDate)}` : "0 / 90")}
+          ${detailRow("Max during trip", `${stats.maxUsed} / 90`)}
+          ${detailRow("PTO count", `${formatPtoAmount(ptoStats.counted)}${ptoStats.holidays ? ` (${ptoStats.holidays} holiday${ptoStats.holidays === 1 ? "" : "s"} excluded)` : ""}`)}
+          ${visibleTripNotes ? detailRow("Notes", visibleTripNotes) : ""}
+        </div>
+        <div class="trip-place-list">${placesMarkup}</div>
+        ${ptoMarkup ? `<div class="trip-place-list pto-place-list">${ptoMarkup}</div>` : ""}
+      `)}
     `;
     elements.tripList.append(card);
   });
@@ -1538,6 +1572,7 @@ function renderReviews() {
   reviews.forEach((review) => {
     const event = state.events.find((item) => item.id === review.eventId);
     const reviewDate = new Date(review.reviewedAt).toLocaleDateString();
+    const collapseId = review.id;
     const card = document.createElement("article");
     card.className = "review-card";
     card.innerHTML = `
@@ -1549,11 +1584,16 @@ function renderReviews() {
           </p>
           <p class="muted">Review date: ${escapeHtml(reviewDate)}</p>
         </div>
-        <span class="pill score-pill">${totalScore(review).toFixed(1)}</span>
+        <div class="card-header-actions">
+          <span class="pill score-pill">${totalScore(review).toFixed(1)}</span>
+          ${cardCollapseButton("reviews", collapseId)}
+        </div>
       </div>
-      ${review.topReason ? `<p><strong>Top reason:</strong> ${escapeHtml(review.topReason)}</p>` : ""}
-      ${review.notes ? `<p class="muted">${escapeHtml(review.notes)}</p>` : ""}
-      ${renderCategoryComments(review)}
+      ${collapsibleCardBody("reviews", collapseId, `
+        ${review.topReason ? `<p><strong>Top reason:</strong> ${escapeHtml(review.topReason)}</p>` : ""}
+        ${review.notes ? `<p class="muted">${escapeHtml(review.notes)}</p>` : ""}
+        ${renderCategoryComments(review)}
+      `)}
     `;
     elements.reviewList.append(card);
   });
@@ -2153,6 +2193,7 @@ function bindEvents() {
   elements.eventList.addEventListener("click", handleAction);
   elements.festivalList.addEventListener("click", handleAction);
   elements.recentlyAddedList.addEventListener("click", handleAction);
+  elements.tripList.addEventListener("click", handleAction);
   elements.reviewList.addEventListener("click", handleAction);
   elements.monthPicker.addEventListener("change", (event) => {
     setSelectedMonth(event.target.value);
@@ -2212,6 +2253,10 @@ function bindEvents() {
   elements.expandFestivalListBtn?.addEventListener("click", () => setCollapseMode("eventList", false));
   elements.collapseRecentlyAddedBtn?.addEventListener("click", () => setCollapseMode("recentlyAdded", true));
   elements.expandRecentlyAddedBtn?.addEventListener("click", () => setCollapseMode("recentlyAdded", false));
+  elements.collapseTripsBtn?.addEventListener("click", () => setCollapseMode("trips", true));
+  elements.expandTripsBtn?.addEventListener("click", () => setCollapseMode("trips", false));
+  elements.collapseReviewsBtn?.addEventListener("click", () => setCollapseMode("reviews", true));
+  elements.expandReviewsBtn?.addEventListener("click", () => setCollapseMode("reviews", false));
   elements.backToTopBtn?.addEventListener("click", scrollToTop);
   window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
   elements.schengenCheckDate?.addEventListener("change", (event) => {
