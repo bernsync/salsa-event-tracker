@@ -65,6 +65,7 @@ const state = {
   selectedMonth: localDateString(new Date()).slice(0, 7),
   hideDuplicateAttendedEvents: localStorage.getItem("salsa-festivals-hide-duplicate-attended") !== "false",
   attendedOnlyCalendar: localStorage.getItem("salsa-festivals-attended-only-calendar") === "true",
+  mobileCalendarMonthView: localStorage.getItem("salsa-festivals-mobile-calendar-month-view") === "true",
   showHistorical: false,
   festivalYear: localStorage.getItem("salsa-festivals-event-list-year") || String(new Date().getFullYear()),
   listYear: "",
@@ -103,9 +104,11 @@ const elements = {
   authMessage: $("#authMessage"),
   reviewAuthPanel: $("#reviewAuthPanel"),
   tripsAuthPanel: $("#tripsAuthPanel"),
+  calendarView: $("#calendarView"),
   monthPicker: $("#monthPicker"),
   calendarMonthJump: $("#calendarMonthJump"),
   monthJumpRail: $("#monthJumpRail"),
+  mobileCalendarModeToggle: $("#mobileCalendarModeToggle"),
   hideDuplicateAttendedToggle: $("#hideDuplicateAttendedToggle"),
   attendedOnlyToggle: $("#attendedOnlyToggle"),
   prevMonthBtn: $("#prevMonthBtn"),
@@ -518,6 +521,16 @@ function renderCalendarMonthJump() {
   }
 }
 
+function renderMobileCalendarModeToggle() {
+  if (!elements.mobileCalendarModeToggle) return;
+  elements.mobileCalendarModeToggle.classList.toggle("is-active", state.mobileCalendarMonthView);
+  elements.mobileCalendarModeToggle.setAttribute("aria-pressed", String(state.mobileCalendarMonthView));
+  elements.mobileCalendarModeToggle.setAttribute(
+    "aria-label",
+    state.mobileCalendarMonthView ? "Show mobile calendar as a date list" : "Show mobile calendar as a month grid"
+  );
+}
+
 function reviewScoreForEvent(event) {
   return calculateReviewScoreForEvent(event, {
     events: state.events,
@@ -792,6 +805,7 @@ function renderEventCard(event, options = {}) {
 function renderCalendar() {
   elements.monthPicker.value = state.selectedMonth;
   renderCalendarMonthJump();
+  renderMobileCalendarModeToggle();
   if (elements.hideDuplicateAttendedToggle) {
     elements.hideDuplicateAttendedToggle.checked = state.hideDuplicateAttendedEvents;
     elements.hideDuplicateAttendedToggle.disabled = !isSignedIn();
@@ -803,6 +817,7 @@ function renderCalendar() {
   elements.calendarGrid.innerHTML = "";
   elements.calendarGrid.classList.remove("is-agenda-empty");
   elements.calendarGrid.classList.remove("is-refreshing");
+  elements.calendarView?.classList.toggle("is-mobile-month-view", state.mobileCalendarMonthView);
   void elements.calendarGrid.offsetWidth;
   elements.calendarGrid.classList.add("is-refreshing");
 
@@ -1456,6 +1471,11 @@ function bindEvents() {
   });
   elements.calendarMonthJump?.addEventListener("change", (event) => setSelectedMonth(event.target.value));
   elements.todayBtn?.addEventListener("click", goToCurrentDate);
+  elements.mobileCalendarModeToggle?.addEventListener("click", () => {
+    state.mobileCalendarMonthView = !state.mobileCalendarMonthView;
+    localStorage.setItem("salsa-festivals-mobile-calendar-month-view", String(state.mobileCalendarMonthView));
+    renderCalendar();
+  });
   elements.monthJumpRail?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-month]");
     if (button) setSelectedMonth(button.dataset.month);
