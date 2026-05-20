@@ -142,10 +142,6 @@ export function schengenPlaceDays(place, schengenStatus, windowStart = "", windo
     .length;
 }
 
-function hasLinkedEvent(place) {
-  return Boolean(place.eventId || place.event_edition_id);
-}
-
 function tripPlacesInSequence(trip) {
   return [...(trip.places || [])].sort((a, b) =>
     Number(a.sequence || 0) - Number(b.sequence || 0)
@@ -157,23 +153,22 @@ function tripPlacesInSequence(trip) {
 
 export function schengenTripSegmentDetails(trip, schengenStatus, windowStart = "", windowEnd = "") {
   const places = tripPlacesInSequence(trip);
+  const countedDates = new Set();
   return places.map((place, index) => {
     const startDate = windowStart && place.startDate < windowStart ? windowStart : place.startDate;
     const endDate = windowEnd && place.endDate > windowEnd ? windowEnd : place.endDate;
-    const previousPlace = places[index - 1];
-    const excludeStartHandoff = previousPlace?.endDate === place.startDate && !hasLinkedEvent(place);
-    const days = startDate <= endDate
+    const dates = startDate <= endDate && schengenStatus(place) === true
       ? eachDate(place.startDate, place.endDate)
         .filter((date) => (!windowStart || date >= windowStart) && (!windowEnd || date <= windowEnd))
-        .filter((date) => !(excludeStartHandoff && date === place.startDate))
-        .length
-      : 0;
+        .filter((date) => !countedDates.has(date))
+      : [];
+    dates.forEach((date) => countedDates.add(date));
     return {
       ...place,
       trip,
       startDate,
       endDate,
-      days: schengenStatus(place) === true ? days : 0
+      days: dates.length
     };
   }).filter((place) => place.days > 0);
 }
