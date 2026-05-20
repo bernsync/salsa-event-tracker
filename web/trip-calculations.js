@@ -128,7 +128,7 @@ export function tripCountries(trip) {
 }
 
 export function tripHasSchengenImpact(trip, checkDate, schengenStatus) {
-  const windowStart = addDays(checkDate, -179);
+  const windowStart = addDays(checkDate, -180);
   return (trip.places || []).some((place) => {
     if (schengenStatus(place) !== true) return false;
     return eachDate(place.startDate, place.endDate).some((date) => date >= windowStart && date <= checkDate);
@@ -200,14 +200,14 @@ export function schengenDayDetails(personalTrips, schengenStatus) {
 }
 
 export function schengenUsedOn(personalTrips, dateValue, schengenStatus) {
-  const windowStart = addDays(dateValue, -179);
+  const windowStart = addDays(dateValue, -180);
   return schengenDayDetails(personalTrips, schengenStatus)
     .filter((day) => day.counts && day.date >= windowStart && day.date <= dateValue)
     .length;
 }
 
 export function schengenWindowDetails(personalTrips, dateValue, schengenStatus) {
-  const windowStart = addDays(dateValue, -179);
+  const windowStart = addDays(dateValue, -180);
   const days = schengenDayDetails(personalTrips, schengenStatus)
     .filter((day) => day.counts && day.date >= windowStart && day.date <= dateValue);
   const segments = personalTrips

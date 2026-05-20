@@ -158,13 +158,13 @@ export function createTripsView({
     populateTripFilters();
 
     const usedOnCheckDate = schengenUsedOn(state.schengenCheckDate);
-    const windowStart = addDays(state.schengenCheckDate, -179);
+    const windowStart = addDays(state.schengenCheckDate, -180);
     const windowDetails = schengenWindowDetails();
     elements.schengenSummary.innerHTML = `
       <article class="summary-card">
         <span class="detail-label">Check date</span>
         <strong>${escapeHtml(formatDate(state.schengenCheckDate))}</strong>
-        <p class="muted">Inclusive 180-day window: ${escapeHtml(formatDate(windowStart))} - ${escapeHtml(formatDate(state.schengenCheckDate))}</p>
+        <p class="muted">Includes today and 180 days back: ${escapeHtml(formatDate(windowStart))} - ${escapeHtml(formatDate(state.schengenCheckDate))}</p>
       </article>
       <article class="summary-card ${usedOnCheckDate > 90 ? "is-danger" : ""}">
         <span class="detail-label">Schengen days used</span>
