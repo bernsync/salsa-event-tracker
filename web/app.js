@@ -438,21 +438,21 @@ function schengenLabel(event) {
   return status ? "Yes" : "No";
 }
 
-function shiftSelectedMonth(offset) {
+function shiftSelectedMonth(offset, { preserveScroll = false } = {}) {
   const [year, month] = state.selectedMonth.split("-").map(Number);
   const date = new Date(year, month - 1 + offset, 1);
   state.selectedMonth = localDateString(date).slice(0, 7);
-  renderCalendar();
+  renderCalendar({ preserveScroll });
 }
 
-function setSelectedMonth(monthValue) {
+function setSelectedMonth(monthValue, { preserveScroll = false } = {}) {
   if (!/^\d{4}-\d{2}$/.test(String(monthValue || ""))) return;
   state.selectedMonth = monthValue;
-  renderCalendar();
+  renderCalendar({ preserveScroll });
 }
 
 function goToCurrentDate() {
-  setSelectedMonth(localDateString(new Date()).slice(0, 7));
+  setSelectedMonth(localDateString(new Date()).slice(0, 7), { preserveScroll: true });
 }
 
 function monthLabel(monthValue, { short = false } = {}) {
@@ -547,7 +547,7 @@ function setSelectedCalendarDate(dateValue) {
   state.selectedMonth = nextMonth;
   state.selectedCalendarDate = dateValue;
   if (monthChanged) {
-    renderCalendar();
+    renderCalendar({ preserveScroll: true });
     return;
   }
   renderCalendarSelection();
@@ -824,7 +824,8 @@ function renderEventCard(event, options = {}) {
   return card;
 }
 
-function renderCalendar() {
+function renderCalendar({ preserveScroll = false } = {}) {
+  const scrollTop = preserveScroll ? window.scrollY : null;
   elements.monthPicker.value = state.selectedMonth;
   renderCalendarMonthJump();
   renderMobileCalendarModeToggle();
@@ -920,6 +921,9 @@ function renderCalendar() {
 
   elements.calendarGrid.classList.toggle("is-agenda-empty", !hasVisibleAgendaItems);
   renderCalendarSelection();
+  if (preserveScroll) {
+    requestAnimationFrame(() => window.scrollTo({ top: scrollTop, left: window.scrollX, behavior: "auto" }));
+  }
 }
 
 function calendarItemsForDate(dateValue) {
@@ -1575,31 +1579,31 @@ function bindEvents() {
   elements.tripList.addEventListener("click", handleAction);
   elements.reviewList.addEventListener("click", handleAction);
   elements.monthPicker.addEventListener("change", (event) => {
-    setSelectedMonth(event.target.value);
+    setSelectedMonth(event.target.value, { preserveScroll: true });
   });
-  elements.calendarMonthJump?.addEventListener("change", (event) => setSelectedMonth(event.target.value));
+  elements.calendarMonthJump?.addEventListener("change", (event) => setSelectedMonth(event.target.value, { preserveScroll: true }));
   elements.todayBtn?.addEventListener("click", goToCurrentDate);
   elements.mobileCalendarModeToggle?.addEventListener("click", () => {
     state.mobileCalendarMonthView = !state.mobileCalendarMonthView;
     localStorage.setItem("salsa-festivals-mobile-calendar-month-view", String(state.mobileCalendarMonthView));
-    renderCalendar();
+    renderCalendar({ preserveScroll: true });
   });
   elements.monthJumpRail?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-month]");
-    if (button) setSelectedMonth(button.dataset.month);
+    if (button) setSelectedMonth(button.dataset.month, { preserveScroll: true });
   });
   elements.hideDuplicateAttendedToggle?.addEventListener("change", (event) => {
     state.hideDuplicateAttendedEvents = event.target.checked;
     localStorage.setItem("salsa-festivals-hide-duplicate-attended", String(state.hideDuplicateAttendedEvents));
-    renderCalendar();
+    renderCalendar({ preserveScroll: true });
   });
   elements.attendedOnlyToggle?.addEventListener("change", (event) => {
     state.attendedOnlyCalendar = event.target.checked;
     localStorage.setItem("salsa-festivals-attended-only-calendar", String(state.attendedOnlyCalendar));
-    renderCalendar();
+    renderCalendar({ preserveScroll: true });
   });
-  elements.prevMonthBtn.addEventListener("click", () => shiftSelectedMonth(-1));
-  elements.nextMonthBtn.addEventListener("click", () => shiftSelectedMonth(1));
+  elements.prevMonthBtn.addEventListener("click", () => shiftSelectedMonth(-1, { preserveScroll: true }));
+  elements.nextMonthBtn.addEventListener("click", () => shiftSelectedMonth(1, { preserveScroll: true }));
   elements.searchInput.addEventListener("input", (event) => {
     state.search = event.target.value;
     renderEvents();
