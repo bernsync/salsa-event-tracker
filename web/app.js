@@ -5,24 +5,12 @@ import {
   cleanTripLabel,
   formatEventSize,
   formatStyles,
-  isImportProvenanceNote,
   isWatchlistEvent,
   watchlistLabel
 } from "./event-metadata.js";
 import {
-  addDays,
   formatPtoAmount,
-  holidayForDate,
-  ptoYearStats as calculatePtoYearStats,
-  schengenTripSegmentDetails as calculateSchengenTripSegmentDetails,
-  schengenTripStats as calculateSchengenTripStats,
-  schengenUsedOn as calculateSchengenUsedOn,
-  schengenWindowDetails as calculateSchengenWindowDetails,
-  tripCountries,
-  tripHasSchengenImpact as calculateTripHasSchengenImpact,
-  tripMonths,
-  tripPtoStats,
-  tripYears
+  holidayForDate
 } from "./trip-calculations.js";
 import { eventLocation, eventPrice } from "./event-view-utils.js";
 import { sourceLink } from "./link-utils.js";
@@ -38,8 +26,6 @@ import {
 } from "./event-date-utils.js";
 import {
   reviewScoreForEvent as calculateReviewScoreForEvent,
-  scoreCategories,
-  totalScore
 } from "./review-scoring.js";
 import {
   authSessionFromStorage,
@@ -49,7 +35,8 @@ import {
   currentUserId as sessionUserId,
   saveAuthSession
 } from "./auth-session.js";
-import { buildTripSavePayload, deletePersonalTrip, savePersonalTrip } from "./trip-api.js";
+import { createTripsView } from "./trips-view.js";
+import { createReviewsView } from "./reviews-view.js";
 
 const storageKey = "salsa-festivals-tracker-v1";
 
@@ -191,6 +178,9 @@ const elements = {
   saveReviewBtn: $("#saveReviewBtn"),
   emptyStateTemplate: $("#emptyStateTemplate")
 };
+
+let tripsView;
+let reviewsView;
 
 function loadState() {
   localStorage.removeItem(storageKey);
@@ -718,8 +708,8 @@ function renderCollapseView(view) {
   if (view === "calendarList") renderEvents();
   if (view === "eventList") renderFestivalList();
   if (view === "recentlyAdded") renderRecentlyAdded();
-  if (view === "trips") renderTrips();
-  if (view === "reviews") renderReviews();
+  if (view === "trips") tripsView.renderTrips();
+  if (view === "reviews") reviewsView.renderReviews();
 }
 
 function toggleCardCollapse(view, id) {
@@ -1246,252 +1236,6 @@ function uniqueValues(values) {
   return [...new Set(values)];
 }
 
-function currentYearValue() {
-  return localDateString(new Date()).slice(0, 4);
-}
-
-function ptoYearStats(year) {
-  return calculatePtoYearStats(state.personalTrips, year);
-}
-
-function tripHasSchengenImpact(trip) {
-  return calculateTripHasSchengenImpact(trip, state.schengenCheckDate, schengenStatus);
-}
-
-function tripMatchesFilters(trip) {
-  const today = localDateString(new Date());
-  const isPastTrip = trip.endDate < today;
-  const includeHistorical = state.showHistoricalTrips || (state.showSchengenImpactingTrips && tripHasSchengenImpact(trip));
-  if (isPastTrip && !includeHistorical) return false;
-  if (state.showSchengenImpactingTrips && !tripHasSchengenImpact(trip)) return false;
-  if (state.tripCountry && !tripCountries(trip).includes(state.tripCountry)) return false;
-  if (state.tripYear && !tripYears(trip).includes(state.tripYear)) return false;
-  if (state.tripMonth && !tripMonths(trip).includes(state.tripMonth)) return false;
-  return true;
-}
-
-function filteredTrips() {
-  return [...state.personalTrips]
-    .filter(tripMatchesFilters)
-    .sort((a, b) => a.startDate.localeCompare(b.startDate));
-}
-
-function populateTripFilters() {
-  if (elements.tripHistoryToggle) elements.tripHistoryToggle.checked = state.showHistoricalTrips;
-  if (elements.schengenImpactToggle) elements.schengenImpactToggle.checked = state.showSchengenImpactingTrips;
-
-  const countries = uniqueValues(state.personalTrips.flatMap(tripCountries)).sort((a, b) => a.localeCompare(b));
-  if (state.tripCountry && !countries.includes(state.tripCountry)) state.tripCountry = "";
-  setSelectOptions(
-    elements.tripCountrySelect,
-    [{ value: "", label: "All countries" }, ...countries.map((country) => ({ value: country, label: country }))],
-    state.tripCountry
-  );
-
-  const years = uniqueValues(state.personalTrips.flatMap(tripYears)).sort();
-  if (state.tripYear && !years.includes(state.tripYear)) state.tripYear = "";
-  setSelectOptions(
-    elements.tripYearSelect,
-    [{ value: "", label: "All years" }, ...years.map((year) => ({ value: year, label: year }))],
-    state.tripYear
-  );
-
-  setSelectOptions(elements.tripMonthSelect, monthOptions(), state.tripMonth);
-}
-
-function tripDateRange(item) {
-  return dateRange({ startDate: item.startDate, endDate: item.endDate });
-}
-
-function schengenUsedOn(dateValue) {
-  return calculateSchengenUsedOn(state.personalTrips, dateValue, schengenStatus);
-}
-
-function tripPlaceKey(place) {
-  return [place.id || "", place.sequence ?? "", place.startDate, place.endDate, place.city, place.country].join("|");
-}
-
-function schengenTripSegmentDayMap(trip) {
-  return new Map(calculateSchengenTripSegmentDetails(trip, schengenStatus).map((place) => [tripPlaceKey(place), place.days]));
-}
-
-function schengenTripStats(trip) {
-  return calculateSchengenTripStats(state.personalTrips, trip, schengenStatus);
-}
-
-function schengenWindowDetails() {
-  return calculateSchengenWindowDetails(state.personalTrips, state.schengenCheckDate, schengenStatus);
-}
-
-function dayCountLabel(days) {
-  return `${days} day${days === 1 ? "" : "s"}`;
-}
-
-function renderSchengenWindowSummary(details) {
-  const segmentRows = details.segments.map((place) => `
-    <div class="schengen-impact-row">
-      <strong>${escapeHtml(tripDateRange(place))}</strong>
-      <span>${escapeHtml([place.city, place.country].filter(Boolean).join(", "))}</span>
-      <span>${escapeHtml(cleanTripLabel(place.trip.label) || place.trip.label)}</span>
-      <span class="pill score-pill">${escapeHtml(dayCountLabel(place.days))}</span>
-    </div>
-  `).join("");
-  return `
-    <article class="event-card schengen-window-card">
-      <details>
-        <summary>
-          <span>
-            <strong>Schengen day detail</strong>
-            <small>${escapeHtml(dayCountLabel(details.used))} counted from ${escapeHtml(formatDate(details.windowStart))} - ${escapeHtml(formatDate(details.windowEnd))}</small>
-          </span>
-        </summary>
-        ${segmentRows ? `
-          <div class="schengen-impact-list">
-            ${segmentRows}
-          </div>
-        ` : "<p class=\"muted\">No Schengen trip segments impact this check date.</p>"}
-      </details>
-    </article>
-  `;
-}
-
-function renderTrips() {
-  if (!elements.tripList || !elements.schengenSummary) return;
-  elements.schengenCheckDate.value = state.schengenCheckDate;
-  elements.tripList.innerHTML = "";
-  elements.schengenSummary.innerHTML = "";
-  if (elements.ptoYearSummary) elements.ptoYearSummary.innerHTML = "";
-  if (!isSignedIn()) return;
-  populateTripFilters();
-
-  const usedOnCheckDate = schengenUsedOn(state.schengenCheckDate);
-  const windowStart = addDays(state.schengenCheckDate, -179);
-  const windowDetails = schengenWindowDetails();
-  elements.schengenSummary.innerHTML = `
-    <article class="summary-card">
-      <span class="detail-label">Check date</span>
-      <strong>${escapeHtml(formatDate(state.schengenCheckDate))}</strong>
-      <p class="muted">Inclusive 180-day window: ${escapeHtml(formatDate(windowStart))} - ${escapeHtml(formatDate(state.schengenCheckDate))}</p>
-    </article>
-    <article class="summary-card ${usedOnCheckDate > 90 ? "is-danger" : ""}">
-      <span class="detail-label">Schengen days used</span>
-      <strong>${usedOnCheckDate} / 90</strong>
-      <p class="muted">${Math.max(0, 90 - usedOnCheckDate)} days remaining</p>
-    </article>
-    ${renderSchengenWindowSummary(windowDetails)}
-  `;
-  renderPtoYearSummary();
-
-  if (!state.personalTrips.length) {
-    elements.tripList.append(emptyState("No trips yet", "Add city-by-city trip rows to start counting Schengen days."));
-    return;
-  }
-
-  const trips = filteredTrips();
-  if (!trips.length) {
-    elements.tripList.append(emptyState("No matching trips", "Adjust the trip filters or turn on historical trips."));
-    return;
-  }
-
-  trips.forEach((trip) => {
-    const stats = schengenTripStats(trip);
-    const ptoStats = tripPtoStats(trip);
-    const visibleTripNotes = isImportProvenanceNote(trip.notes) ? "" : trip.notes;
-    const collapseId = trip.id;
-    const segmentDayMap = schengenTripSegmentDayMap(trip);
-    const placesMarkup = trip.places.map((place) => {
-      const schengenDays = segmentDayMap.get(tripPlaceKey(place)) || 0;
-      return `
-        <div class="trip-place">
-          <strong>${escapeHtml(tripDateRange(place))}</strong>
-          <span>${escapeHtml([place.city, place.country].filter(Boolean).join(", "))}</span>
-          <span class="trip-place-pills">
-            <span class="pill ${schengenStatus(place) ? "score-pill" : "location-pill"}">${schengenLabel(place) || "Schengen unknown"}</span>
-            ${schengenDays ? `<span class="pill score-pill">${escapeHtml(dayCountLabel(schengenDays))}</span>` : ""}
-          </span>
-        </div>
-      `;
-    }).join("");
-    const ptoMarkup = (trip.ptoDays || []).map((ptoDay) => {
-      const holiday = holidayForDate(ptoDay.date);
-      return `
-        <div class="trip-place pto-place ${holiday ? "is-holiday" : ""}">
-          <strong>${escapeHtml(formatDate(ptoDay.date))}</strong>
-          <span>${escapeHtml(ptoDay.notes || "PTO")}</span>
-          <span class="pill ${holiday ? "location-pill" : "score-pill"}">${escapeHtml(holiday || formatPtoAmount(ptoDay.amount))}</span>
-        </div>
-      `;
-    }).join("");
-    const card = document.createElement("article");
-    card.className = "event-card trip-card";
-    card.innerHTML = `
-      <div class="event-card-header">
-        <div>
-          <h3>${escapeHtml(cleanTripLabel(trip.label) || trip.label)}</h3>
-          <p class="muted">${escapeHtml(tripDateRange(trip))}</p>
-        </div>
-        <div class="card-header-actions">
-          <span class="pill score-pill">${stats.daysAdded} days</span>
-          ${cardCollapseButton("trips", collapseId)}
-        </div>
-      </div>
-      ${collapsibleCardBody("trips", collapseId, `
-        <div class="event-detail">
-          ${detailRow("First Schengen day count", stats.entryDate ? `${stats.entryUsed} / 90 on ${formatDate(stats.entryDate)}` : "0 / 90")}
-          ${detailRow("Last Schengen day count", stats.exitDate ? `${stats.exitUsed} / 90 on ${formatDate(stats.exitDate)}` : "0 / 90")}
-          ${detailRow("Max during trip", `${stats.maxUsed} / 90`)}
-          ${detailRow("PTO count", `${formatPtoAmount(ptoStats.counted)}${ptoStats.holidays ? ` (${ptoStats.holidays} holiday${ptoStats.holidays === 1 ? "" : "s"} excluded)` : ""}`)}
-          ${visibleTripNotes ? detailRow("Notes", visibleTripNotes) : ""}
-        </div>
-        <div class="trip-place-list">${placesMarkup}</div>
-        ${ptoMarkup ? `<div class="trip-place-list pto-place-list">${ptoMarkup}</div>` : ""}
-      `)}
-    `;
-    elements.tripList.append(card);
-  });
-}
-
-function renderPtoYearSummary() {
-  if (!elements.ptoYearSummary) return;
-  const year = currentYearValue();
-  const stats = ptoYearStats(year);
-  const ptoRows = stats.ptoDays.slice(0, 8).map((ptoDay) => {
-    const holiday = holidayForDate(ptoDay.date);
-    return `
-      <div class="pto-year-row ${holiday ? "is-holiday" : ""}">
-        <strong>${escapeHtml(formatDate(ptoDay.date))}</strong>
-        <span>${escapeHtml(cleanTripLabel(ptoDay.trip.label) || ptoDay.trip.label)}</span>
-        <span class="pill ${holiday ? "location-pill" : "score-pill"}">${escapeHtml(holiday || formatPtoAmount(ptoDay.amount))}</span>
-      </div>
-    `;
-  }).join("");
-  const hiddenCount = Math.max(0, stats.ptoDays.length - 8);
-  elements.ptoYearSummary.innerHTML = `
-    <article class="event-card pto-year-card">
-      <div class="event-card-header">
-        <div>
-          <h3>${escapeHtml(year)} PTO tracker</h3>
-          <p class="muted">Full and half PTO days, with holidays excluded from the total.</p>
-        </div>
-        <span class="pill score-pill">${escapeHtml(formatPtoAmount(stats.counted))}</span>
-      </div>
-      <div class="summary-grid pto-year-grid">
-        <article class="summary-card">
-          <span class="detail-label">PTO used</span>
-          <strong>${escapeHtml(formatPtoAmount(stats.counted))}</strong>
-          <p class="muted">${escapeHtml(formatPtoAmount(stats.requested))} requested before holiday exclusions</p>
-        </article>
-        <article class="summary-card">
-          <span class="detail-label">Breakdown</span>
-          <strong>${stats.fullDays} full / ${stats.halfDays} half</strong>
-          <p class="muted">${stats.holidays.length} holiday${stats.holidays.length === 1 ? "" : "s"} excluded</p>
-        </article>
-      </div>
-      ${ptoRows ? `<div class="pto-year-list">${ptoRows}${hiddenCount ? `<p class="muted">+ ${hiddenCount} more PTO entr${hiddenCount === 1 ? "y" : "ies"}</p>` : ""}</div>` : "<p class=\"muted\">No PTO days marked for this year yet.</p>"}
-    </article>
-  `;
-}
-
 function renderDataStatus() {
   if (!elements.dataStatus) return;
   const items = tableStatusItems(state.supabaseLoadStatus);
@@ -1575,66 +1319,6 @@ function renderAuth() {
   });
 }
 
-function renderReviews() {
-  elements.reviewList.innerHTML = "";
-  if (!isSignedIn()) {
-    return;
-  }
-
-  const reviews = [...state.reviews].sort((a, b) => b.reviewedAt.localeCompare(a.reviewedAt));
-
-  if (!reviews.length) {
-    elements.reviewList.append(emptyState("No reviews yet", "Your private reviews will show here once they are added to Supabase."));
-    return;
-  }
-
-  reviews.forEach((review) => {
-    const event = state.events.find((item) => item.id === review.eventId);
-    const reviewDate = new Date(review.reviewedAt).toLocaleDateString();
-    const collapseId = review.id;
-    const card = document.createElement("article");
-    card.className = "review-card";
-    card.innerHTML = `
-      <div class="event-card-header">
-        <div>
-          <h3>${escapeHtml(event?.name || "Deleted event")}</h3>
-          <p class="muted">
-            ${event ? `Edition: ${escapeHtml(dateRange(event))}${eventLocation(event) ? ` | ${escapeHtml(eventLocation(event))}` : ""}` : "Edition: deleted event"}
-          </p>
-          <p class="muted">Review date: ${escapeHtml(reviewDate)}</p>
-        </div>
-        <div class="card-header-actions">
-          <span class="pill score-pill">${totalScore(review).toFixed(1)}</span>
-          ${cardCollapseButton("reviews", collapseId)}
-        </div>
-      </div>
-      ${collapsibleCardBody("reviews", collapseId, `
-        ${review.topReason ? `<p><strong>Top reason:</strong> ${escapeHtml(review.topReason)}</p>` : ""}
-        ${review.notes ? `<p class="muted">${escapeHtml(review.notes)}</p>` : ""}
-        ${renderCategoryComments(review)}
-      `)}
-    `;
-    elements.reviewList.append(card);
-  });
-}
-
-function renderCategoryComments(review) {
-  const comments = review.categoryComments || {};
-  const rows = scoreCategories
-    .map(([key, label]) => `
-      <div class="review-comment">
-        <div class="review-category-header">
-          <strong>${escapeHtml(label)}</strong>
-          <span class="review-score-badge">${escapeHtml(review.scores?.[key] ?? "")}/10</span>
-        </div>
-        ${comments[key] ? `<p>${escapeHtml(comments[key])}</p>` : ""}
-      </div>
-    `)
-    .join("");
-
-  return rows ? `<div class="review-comments">${rows}</div>` : "";
-}
-
 function render() {
   renderAuth();
   renderDataStatus();
@@ -1642,8 +1326,8 @@ function render() {
   renderEvents();
   renderFestivalList();
   renderRecentlyAdded();
-  renderTrips();
-  renderReviews();
+  tripsView.renderTrips();
+  reviewsView.renderReviews();
 }
 
 function switchView(view) {
@@ -1709,369 +1393,6 @@ function openEventDetails(eventId) {
   elements.eventDetailsDialog.showModal();
 }
 
-function tripPlaceTemplate(place = {}) {
-  const row = document.createElement("section");
-  row.className = "trip-place-row";
-  row.innerHTML = `
-    <div class="form-grid trip-place-grid">
-      <label class="field">
-        <span>Start</span>
-        <input data-trip-place="startDate" type="date" value="${escapeHtml(place.startDate || elements.tripStartDate.value || localDateString(new Date()))}" required>
-      </label>
-      <label class="field">
-        <span>End</span>
-        <input data-trip-place="endDate" type="date" value="${escapeHtml(place.endDate || place.startDate || elements.tripEndDate.value || localDateString(new Date()))}" required>
-      </label>
-      <label class="field">
-        <span>City</span>
-        <input data-trip-place="city" type="text" value="${escapeHtml(place.city || "")}" required>
-      </label>
-      <label class="field">
-        <span>Country</span>
-        <input data-trip-place="country" type="text" value="${escapeHtml(place.country || "")}" required>
-      </label>
-      <label class="field">
-        <span>Role</span>
-        <select data-trip-place="role">
-          ${["stay", "origin", "stop", "destination"].map((role) => `<option value="${role}" ${role === (place.role || "stay") ? "selected" : ""}>${role}</option>`).join("")}
-        </select>
-      </label>
-      <label class="field">
-        <span>Event</span>
-        <select data-trip-place="eventId">
-          <option value="">No event</option>
-          ${state.events.map((event) => `<option value="${escapeHtml(event.id)}" ${event.id === place.eventId ? "selected" : ""}>${escapeHtml(`${event.name} (${event.startDate})`)}</option>`).join("")}
-        </select>
-      </label>
-    </div>
-    <label class="field">
-      <span>Place notes</span>
-      <input data-trip-place="notes" type="text" value="${escapeHtml(place.notes || "")}" placeholder="Flight, hotel, or Schengen note">
-    </label>
-    <button class="secondary-action" type="button" data-trip-action="remove-place">Remove city</button>
-  `;
-  return row;
-}
-
-function addTripPlaceRow(place) {
-  elements.tripPlacesEditor.append(tripPlaceTemplate(place));
-}
-
-function ptoDayTemplate(ptoDay = {}) {
-  const row = document.createElement("section");
-  row.className = "trip-pto-row";
-  const dateValue = ptoDay.date || elements.tripStartDate.value || localDateString(new Date());
-  row.innerHTML = `
-    <div class="form-grid pto-day-grid">
-      <label class="field">
-        <span>Date</span>
-        <input data-pto-day="date" type="date" value="${escapeHtml(dateValue)}" required>
-      </label>
-      <label class="field">
-        <span>Amount</span>
-        <select data-pto-day="amount">
-          <option value="1" ${Number(ptoDay.amount || 1) === 1 ? "selected" : ""}>Full day</option>
-          <option value="0.5" ${Number(ptoDay.amount) === 0.5 ? "selected" : ""}>Half day</option>
-        </select>
-      </label>
-      <label class="field">
-        <span>Note</span>
-        <input data-pto-day="notes" type="text" value="${escapeHtml(ptoDay.notes || "")}" placeholder="Optional PTO note">
-      </label>
-      <div class="pto-day-status" data-pto-holiday>${escapeHtml(holidayForDate(dateValue) || "Counts as PTO")}</div>
-    </div>
-    <button class="secondary-action" type="button" data-trip-action="remove-pto">Remove PTO</button>
-  `;
-  return row;
-}
-
-function addPtoDayRow(ptoDay) {
-  elements.ptoDaysEditor.append(ptoDayTemplate(ptoDay));
-}
-
-function openTripDialog(tripId = "") {
-  const trip = state.personalTrips.find((item) => item.id === tripId);
-  elements.tripDialogTitle.textContent = trip ? "Edit trip" : "Add trip";
-  elements.tripId.value = trip?.id || "";
-  elements.tripLabel.value = trip?.label || "";
-  elements.tripStartDate.value = trip?.startDate || localDateString(new Date());
-  elements.tripEndDate.value = trip?.endDate || trip?.startDate || localDateString(new Date());
-  elements.tripNotes.value = trip?.notes || "";
-  elements.deleteTripBtn.hidden = !trip;
-  elements.tripPlacesEditor.innerHTML = "";
-  elements.ptoDaysEditor.innerHTML = "";
-  (trip?.places?.length ? trip.places : [{}]).forEach(addTripPlaceRow);
-  (trip?.ptoDays || []).forEach(addPtoDayRow);
-  elements.tripDialog.showModal();
-}
-
-function closeTripDialog() {
-  if (elements.tripDialog?.open) {
-    elements.tripDialog.close();
-  }
-}
-
-function collectTripPlaces() {
-  return [...elements.tripPlacesEditor.querySelectorAll(".trip-place-row")].map((row, index) => {
-    const value = (field) => row.querySelector(`[data-trip-place="${field}"]`)?.value.trim() || "";
-    const startDate = value("startDate");
-    const endDate = value("endDate") < startDate ? startDate : value("endDate");
-    return {
-      startDate,
-      endDate,
-      city: value("city"),
-      country: value("country"),
-      role: value("role") || "stay",
-      eventId: value("eventId"),
-      notes: value("notes"),
-      sequence: index
-    };
-  });
-}
-
-function collectPtoDays() {
-  return [...elements.ptoDaysEditor.querySelectorAll(".trip-pto-row")].map((row) => {
-    const value = (field) => row.querySelector(`[data-pto-day="${field}"]`)?.value.trim() || "";
-    return {
-      date: value("date"),
-      amount: Number(value("amount") || 1),
-      notes: value("notes")
-    };
-  }).filter((ptoDay) => ptoDay.date);
-}
-
-function updatePtoHolidayStatus(row) {
-  const dateValue = row.querySelector('[data-pto-day="date"]')?.value || "";
-  const status = row.querySelector("[data-pto-holiday]");
-  if (!status) return;
-  const holiday = holidayForDate(dateValue);
-  status.textContent = holiday || "Counts as PTO";
-  status.classList.toggle("is-holiday", Boolean(holiday));
-}
-
-async function saveTrip(event) {
-  event.preventDefault();
-  if (!elements.tripForm.reportValidity()) return;
-  if (!isSignedIn()) return;
-
-  const places = collectTripPlaces();
-  const ptoDays = collectPtoDays();
-  if (!places.length) {
-    window.alert("Add at least one city segment.");
-    return;
-  }
-
-  const startDate = elements.tripStartDate.value;
-  const endDate = elements.tripEndDate.value < startDate ? startDate : elements.tripEndDate.value;
-  const tripId = elements.tripId.value;
-  const payload = buildTripSavePayload({
-    tripId,
-    label: elements.tripLabel.value,
-    startDate,
-    endDate,
-    notes: elements.tripNotes.value,
-    places,
-    ptoDays,
-    ownerId: currentUserId(),
-    ownerEmail: currentUserEmail()
-  });
-
-  try {
-    await savePersonalTrip(Api, payload);
-    closeTripDialog();
-    state.personalTrips = await loadSupabasePersonalTrips();
-    render();
-  } catch (error) {
-    window.alert(error.message);
-  }
-}
-
-async function deleteTrip(tripId) {
-  if (!tripId) return;
-  const trip = state.personalTrips.find((item) => item.id === tripId);
-  const confirmed = window.confirm(`Delete ${trip?.label || "this trip"}?`);
-  if (!confirmed) return;
-  try {
-    await deletePersonalTrip(Api, tripId);
-    closeTripDialog();
-    state.personalTrips = await loadSupabasePersonalTrips();
-    render();
-  } catch (error) {
-    window.alert(error.message);
-  }
-}
-
-function buildScoreFields() {
-  elements.scoreFields.replaceChildren();
-  scoreCategories.forEach(([key, label]) => {
-    const row = document.createElement("label");
-    row.className = "score-row";
-
-    const labelText = document.createElement("span");
-    labelText.textContent = label;
-
-    const value = document.createElement("span");
-    value.className = "score-value";
-    value.id = `${key}Value`;
-    value.textContent = "5";
-
-    const input = document.createElement("input");
-    input.dataset.score = key;
-    input.type = "range";
-    input.min = "1";
-    input.max = "10";
-    input.value = "5";
-
-    const textarea = document.createElement("textarea");
-    textarea.dataset.comment = key;
-    textarea.rows = 2;
-    textarea.placeholder = `${label} comments`;
-
-    row.append(labelText, value, input, textarea);
-    elements.scoreFields.append(row);
-  });
-}
-
-function setScoreFieldValues(scores) {
-  document.querySelectorAll("[data-score]").forEach((input) => {
-    const value = scores?.[input.dataset.score] || 5;
-    input.value = value;
-  });
-  updateLiveScore();
-}
-
-function setCommentFieldValues(comments = {}) {
-  document.querySelectorAll("[data-comment]").forEach((textarea) => {
-    textarea.value = comments[textarea.dataset.comment] || "";
-  });
-}
-
-function updateLiveScore() {
-  const values = [...document.querySelectorAll("[data-score]")].map((input) => Number(input.value));
-  const total = values.reduce((sum, value) => sum + value, 0) / values.length;
-  elements.liveScore.textContent = total.toFixed(1);
-  document.querySelectorAll("[data-score]").forEach((input) => {
-    $(`#${input.dataset.score}Value`).textContent = input.value;
-  });
-}
-
-function openReviewDialog(eventId) {
-  const event = state.events.find((item) => item.id === eventId);
-  if (!event) return;
-  if (!isHistorical(event)) {
-    window.alert("Reviews can only be added after an event has happened. Upcoming editions show prior-edition reviews when available.");
-    return;
-  }
-  elements.reviewEventName.textContent = event.name;
-  elements.reviewEventId.value = event.id;
-  elements.reviewId.value = "";
-  elements.topReason.value = "";
-  elements.reviewNotes.value = "";
-  buildScoreFields();
-  setScoreFieldValues();
-  setCommentFieldValues();
-  elements.saveReviewBtn.textContent = "Save review";
-  elements.reviewDialog.showModal();
-}
-
-function openReviewEditor(reviewId) {
-  const review = state.reviews.find((item) => item.id === reviewId);
-  if (!review) return;
-  const event = state.events.find((item) => item.id === review.eventId);
-  elements.reviewEventName.textContent = event?.name || "Festival review";
-  elements.reviewEventId.value = review.eventId;
-  elements.reviewId.value = review.id;
-  elements.topReason.value = review.topReason || "";
-  elements.reviewNotes.value = review.notes || "";
-  buildScoreFields();
-  setScoreFieldValues(review.scores);
-  setCommentFieldValues(review.categoryComments);
-  elements.saveReviewBtn.textContent = "Update review";
-  elements.reviewDialog.showModal();
-}
-
-function reviewPayloadFromForm(scores, categoryComments, existing = null) {
-  return {
-    ...(existing ? {} : { id: crypto.randomUUID() }),
-    user_id: currentUserId(),
-    event_edition_id: elements.reviewEventId.value,
-    reviewed_at: existing?.reviewedAt || new Date().toISOString(),
-    music_score: scores.music,
-    dancing_level_score: scores.dancingLevel,
-    stage_impact_score: scores.stageImpact,
-    floor_score: scores.floor,
-    vibe_score: scores.vibe,
-    event_cost_score: scores.eventCost,
-    services_score: scores.servicesProvided,
-    event_hours_score: scores.eventHours,
-    host_city_score: scores.hostCity,
-    event_size_score: scores.eventSize,
-    travel_score: scores.travelToEvent,
-    music_comment: categoryComments.music || "",
-    dancing_level_comment: categoryComments.dancingLevel || "",
-    stage_impact_comment: categoryComments.stageImpact || "",
-    floor_comment: categoryComments.floor || "",
-    vibe_comment: categoryComments.vibe || "",
-    event_cost_comment: categoryComments.eventCost || "",
-    services_comment: categoryComments.servicesProvided || "",
-    event_hours_comment: categoryComments.eventHours || "",
-    host_city_comment: categoryComments.hostCity || "",
-    event_size_comment: categoryComments.eventSize || "",
-    travel_comment: categoryComments.travelToEvent || "",
-    top_reason: elements.topReason.value.trim(),
-    notes: elements.reviewNotes.value.trim(),
-    visibility: "owner"
-  };
-}
-
-async function saveReview() {
-  if (!isSignedIn()) return;
-  const scores = {};
-  document.querySelectorAll("[data-score]").forEach((input) => {
-    scores[input.dataset.score] = Number(input.value);
-  });
-  const categoryComments = {};
-  document.querySelectorAll("[data-comment]").forEach((textarea) => {
-    const value = textarea.value.trim();
-    if (value) {
-      categoryComments[textarea.dataset.comment] = value;
-    }
-  });
-
-  const reviewId = elements.reviewId.value;
-  const existing = state.reviews.find((review) => review.id === reviewId);
-  const payload = reviewPayloadFromForm(scores, categoryComments, existing);
-  try {
-    if (existing) {
-      await Api.updateReview(reviewId, payload);
-    } else {
-      await Api.createReview(payload);
-    }
-    state.reviews = await loadSupabaseReviews();
-    elements.reviewDialog.close();
-    render();
-    switchView("reviews");
-  } catch (error) {
-    window.alert(error.message);
-  }
-}
-
-async function deleteReview(reviewId) {
-  if (!isSignedIn()) return;
-  const review = state.reviews.find((item) => item.id === reviewId);
-  if (!review) return;
-  const event = state.events.find((item) => item.id === review.eventId);
-  const confirmed = window.confirm(`Delete review for ${event?.name || "this event"}?`);
-  if (!confirmed) return;
-  try {
-    await Api.deleteReview(reviewId);
-    state.reviews = await loadSupabaseReviews();
-    render();
-  } catch (error) {
-    window.alert(error.message);
-  }
-}
-
 function handleAction(event) {
   const target = event.target.closest("[data-action]");
   if (!target) {
@@ -2131,7 +1452,8 @@ function handleAuthAction(event) {
 }
 
 function bindEvents() {
-  elements.saveReviewBtn?.addEventListener("click", saveReview);
+  tripsView.bindEvents();
+  reviewsView.bindEvents();
   elements.authForm?.addEventListener("submit", handleAuthSubmit);
   document.addEventListener("click", handleAuthAction);
   elements.calendarGrid.addEventListener("click", handleAction);
@@ -2207,59 +1529,30 @@ function bindEvents() {
   window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
   elements.schengenCheckDate?.addEventListener("change", (event) => {
     state.schengenCheckDate = event.target.value || localDateString(new Date());
-    renderTrips();
+    tripsView.renderTrips();
   });
   elements.tripHistoryToggle?.addEventListener("change", (event) => {
     state.showHistoricalTrips = event.target.checked;
     localStorage.setItem("salsa-festivals-show-historical-trips", String(state.showHistoricalTrips));
-    renderTrips();
+    tripsView.renderTrips();
   });
   elements.schengenImpactToggle?.addEventListener("change", (event) => {
     state.showSchengenImpactingTrips = event.target.checked;
     localStorage.setItem("salsa-festivals-show-schengen-impacting-trips", String(state.showSchengenImpactingTrips));
-    renderTrips();
+    tripsView.renderTrips();
   });
   elements.tripCountrySelect?.addEventListener("change", (event) => {
     state.tripCountry = event.target.value;
-    renderTrips();
+    tripsView.renderTrips();
   });
   elements.tripYearSelect?.addEventListener("change", (event) => {
     state.tripYear = event.target.value;
-    renderTrips();
+    tripsView.renderTrips();
   });
   elements.tripMonthSelect?.addEventListener("change", (event) => {
     state.tripMonth = event.target.value;
-    renderTrips();
+    tripsView.renderTrips();
   });
-  elements.addTripBtn?.addEventListener("click", () => openTripDialog());
-  elements.tripForm?.addEventListener("submit", saveTrip);
-  elements.addTripPlaceBtn?.addEventListener("click", () => addTripPlaceRow());
-  elements.addPtoDayBtn?.addEventListener("click", () => addPtoDayRow());
-  elements.tripPlacesEditor?.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-trip-action]");
-    if (!target) return;
-    if (target.dataset.tripAction === "remove-place") {
-      target.closest(".trip-place-row")?.remove();
-    }
-  });
-  elements.ptoDaysEditor?.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-trip-action]");
-    if (!target) return;
-    if (target.dataset.tripAction === "remove-pto") {
-      target.closest(".trip-pto-row")?.remove();
-    }
-  });
-  elements.ptoDaysEditor?.addEventListener("change", (event) => {
-    if (event.target.matches('[data-pto-day="date"]')) {
-      updatePtoHolidayStatus(event.target.closest(".trip-pto-row"));
-    }
-  });
-  elements.tripDialog?.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-trip-action]");
-    if (!target) return;
-    if (target.dataset.tripAction === "close") closeTripDialog();
-  });
-  elements.deleteTripBtn?.addEventListener("click", () => deleteTrip(elements.tripId.value));
   elements.sortSelect.addEventListener("change", (event) => {
     state.sort = event.target.value;
     renderEvents();
@@ -2272,8 +1565,39 @@ function bindEvents() {
   elements.tabs.forEach((tab) => {
     tab.addEventListener("click", () => switchView(tab.dataset.view));
   });
-  elements.scoreFields?.addEventListener("input", updateLiveScore);
   updateBackToTopVisibility();
+}
+
+function initializeFeatureViews() {
+  tripsView = createTripsView({
+    Api,
+    state,
+    elements,
+    isSignedIn,
+    currentUserId,
+    currentUserEmail,
+    loadSupabasePersonalTrips,
+    render,
+    schengenStatus,
+    schengenLabel,
+    emptyState,
+    detailRow,
+    cardCollapseButton,
+    collapsibleCardBody
+  });
+  reviewsView = createReviewsView({
+    Api,
+    state,
+    elements,
+    isSignedIn,
+    currentUserId,
+    loadSupabaseReviews,
+    render,
+    switchView,
+    emptyState,
+    cardCollapseButton,
+    collapsibleCardBody
+  });
 }
 
 async function init() {
@@ -2282,6 +1606,7 @@ async function init() {
   if (!isSignedIn()) {
     state.reviews = [];
   }
+  initializeFeatureViews();
   bindEvents();
   render();
   switchView(state.activeView);
