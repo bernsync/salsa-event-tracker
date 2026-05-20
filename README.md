@@ -26,6 +26,16 @@ See `DATA_ACCESS.md` for public/authenticated/owner data rules and `DATA_UPDATE_
 
 Default new JavaScript functionality to small modules instead of adding more logic to `web/app.js`. Keep `app.js` focused on rendering, state coordination, and event wiring; put reusable formatting, parsing, link generation, API helpers, and other isolated behavior in dedicated files under `web/`, with focused tests when the behavior is non-trivial.
 
+## Project Docs
+
+- `docs/setup.md`: local setup, checks, and data-access reminder.
+- `docs/deployment.md`: GitHub Pages fallback and Cloudflare Pages migration checklist.
+- `docs/architecture.md`: current frontend, Supabase, automation, and hosting shape.
+- `docs/task-handoff.md`: template for turning roadmap sections into PR-sized tasks.
+- `docs/roadmap.md`: near-term Cloudflare, frontend, and product roadmap.
+
+AI assistant context lives in `ai/`. Start with `ai/product.md`, `ai/architecture.md`, and `ai/frontend-rules.md` before asking Codex or Claude to make broad changes.
+
 ## How To Open
 
 Either open `web/index.html` in a browser, or run this from the `web` folder:
