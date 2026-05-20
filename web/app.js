@@ -1332,15 +1332,6 @@ function renderSchengenWindowSummary(details) {
       <span class="pill score-pill">${escapeHtml(dayCountLabel(place.days))}</span>
     </div>
   `).join("");
-  const dayRows = details.days.map((day) => {
-    const locations = uniqueValues(day.schengenPlaces.map((place) => [place.city, place.country].filter(Boolean).join(", ")).filter(Boolean));
-    return `
-      <div class="schengen-day-row">
-        <strong>${escapeHtml(formatDate(day.date))}</strong>
-        <span>${escapeHtml(locations.join(" + "))}</span>
-      </div>
-    `;
-  }).join("");
   return `
     <article class="event-card schengen-window-card">
       <details>
@@ -1355,12 +1346,6 @@ function renderSchengenWindowSummary(details) {
             ${segmentRows}
           </div>
         ` : "<p class=\"muted\">No Schengen trip segments impact this check date.</p>"}
-        ${dayRows ? `
-          <div class="schengen-day-list">
-            <h4>Counted days</h4>
-            ${dayRows}
-          </div>
-        ` : ""}
       </details>
     </article>
   `;
