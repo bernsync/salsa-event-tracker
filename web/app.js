@@ -1525,6 +1525,13 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function preserveScrollWhile(renderWork) {
+  const scrollTop = window.scrollY;
+  const scrollLeft = window.scrollX;
+  renderWork();
+  requestAnimationFrame(() => window.scrollTo({ top: scrollTop, left: scrollLeft, behavior: "auto" }));
+}
+
 async function handleAuthSubmit(event) {
   event.preventDefault();
   const email = elements.authEmail.value.trim();
@@ -1606,82 +1613,84 @@ function bindEvents() {
   elements.nextMonthBtn.addEventListener("click", () => shiftSelectedMonth(1, { preserveScroll: true }));
   elements.searchInput.addEventListener("input", (event) => {
     state.search = event.target.value;
-    renderEvents();
-    renderCalendar();
+    preserveScrollWhile(() => {
+      renderEvents();
+      renderCalendar();
+    });
   });
   elements.listYearSelect?.addEventListener("change", (event) => {
     state.listYear = event.target.value;
-    renderEvents();
+    preserveScrollWhile(renderEvents);
   });
   elements.listMonthSelect?.addEventListener("change", (event) => {
     state.listMonth = event.target.value;
-    renderEvents();
+    preserveScrollWhile(renderEvents);
   });
-  elements.collapseCalendarListBtn?.addEventListener("click", () => setCollapseMode("calendarList", true));
-  elements.expandCalendarListBtn?.addEventListener("click", () => setCollapseMode("calendarList", false));
-  elements.festivalSearchInput.addEventListener("input", renderFestivalList);
+  elements.collapseCalendarListBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("calendarList", true)));
+  elements.expandCalendarListBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("calendarList", false)));
+  elements.festivalSearchInput.addEventListener("input", () => preserveScrollWhile(renderFestivalList));
   elements.festivalYearSelect.addEventListener("change", (event) => {
     state.festivalYear = event.target.value;
     state.festivalCountry = "";
     localStorage.setItem("salsa-festivals-event-list-year", state.festivalYear);
-    renderFestivalList();
+    preserveScrollWhile(renderFestivalList);
   });
   elements.festivalMonthSelect?.addEventListener("change", (event) => {
     state.festivalMonth = event.target.value;
-    renderFestivalList();
+    preserveScrollWhile(renderFestivalList);
   });
   elements.festivalCountrySelect.addEventListener("change", (event) => {
     state.festivalCountry = event.target.value;
-    renderFestivalList();
+    preserveScrollWhile(renderFestivalList);
   });
   elements.festivalSizeSelect.addEventListener("change", (event) => {
     state.festivalSize = event.target.value;
-    renderFestivalList();
+    preserveScrollWhile(renderFestivalList);
   });
-  elements.collapseFestivalListBtn?.addEventListener("click", () => setCollapseMode("eventList", true));
-  elements.expandFestivalListBtn?.addEventListener("click", () => setCollapseMode("eventList", false));
-  elements.collapseRecentlyAddedBtn?.addEventListener("click", () => setCollapseMode("recentlyAdded", true));
-  elements.expandRecentlyAddedBtn?.addEventListener("click", () => setCollapseMode("recentlyAdded", false));
-  elements.collapseTripsBtn?.addEventListener("click", () => setCollapseMode("trips", true));
-  elements.expandTripsBtn?.addEventListener("click", () => setCollapseMode("trips", false));
-  elements.collapseReviewsBtn?.addEventListener("click", () => setCollapseMode("reviews", true));
-  elements.expandReviewsBtn?.addEventListener("click", () => setCollapseMode("reviews", false));
+  elements.collapseFestivalListBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("eventList", true)));
+  elements.expandFestivalListBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("eventList", false)));
+  elements.collapseRecentlyAddedBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("recentlyAdded", true)));
+  elements.expandRecentlyAddedBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("recentlyAdded", false)));
+  elements.collapseTripsBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("trips", true)));
+  elements.expandTripsBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("trips", false)));
+  elements.collapseReviewsBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("reviews", true)));
+  elements.expandReviewsBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("reviews", false)));
   elements.backToTopBtn?.addEventListener("click", scrollToTop);
   window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
   elements.schengenCheckDate?.addEventListener("change", (event) => {
     state.schengenCheckDate = event.target.value || localDateString(new Date());
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.tripHistoryToggle?.addEventListener("change", (event) => {
     state.showHistoricalTrips = event.target.checked;
     localStorage.setItem("salsa-festivals-show-historical-trips", String(state.showHistoricalTrips));
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.schengenImpactToggle?.addEventListener("change", (event) => {
     state.showSchengenImpactingTrips = event.target.checked;
     localStorage.setItem("salsa-festivals-show-schengen-impacting-trips", String(state.showSchengenImpactingTrips));
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.tripCountrySelect?.addEventListener("change", (event) => {
     state.tripCountry = event.target.value;
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.tripYearSelect?.addEventListener("change", (event) => {
     state.tripYear = event.target.value;
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.tripMonthSelect?.addEventListener("change", (event) => {
     state.tripMonth = event.target.value;
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.sortSelect.addEventListener("change", (event) => {
     state.sort = event.target.value;
-    renderEvents();
+    preserveScrollWhile(renderEvents);
   });
   elements.historyToggle.addEventListener("change", (event) => {
     state.showHistorical = event.target.checked;
     state.listYear = "";
-    renderEvents();
+    preserveScrollWhile(renderEvents);
   });
   elements.tabs.forEach((tab) => {
     tab.addEventListener("click", () => switchView(tab.dataset.view));
