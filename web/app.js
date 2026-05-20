@@ -14,7 +14,7 @@ import {
   formatPtoAmount,
   holidayForDate,
   ptoYearStats as calculatePtoYearStats,
-  schengenPlaceDays as calculateSchengenPlaceDays,
+  schengenTripSegmentDetails as calculateSchengenTripSegmentDetails,
   schengenTripStats as calculateSchengenTripStats,
   schengenUsedOn as calculateSchengenUsedOn,
   schengenWindowDetails as calculateSchengenWindowDetails,
@@ -1307,8 +1307,12 @@ function schengenUsedOn(dateValue) {
   return calculateSchengenUsedOn(state.personalTrips, dateValue, schengenStatus);
 }
 
-function schengenPlaceDays(place) {
-  return calculateSchengenPlaceDays(place, schengenStatus);
+function tripPlaceKey(place) {
+  return [place.id || "", place.sequence ?? "", place.startDate, place.endDate, place.city, place.country].join("|");
+}
+
+function schengenTripSegmentDayMap(trip) {
+  return new Map(calculateSchengenTripSegmentDetails(trip, schengenStatus).map((place) => [tripPlaceKey(place), place.days]));
 }
 
 function schengenTripStats(trip) {
@@ -1394,8 +1398,9 @@ function renderTrips() {
     const ptoStats = tripPtoStats(trip);
     const visibleTripNotes = isImportProvenanceNote(trip.notes) ? "" : trip.notes;
     const collapseId = trip.id;
+    const segmentDayMap = schengenTripSegmentDayMap(trip);
     const placesMarkup = trip.places.map((place) => {
-      const schengenDays = schengenPlaceDays(place);
+      const schengenDays = segmentDayMap.get(tripPlaceKey(place)) || 0;
       return `
         <div class="trip-place">
           <strong>${escapeHtml(tripDateRange(place))}</strong>
