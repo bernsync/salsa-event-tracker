@@ -634,15 +634,6 @@ function priorEditionFor(event) {
     .sort((a, b) => b.startDate.localeCompare(a.startDate))[0] || null;
 }
 
-function detailActionButton(event, label = "Details", action = "details") {
-  if (!event) return "";
-  return `
-    <button type="button" data-action="${escapeHtml(action)}" data-id="${escapeHtml(event.id)}">
-      ${escapeHtml(label)}
-    </button>
-  `;
-}
-
 function calendarActionMenu(event) {
   if (!event) return "";
   return `
@@ -1177,11 +1168,11 @@ function renderFestivalList() {
           ${editionHistoryBlocks(group)}
         </div>
         <div class="event-actions">
-          ${detailActionButton(detailsTarget)}
           ${sourceLink("Website", group.website)}
           ${sourceLink("Instagram", group.instagram)}
           ${sourceLink("Facebook", group.facebook)}
           ${sourceLink("Tickets", group.tickets)}
+          ${calendarActionMenu(detailsTarget)}
         </div>
       `)}
     `;
