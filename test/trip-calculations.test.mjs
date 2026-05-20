@@ -6,7 +6,9 @@ import {
   holidayForDate,
   ptoDayCount,
   ptoYearStats,
+  schengenPlaceDays,
   schengenUsedOn,
+  schengenWindowDetails,
   tripHasSchengenImpact
 } from "../web/trip-calculations.js";
 
@@ -53,4 +55,34 @@ test("Schengen rolling usage counts unique Schengen calendar days", () => {
   assert.equal(schengenUsedOn(trips, "2026-01-03", schengenStatus), 3);
   assert.equal(tripHasSchengenImpact(trips[0], "2026-06-29", schengenStatus), true);
   assert.equal(tripHasSchengenImpact(trips[0], "2026-07-02", schengenStatus), false);
+});
+
+test("Schengen window details clip segment days to the check-date window", () => {
+  const trips = [
+    {
+      label: "Winter Spain",
+      places: [
+        { startDate: "2026-01-01", endDate: "2026-01-03", city: "Madrid", country: "Spain" },
+        { startDate: "2026-01-04", endDate: "2026-01-05", city: "London", country: "United Kingdom" }
+      ]
+    },
+    {
+      label: "Spring Italy",
+      places: [
+        { startDate: "2026-04-01", endDate: "2026-04-02", city: "Rome", country: "Italy" }
+      ]
+    }
+  ];
+  const schengenStatus = (place) => ["Spain", "Italy"].includes(place.country);
+
+  assert.equal(schengenPlaceDays(trips[0].places[0], schengenStatus), 3);
+  assert.equal(schengenPlaceDays(trips[0].places[1], schengenStatus), 0);
+
+  const details = schengenWindowDetails(trips, "2026-06-30", schengenStatus);
+  assert.equal(details.windowStart, "2026-01-02");
+  assert.equal(details.used, 4);
+  assert.deepEqual(details.segments.map((place) => [place.city, place.startDate, place.endDate, place.days]), [
+    ["Madrid", "2026-01-02", "2026-01-03", 2],
+    ["Rome", "2026-04-01", "2026-04-02", 2]
+  ]);
 });
