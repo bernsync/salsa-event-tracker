@@ -1,4 +1,4 @@
-const CACHE = "salsa-festival-tracker-static-v3";
+const CACHE = "salsa-festival-tracker-static-v4";
 function scopePath() {
   try {
     return new URL(self.registration.scope).pathname.replace(/\/?$/, "/");
@@ -33,10 +33,12 @@ self.addEventListener("install", (event) => {
     new URL("./event-view-utils.js", root),
     new URL("./link-utils.js", root),
     new URL("./review-scoring.js", root),
+    new URL("./reviews-view.js", root),
     new URL("./supabase-mappers.js", root),
     new URL("./text-utils.js", root),
     new URL("./trip-calculations.js", root),
     new URL("./trip-api.js", root),
+    new URL("./trips-view.js", root),
     new URL("./manifest.json", root),
     new URL("./icons/app-icon.svg", root)
   ].map((u) => u.href);
