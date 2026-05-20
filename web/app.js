@@ -15,8 +15,9 @@ import {
 import { eventLocation, eventPrice } from "./event-view-utils.js";
 import { sourceLink } from "./link-utils.js";
 import { mapSupabaseReview, mapSupabaseTrip } from "./supabase-mappers.js";
-import { normalizeText } from "./text-utils.js";
 import { downloadCalendarFile, googleCalendarUrl } from "./calendar-links.js";
+import { eventForTripPlace, tripPlaceMatchesEvent } from "./trip-event-matching.js";
+import { normalizeText } from "./text-utils.js";
 import {
   eventMonthValue,
   eventOccursOnDate,
@@ -919,20 +920,8 @@ function attendedPlaceMatchesEventOnDate(event, dateValue) {
   return calendarTripPlacesForDate(dateValue).some((place) => tripPlaceMatchesEvent(place, event));
 }
 
-function tripPlaceMatchesEvent(place, event) {
-  if (place.eventId && place.eventId === event.id) return true;
-  const eventLocationKey = normalizeText([event.city, event.country].filter(Boolean).join(" "));
-  const placeLocationKey = normalizeText([place.city, place.country].filter(Boolean).join(" "));
-  if (!eventLocationKey || eventLocationKey !== placeLocationKey) return false;
-
-  const eventName = normalizeText(event.name);
-  const tripLabel = normalizeText(place.trip?.label || "");
-  const placeNotes = normalizeText(place.notes || "");
-  return Boolean(eventName && (tripLabel.includes(eventName) || placeNotes.includes(eventName)));
-}
-
 function calendarTripMarkup(place) {
-  const event = place.eventId ? state.events.find((item) => item.id === place.eventId) : null;
+  const event = eventForTripPlace(place, state.events);
   return `
     <strong>${escapeHtml(event?.name || [place.city, place.country].filter(Boolean).join(", "))}</strong>
     ${event ? `<span>${escapeHtml([place.city, place.country].filter(Boolean).join(", "))}</span>` : ""}
