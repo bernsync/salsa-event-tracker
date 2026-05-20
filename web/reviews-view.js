@@ -12,6 +12,7 @@ export function createReviewsView({
   currentUserId,
   loadSupabaseReviews,
   render,
+  preserveScrollWhile,
   switchView,
   emptyState,
   cardCollapseButton,
@@ -225,7 +226,7 @@ export function createReviewsView({
       }
       state.reviews = await loadSupabaseReviews();
       elements.reviewDialog.close();
-      render();
+      preserveScrollWhile(render);
       switchView("reviews");
     } catch (error) {
       window.alert(error.message);
@@ -242,7 +243,7 @@ export function createReviewsView({
     try {
       await Api.deleteReview(reviewId);
       state.reviews = await loadSupabaseReviews();
-      render();
+      preserveScrollWhile(render);
     } catch (error) {
       window.alert(error.message);
     }

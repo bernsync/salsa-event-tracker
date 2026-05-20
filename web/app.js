@@ -438,21 +438,21 @@ function schengenLabel(event) {
   return status ? "Yes" : "No";
 }
 
-function shiftSelectedMonth(offset) {
+function shiftSelectedMonth(offset, { preserveScroll = false } = {}) {
   const [year, month] = state.selectedMonth.split("-").map(Number);
   const date = new Date(year, month - 1 + offset, 1);
   state.selectedMonth = localDateString(date).slice(0, 7);
-  renderCalendar();
+  renderCalendar({ preserveScroll });
 }
 
-function setSelectedMonth(monthValue) {
+function setSelectedMonth(monthValue, { preserveScroll = false } = {}) {
   if (!/^\d{4}-\d{2}$/.test(String(monthValue || ""))) return;
   state.selectedMonth = monthValue;
-  renderCalendar();
+  renderCalendar({ preserveScroll });
 }
 
 function goToCurrentDate() {
-  setSelectedMonth(localDateString(new Date()).slice(0, 7));
+  setSelectedMonth(localDateString(new Date()).slice(0, 7), { preserveScroll: true });
 }
 
 function monthLabel(monthValue, { short = false } = {}) {
@@ -547,7 +547,7 @@ function setSelectedCalendarDate(dateValue) {
   state.selectedMonth = nextMonth;
   state.selectedCalendarDate = dateValue;
   if (monthChanged) {
-    renderCalendar();
+    renderCalendar({ preserveScroll: true });
     return;
   }
   renderCalendarSelection();
@@ -824,7 +824,8 @@ function renderEventCard(event, options = {}) {
   return card;
 }
 
-function renderCalendar() {
+function renderCalendar({ preserveScroll = false } = {}) {
+  const scrollTop = preserveScroll ? window.scrollY : null;
   elements.monthPicker.value = state.selectedMonth;
   renderCalendarMonthJump();
   renderMobileCalendarModeToggle();
@@ -920,6 +921,9 @@ function renderCalendar() {
 
   elements.calendarGrid.classList.toggle("is-agenda-empty", !hasVisibleAgendaItems);
   renderCalendarSelection();
+  if (preserveScroll) {
+    requestAnimationFrame(() => window.scrollTo({ top: scrollTop, left: window.scrollX, behavior: "auto" }));
+  }
 }
 
 function calendarItemsForDate(dateValue) {
@@ -1497,7 +1501,7 @@ function handleAction(event) {
   const target = event.target.closest("[data-action]");
   if (!target) {
     const collapseButton = collapseHeaderButtonFromClick(event);
-    if (collapseButton) toggleCardCollapse(collapseButton.dataset.view, collapseButton.dataset.id);
+    if (collapseButton) preserveScrollWhile(() => toggleCardCollapse(collapseButton.dataset.view, collapseButton.dataset.id));
     return;
   }
   const { action, id } = target.dataset;
@@ -1509,7 +1513,7 @@ function handleAction(event) {
   if (action === "add-google-calendar") return openGoogleCalendar(id);
   if (action === "download-calendar-file") return downloadCalendarFileForEvent(id);
   if (action === "edit-trip") return;
-  if (action === "toggle-card-collapse") return toggleCardCollapse(target.dataset.view, id);
+  if (action === "toggle-card-collapse") return preserveScrollWhile(() => toggleCardCollapse(target.dataset.view, id));
 }
 
 function updateBackToTopVisibility() {
@@ -1519,6 +1523,13 @@ function updateBackToTopVisibility() {
 
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function preserveScrollWhile(renderWork) {
+  const scrollTop = window.scrollY;
+  const scrollLeft = window.scrollX;
+  renderWork();
+  requestAnimationFrame(() => window.scrollTo({ top: scrollTop, left: scrollLeft, behavior: "auto" }));
 }
 
 async function handleAuthSubmit(event) {
@@ -1575,109 +1586,111 @@ function bindEvents() {
   elements.tripList.addEventListener("click", handleAction);
   elements.reviewList.addEventListener("click", handleAction);
   elements.monthPicker.addEventListener("change", (event) => {
-    setSelectedMonth(event.target.value);
+    setSelectedMonth(event.target.value, { preserveScroll: true });
   });
-  elements.calendarMonthJump?.addEventListener("change", (event) => setSelectedMonth(event.target.value));
+  elements.calendarMonthJump?.addEventListener("change", (event) => setSelectedMonth(event.target.value, { preserveScroll: true }));
   elements.todayBtn?.addEventListener("click", goToCurrentDate);
   elements.mobileCalendarModeToggle?.addEventListener("click", () => {
     state.mobileCalendarMonthView = !state.mobileCalendarMonthView;
     localStorage.setItem("salsa-festivals-mobile-calendar-month-view", String(state.mobileCalendarMonthView));
-    renderCalendar();
+    renderCalendar({ preserveScroll: true });
   });
   elements.monthJumpRail?.addEventListener("click", (event) => {
     const button = event.target.closest("[data-month]");
-    if (button) setSelectedMonth(button.dataset.month);
+    if (button) setSelectedMonth(button.dataset.month, { preserveScroll: true });
   });
   elements.hideDuplicateAttendedToggle?.addEventListener("change", (event) => {
     state.hideDuplicateAttendedEvents = event.target.checked;
     localStorage.setItem("salsa-festivals-hide-duplicate-attended", String(state.hideDuplicateAttendedEvents));
-    renderCalendar();
+    renderCalendar({ preserveScroll: true });
   });
   elements.attendedOnlyToggle?.addEventListener("change", (event) => {
     state.attendedOnlyCalendar = event.target.checked;
     localStorage.setItem("salsa-festivals-attended-only-calendar", String(state.attendedOnlyCalendar));
-    renderCalendar();
+    renderCalendar({ preserveScroll: true });
   });
-  elements.prevMonthBtn.addEventListener("click", () => shiftSelectedMonth(-1));
-  elements.nextMonthBtn.addEventListener("click", () => shiftSelectedMonth(1));
+  elements.prevMonthBtn.addEventListener("click", () => shiftSelectedMonth(-1, { preserveScroll: true }));
+  elements.nextMonthBtn.addEventListener("click", () => shiftSelectedMonth(1, { preserveScroll: true }));
   elements.searchInput.addEventListener("input", (event) => {
     state.search = event.target.value;
-    renderEvents();
-    renderCalendar();
+    preserveScrollWhile(() => {
+      renderEvents();
+      renderCalendar();
+    });
   });
   elements.listYearSelect?.addEventListener("change", (event) => {
     state.listYear = event.target.value;
-    renderEvents();
+    preserveScrollWhile(renderEvents);
   });
   elements.listMonthSelect?.addEventListener("change", (event) => {
     state.listMonth = event.target.value;
-    renderEvents();
+    preserveScrollWhile(renderEvents);
   });
-  elements.collapseCalendarListBtn?.addEventListener("click", () => setCollapseMode("calendarList", true));
-  elements.expandCalendarListBtn?.addEventListener("click", () => setCollapseMode("calendarList", false));
-  elements.festivalSearchInput.addEventListener("input", renderFestivalList);
+  elements.collapseCalendarListBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("calendarList", true)));
+  elements.expandCalendarListBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("calendarList", false)));
+  elements.festivalSearchInput.addEventListener("input", () => preserveScrollWhile(renderFestivalList));
   elements.festivalYearSelect.addEventListener("change", (event) => {
     state.festivalYear = event.target.value;
     state.festivalCountry = "";
     localStorage.setItem("salsa-festivals-event-list-year", state.festivalYear);
-    renderFestivalList();
+    preserveScrollWhile(renderFestivalList);
   });
   elements.festivalMonthSelect?.addEventListener("change", (event) => {
     state.festivalMonth = event.target.value;
-    renderFestivalList();
+    preserveScrollWhile(renderFestivalList);
   });
   elements.festivalCountrySelect.addEventListener("change", (event) => {
     state.festivalCountry = event.target.value;
-    renderFestivalList();
+    preserveScrollWhile(renderFestivalList);
   });
   elements.festivalSizeSelect.addEventListener("change", (event) => {
     state.festivalSize = event.target.value;
-    renderFestivalList();
+    preserveScrollWhile(renderFestivalList);
   });
-  elements.collapseFestivalListBtn?.addEventListener("click", () => setCollapseMode("eventList", true));
-  elements.expandFestivalListBtn?.addEventListener("click", () => setCollapseMode("eventList", false));
-  elements.collapseRecentlyAddedBtn?.addEventListener("click", () => setCollapseMode("recentlyAdded", true));
-  elements.expandRecentlyAddedBtn?.addEventListener("click", () => setCollapseMode("recentlyAdded", false));
-  elements.collapseTripsBtn?.addEventListener("click", () => setCollapseMode("trips", true));
-  elements.expandTripsBtn?.addEventListener("click", () => setCollapseMode("trips", false));
-  elements.collapseReviewsBtn?.addEventListener("click", () => setCollapseMode("reviews", true));
-  elements.expandReviewsBtn?.addEventListener("click", () => setCollapseMode("reviews", false));
+  elements.collapseFestivalListBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("eventList", true)));
+  elements.expandFestivalListBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("eventList", false)));
+  elements.collapseRecentlyAddedBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("recentlyAdded", true)));
+  elements.expandRecentlyAddedBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("recentlyAdded", false)));
+  elements.collapseTripsBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("trips", true)));
+  elements.expandTripsBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("trips", false)));
+  elements.collapseReviewsBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("reviews", true)));
+  elements.expandReviewsBtn?.addEventListener("click", () => preserveScrollWhile(() => setCollapseMode("reviews", false)));
   elements.backToTopBtn?.addEventListener("click", scrollToTop);
   window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
   elements.schengenCheckDate?.addEventListener("change", (event) => {
     state.schengenCheckDate = event.target.value || localDateString(new Date());
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.tripHistoryToggle?.addEventListener("change", (event) => {
     state.showHistoricalTrips = event.target.checked;
     localStorage.setItem("salsa-festivals-show-historical-trips", String(state.showHistoricalTrips));
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.schengenImpactToggle?.addEventListener("change", (event) => {
     state.showSchengenImpactingTrips = event.target.checked;
     localStorage.setItem("salsa-festivals-show-schengen-impacting-trips", String(state.showSchengenImpactingTrips));
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.tripCountrySelect?.addEventListener("change", (event) => {
     state.tripCountry = event.target.value;
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.tripYearSelect?.addEventListener("change", (event) => {
     state.tripYear = event.target.value;
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.tripMonthSelect?.addEventListener("change", (event) => {
     state.tripMonth = event.target.value;
-    tripsView.renderTrips();
+    preserveScrollWhile(() => tripsView.renderTrips());
   });
   elements.sortSelect.addEventListener("change", (event) => {
     state.sort = event.target.value;
-    renderEvents();
+    preserveScrollWhile(renderEvents);
   });
   elements.historyToggle.addEventListener("change", (event) => {
     state.showHistorical = event.target.checked;
     state.listYear = "";
-    renderEvents();
+    preserveScrollWhile(renderEvents);
   });
   elements.tabs.forEach((tab) => {
     tab.addEventListener("click", () => switchView(tab.dataset.view));
@@ -1695,6 +1708,7 @@ function initializeFeatureViews() {
     currentUserEmail,
     loadSupabasePersonalTrips,
     render,
+    preserveScrollWhile,
     schengenStatus,
     schengenLabel,
     emptyState,
@@ -1710,6 +1724,7 @@ function initializeFeatureViews() {
     currentUserId,
     loadSupabaseReviews,
     render,
+    preserveScrollWhile,
     switchView,
     emptyState,
     cardCollapseButton,
