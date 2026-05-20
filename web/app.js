@@ -542,9 +542,15 @@ function selectedCalendarDateForMonth() {
 
 function setSelectedCalendarDate(dateValue) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ""))) return;
-  state.selectedMonth = dateValue.slice(0, 7);
+  const nextMonth = dateValue.slice(0, 7);
+  const monthChanged = nextMonth !== state.selectedMonth;
+  state.selectedMonth = nextMonth;
   state.selectedCalendarDate = dateValue;
-  renderCalendar();
+  if (monthChanged) {
+    renderCalendar();
+    return;
+  }
+  renderCalendarSelection();
 }
 
 function reviewScoreForEvent(event) {
@@ -913,7 +919,7 @@ function renderCalendar() {
   }
 
   elements.calendarGrid.classList.toggle("is-agenda-empty", !hasVisibleAgendaItems);
-  renderSelectedCalendarDay();
+  renderCalendarSelection();
 }
 
 function calendarItemsForDate(dateValue) {
@@ -1002,6 +1008,15 @@ function renderSelectedCalendarDay() {
     chip.innerHTML = calendarPtoMarkup(ptoDay);
     elements.calendarSelectedDay.append(chip);
   });
+}
+
+function renderCalendarSelection() {
+  if (elements.calendarGrid) {
+    elements.calendarGrid.querySelectorAll(".calendar-day").forEach((day) => {
+      day.classList.toggle("is-selected", day.dataset.date === state.selectedCalendarDate);
+    });
+  }
+  renderSelectedCalendarDay();
 }
 
 function calendarTripPlacesForDate(dateValue) {
