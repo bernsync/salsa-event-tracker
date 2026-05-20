@@ -404,6 +404,10 @@ select:focus-visible {
   background: #fff1f3;
 }
 
+#schengenSummary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .schengen-window-card {
   grid-column: 1 / -1;
 }
@@ -430,21 +434,13 @@ select:focus-visible {
   font-weight: 750;
 }
 
-.schengen-impact-list,
-.schengen-day-list {
+.schengen-impact-list {
   display: grid;
   gap: 8px;
   margin-top: 12px;
 }
 
-.schengen-day-list h4 {
-  margin: 4px 0 0;
-  color: #253245;
-  font-size: 0.9rem;
-}
-
-.schengen-impact-row,
-.schengen-day-row {
+.schengen-impact-row {
   display: grid;
   align-items: center;
   gap: 10px;
@@ -456,10 +452,6 @@ select:focus-visible {
 
 .schengen-impact-row {
   grid-template-columns: minmax(140px, 0.8fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
-}
-
-.schengen-day-row {
-  grid-template-columns: minmax(140px, 0.7fr) minmax(180px, 1.3fr);
 }
 
 .pto-year-summary {
@@ -1528,6 +1520,10 @@ select:focus-visible {
     grid-template-columns: 1fr;
   }
 
+  #schengenSummary {
+    grid-template-columns: 1fr;
+  }
+
   .summary-card strong {
     font-size: 1.35rem;
   }
@@ -1537,7 +1533,6 @@ select:focus-visible {
   .pto-day-grid,
   .trip-place,
   .schengen-impact-row,
-  .schengen-day-row,
   .pto-year-row,
   .score-grid,
   .detail-row,
