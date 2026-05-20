@@ -404,6 +404,64 @@ select:focus-visible {
   background: #fff1f3;
 }
 
+.schengen-window-card {
+  grid-column: 1 / -1;
+}
+
+.schengen-window-card details {
+  display: grid;
+  gap: 12px;
+}
+
+.schengen-window-card summary {
+  cursor: pointer;
+  color: #253245;
+  font-weight: 850;
+}
+
+.schengen-window-card summary span {
+  display: inline-grid;
+  gap: 3px;
+}
+
+.schengen-window-card summary small {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.schengen-impact-list,
+.schengen-day-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.schengen-day-list h4 {
+  margin: 4px 0 0;
+  color: #253245;
+  font-size: 0.9rem;
+}
+
+.schengen-impact-row,
+.schengen-day-row {
+  display: grid;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 9px 10px;
+}
+
+.schengen-impact-row {
+  grid-template-columns: minmax(140px, 0.8fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
+}
+
+.schengen-day-row {
+  grid-template-columns: minmax(140px, 0.7fr) minmax(180px, 1.3fr);
+}
+
 .pto-year-summary {
   margin-bottom: 12px;
 }
@@ -977,6 +1035,13 @@ select:focus-visible {
   padding: 9px 10px;
 }
 
+.trip-place-pills {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
 .trip-place-editor {
   display: grid;
   gap: 10px;
@@ -1471,11 +1536,17 @@ select:focus-visible {
   .trip-place-grid,
   .pto-day-grid,
   .trip-place,
+  .schengen-impact-row,
+  .schengen-day-row,
   .pto-year-row,
   .score-grid,
   .detail-row,
   .festival-editions {
     grid-template-columns: 1fr;
+  }
+
+  .trip-place-pills {
+    justify-content: flex-start;
   }
 
   .span-2 {

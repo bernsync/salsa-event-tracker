@@ -14,8 +14,10 @@ import {
   formatPtoAmount,
   holidayForDate,
   ptoYearStats as calculatePtoYearStats,
+  schengenPlaceDays as calculateSchengenPlaceDays,
   schengenTripStats as calculateSchengenTripStats,
   schengenUsedOn as calculateSchengenUsedOn,
+  schengenWindowDetails as calculateSchengenWindowDetails,
   tripCountries,
   tripHasSchengenImpact as calculateTripHasSchengenImpact,
   tripMonths,
@@ -1305,8 +1307,63 @@ function schengenUsedOn(dateValue) {
   return calculateSchengenUsedOn(state.personalTrips, dateValue, schengenStatus);
 }
 
+function schengenPlaceDays(place) {
+  return calculateSchengenPlaceDays(place, schengenStatus);
+}
+
 function schengenTripStats(trip) {
   return calculateSchengenTripStats(state.personalTrips, trip, schengenStatus);
+}
+
+function schengenWindowDetails() {
+  return calculateSchengenWindowDetails(state.personalTrips, state.schengenCheckDate, schengenStatus);
+}
+
+function dayCountLabel(days) {
+  return `${days} day${days === 1 ? "" : "s"}`;
+}
+
+function renderSchengenWindowSummary(details) {
+  const segmentRows = details.segments.map((place) => `
+    <div class="schengen-impact-row">
+      <strong>${escapeHtml(tripDateRange(place))}</strong>
+      <span>${escapeHtml([place.city, place.country].filter(Boolean).join(", "))}</span>
+      <span>${escapeHtml(cleanTripLabel(place.trip.label) || place.trip.label)}</span>
+      <span class="pill score-pill">${escapeHtml(dayCountLabel(place.days))}</span>
+    </div>
+  `).join("");
+  const dayRows = details.days.map((day) => {
+    const locations = uniqueValues(day.schengenPlaces.map((place) => [place.city, place.country].filter(Boolean).join(", ")).filter(Boolean));
+    return `
+      <div class="schengen-day-row">
+        <strong>${escapeHtml(formatDate(day.date))}</strong>
+        <span>${escapeHtml(locations.join(" + "))}</span>
+      </div>
+    `;
+  }).join("");
+  return `
+    <article class="event-card schengen-window-card">
+      <details>
+        <summary>
+          <span>
+            <strong>Schengen day detail</strong>
+            <small>${escapeHtml(dayCountLabel(details.used))} counted from ${escapeHtml(formatDate(details.windowStart))} - ${escapeHtml(formatDate(details.windowEnd))}</small>
+          </span>
+        </summary>
+        ${segmentRows ? `
+          <div class="schengen-impact-list">
+            ${segmentRows}
+          </div>
+        ` : "<p class=\"muted\">No Schengen trip segments impact this check date.</p>"}
+        ${dayRows ? `
+          <div class="schengen-day-list">
+            <h4>Counted days</h4>
+            ${dayRows}
+          </div>
+        ` : ""}
+      </details>
+    </article>
+  `;
 }
 
 function renderTrips() {
@@ -1320,6 +1377,7 @@ function renderTrips() {
 
   const usedOnCheckDate = schengenUsedOn(state.schengenCheckDate);
   const windowStart = addDays(state.schengenCheckDate, -179);
+  const windowDetails = schengenWindowDetails();
   elements.schengenSummary.innerHTML = `
     <article class="summary-card">
       <span class="detail-label">Check date</span>
@@ -1331,6 +1389,7 @@ function renderTrips() {
       <strong>${usedOnCheckDate} / 90</strong>
       <p class="muted">${Math.max(0, 90 - usedOnCheckDate)} days remaining</p>
     </article>
+    ${renderSchengenWindowSummary(windowDetails)}
   `;
   renderPtoYearSummary();
 
@@ -1350,13 +1409,19 @@ function renderTrips() {
     const ptoStats = tripPtoStats(trip);
     const visibleTripNotes = isImportProvenanceNote(trip.notes) ? "" : trip.notes;
     const collapseId = trip.id;
-    const placesMarkup = trip.places.map((place) => `
-      <div class="trip-place">
-        <strong>${escapeHtml(tripDateRange(place))}</strong>
-        <span>${escapeHtml([place.city, place.country].filter(Boolean).join(", "))}</span>
-        <span class="pill ${schengenStatus(place) ? "score-pill" : "location-pill"}">${schengenLabel(place) || "Schengen unknown"}</span>
-      </div>
-    `).join("");
+    const placesMarkup = trip.places.map((place) => {
+      const schengenDays = schengenPlaceDays(place);
+      return `
+        <div class="trip-place">
+          <strong>${escapeHtml(tripDateRange(place))}</strong>
+          <span>${escapeHtml([place.city, place.country].filter(Boolean).join(", "))}</span>
+          <span class="trip-place-pills">
+            <span class="pill ${schengenStatus(place) ? "score-pill" : "location-pill"}">${schengenLabel(place) || "Schengen unknown"}</span>
+            ${schengenDays ? `<span class="pill score-pill">${escapeHtml(dayCountLabel(schengenDays))}</span>` : ""}
+          </span>
+        </div>
+      `;
+    }).join("");
     const ptoMarkup = (trip.ptoDays || []).map((ptoDay) => {
       const holiday = holidayForDate(ptoDay.date);
       return `

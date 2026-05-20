@@ -135,6 +135,13 @@ export function tripHasSchengenImpact(trip, checkDate, schengenStatus) {
   });
 }
 
+export function schengenPlaceDays(place, schengenStatus, windowStart = "", windowEnd = "") {
+  if (schengenStatus(place) !== true) return 0;
+  return eachDate(place.startDate, place.endDate)
+    .filter((date) => (!windowStart || date >= windowStart) && (!windowEnd || date <= windowEnd))
+    .length;
+}
+
 export function tripPlacesByDate(personalTrips) {
   const days = new Map();
   personalTrips.forEach((trip) => {
@@ -166,6 +173,33 @@ export function schengenUsedOn(personalTrips, dateValue, schengenStatus) {
   return schengenDayDetails(personalTrips, schengenStatus)
     .filter((day) => day.counts && day.date >= windowStart && day.date <= dateValue)
     .length;
+}
+
+export function schengenWindowDetails(personalTrips, dateValue, schengenStatus) {
+  const windowStart = addDays(dateValue, -179);
+  const days = schengenDayDetails(personalTrips, schengenStatus)
+    .filter((day) => day.counts && day.date >= windowStart && day.date <= dateValue);
+  const segments = personalTrips
+    .flatMap((trip) => (trip.places || []).map((place) => {
+      const startDate = place.startDate > windowStart ? place.startDate : windowStart;
+      const endDate = place.endDate < dateValue ? place.endDate : dateValue;
+      return {
+        ...place,
+        trip,
+        startDate,
+        endDate,
+        days: startDate <= endDate ? schengenPlaceDays(place, schengenStatus, windowStart, dateValue) : 0
+      };
+    }))
+    .filter((place) => place.days > 0)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate) || a.trip.label.localeCompare(b.trip.label));
+  return {
+    windowStart,
+    windowEnd: dateValue,
+    days,
+    segments,
+    used: days.length
+  };
 }
 
 export function schengenTripStats(personalTrips, trip, schengenStatus) {
