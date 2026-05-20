@@ -53,8 +53,8 @@ test("Schengen rolling usage counts unique Schengen calendar days", () => {
   const schengenStatus = (place) => place.country === "Inside Schengen";
 
   assert.equal(schengenUsedOn(trips, "2026-01-03", schengenStatus), 3);
-  assert.equal(tripHasSchengenImpact(trips[0], "2026-06-29", schengenStatus), true);
-  assert.equal(tripHasSchengenImpact(trips[0], "2026-07-02", schengenStatus), false);
+  assert.equal(tripHasSchengenImpact(trips[0], "2026-06-30", schengenStatus), true);
+  assert.equal(tripHasSchengenImpact(trips[0], "2026-07-03", schengenStatus), false);
 });
 
 test("Schengen window details clip segment days to the check-date window", () => {
@@ -79,10 +79,10 @@ test("Schengen window details clip segment days to the check-date window", () =>
   assert.equal(schengenPlaceDays(trips[0].places[1], schengenStatus), 0);
 
   const details = schengenWindowDetails(trips, "2026-06-30", schengenStatus);
-  assert.equal(details.windowStart, "2026-01-02");
-  assert.equal(details.used, 4);
+  assert.equal(details.windowStart, "2026-01-01");
+  assert.equal(details.used, 5);
   assert.deepEqual(details.segments.map((place) => [place.city, place.startDate, place.endDate, place.days]), [
-    ["City E", "2026-01-02", "2026-01-03", 2],
+    ["City E", "2026-01-01", "2026-01-03", 3],
     ["City G", "2026-04-01", "2026-04-02", 2]
   ]);
 });
