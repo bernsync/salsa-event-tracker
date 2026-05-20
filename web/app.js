@@ -1501,7 +1501,7 @@ function handleAction(event) {
   const target = event.target.closest("[data-action]");
   if (!target) {
     const collapseButton = collapseHeaderButtonFromClick(event);
-    if (collapseButton) toggleCardCollapse(collapseButton.dataset.view, collapseButton.dataset.id);
+    if (collapseButton) preserveScrollWhile(() => toggleCardCollapse(collapseButton.dataset.view, collapseButton.dataset.id));
     return;
   }
   const { action, id } = target.dataset;
@@ -1513,7 +1513,7 @@ function handleAction(event) {
   if (action === "add-google-calendar") return openGoogleCalendar(id);
   if (action === "download-calendar-file") return downloadCalendarFileForEvent(id);
   if (action === "edit-trip") return;
-  if (action === "toggle-card-collapse") return toggleCardCollapse(target.dataset.view, id);
+  if (action === "toggle-card-collapse") return preserveScrollWhile(() => toggleCardCollapse(target.dataset.view, id));
 }
 
 function updateBackToTopVisibility() {
@@ -1708,6 +1708,7 @@ function initializeFeatureViews() {
     currentUserEmail,
     loadSupabasePersonalTrips,
     render,
+    preserveScrollWhile,
     schengenStatus,
     schengenLabel,
     emptyState,
@@ -1723,6 +1724,7 @@ function initializeFeatureViews() {
     currentUserId,
     loadSupabaseReviews,
     render,
+    preserveScrollWhile,
     switchView,
     emptyState,
     cardCollapseButton,

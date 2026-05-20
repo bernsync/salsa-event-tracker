@@ -28,6 +28,7 @@ export function createTripsView({
   currentUserEmail,
   loadSupabasePersonalTrips,
   render,
+  preserveScrollWhile,
   schengenStatus,
   schengenLabel,
   emptyState,
@@ -456,7 +457,7 @@ export function createTripsView({
       await savePersonalTrip(Api, payload);
       closeTripDialog();
       state.personalTrips = await loadSupabasePersonalTrips();
-      render();
+      preserveScrollWhile(render);
     } catch (error) {
       window.alert(error.message);
     }
@@ -471,7 +472,7 @@ export function createTripsView({
       await deletePersonalTrip(Api, tripId);
       closeTripDialog();
       state.personalTrips = await loadSupabasePersonalTrips();
-      render();
+      preserveScrollWhile(render);
     } catch (error) {
       window.alert(error.message);
     }
