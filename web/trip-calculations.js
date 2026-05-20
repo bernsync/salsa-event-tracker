@@ -142,6 +142,42 @@ export function schengenPlaceDays(place, schengenStatus, windowStart = "", windo
     .length;
 }
 
+function hasLinkedEvent(place) {
+  return Boolean(place.eventId || place.event_edition_id);
+}
+
+function tripPlacesInSequence(trip) {
+  return [...(trip.places || [])].sort((a, b) =>
+    Number(a.sequence || 0) - Number(b.sequence || 0)
+    || a.startDate.localeCompare(b.startDate)
+    || a.endDate.localeCompare(b.endDate)
+    || a.city.localeCompare(b.city)
+  );
+}
+
+export function schengenTripSegmentDetails(trip, schengenStatus, windowStart = "", windowEnd = "") {
+  const places = tripPlacesInSequence(trip);
+  return places.map((place, index) => {
+    const startDate = windowStart && place.startDate < windowStart ? windowStart : place.startDate;
+    const endDate = windowEnd && place.endDate > windowEnd ? windowEnd : place.endDate;
+    const previousPlace = places[index - 1];
+    const excludeStartHandoff = previousPlace?.endDate === place.startDate && !hasLinkedEvent(place);
+    const days = startDate <= endDate
+      ? eachDate(place.startDate, place.endDate)
+        .filter((date) => (!windowStart || date >= windowStart) && (!windowEnd || date <= windowEnd))
+        .filter((date) => !(excludeStartHandoff && date === place.startDate))
+        .length
+      : 0;
+    return {
+      ...place,
+      trip,
+      startDate,
+      endDate,
+      days: schengenStatus(place) === true ? days : 0
+    };
+  }).filter((place) => place.days > 0);
+}
+
 export function tripPlacesByDate(personalTrips) {
   const days = new Map();
   personalTrips.forEach((trip) => {
@@ -180,17 +216,7 @@ export function schengenWindowDetails(personalTrips, dateValue, schengenStatus) 
   const days = schengenDayDetails(personalTrips, schengenStatus)
     .filter((day) => day.counts && day.date >= windowStart && day.date <= dateValue);
   const segments = personalTrips
-    .flatMap((trip) => (trip.places || []).map((place) => {
-      const startDate = place.startDate > windowStart ? place.startDate : windowStart;
-      const endDate = place.endDate < dateValue ? place.endDate : dateValue;
-      return {
-        ...place,
-        trip,
-        startDate,
-        endDate,
-        days: startDate <= endDate ? schengenPlaceDays(place, schengenStatus, windowStart, dateValue) : 0
-      };
-    }))
+    .flatMap((trip) => schengenTripSegmentDetails(trip, schengenStatus, windowStart, dateValue))
     .filter((place) => place.days > 0)
     .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate) || a.trip.label.localeCompare(b.trip.label));
   return {
