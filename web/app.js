@@ -63,6 +63,7 @@ const state = {
   search: "",
   sort: "date",
   selectedMonth: localDateString(new Date()).slice(0, 7),
+  selectedCalendarDate: localDateString(new Date()),
   hideDuplicateAttendedEvents: localStorage.getItem("salsa-festivals-hide-duplicate-attended") !== "false",
   attendedOnlyCalendar: localStorage.getItem("salsa-festivals-attended-only-calendar") === "true",
   mobileCalendarMonthView: localStorage.getItem("salsa-festivals-mobile-calendar-month-view") === "true",
@@ -114,6 +115,7 @@ const elements = {
   prevMonthBtn: $("#prevMonthBtn"),
   nextMonthBtn: $("#nextMonthBtn"),
   calendarGrid: $("#calendarGrid"),
+  calendarSelectedDay: $("#calendarSelectedDay"),
   eventList: $("#eventList"),
   festivalList: $("#festivalList"),
   festivalSearchInput: $("#festivalSearchInput"),
@@ -531,6 +533,20 @@ function renderMobileCalendarModeToggle() {
   );
 }
 
+function selectedCalendarDateForMonth() {
+  const currentMonth = localDateString(new Date()).slice(0, 7);
+  if (state.selectedCalendarDate?.startsWith(state.selectedMonth)) return state.selectedCalendarDate;
+  if (state.selectedMonth === currentMonth) return localDateString(new Date());
+  return `${state.selectedMonth}-01`;
+}
+
+function setSelectedCalendarDate(dateValue) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateValue || ""))) return;
+  state.selectedMonth = dateValue.slice(0, 7);
+  state.selectedCalendarDate = dateValue;
+  renderCalendar();
+}
+
 function reviewScoreForEvent(event) {
   return calculateReviewScoreForEvent(event, {
     events: state.events,
@@ -806,6 +822,9 @@ function renderCalendar() {
   elements.monthPicker.value = state.selectedMonth;
   renderCalendarMonthJump();
   renderMobileCalendarModeToggle();
+  if (state.mobileCalendarMonthView) {
+    state.selectedCalendarDate = selectedCalendarDateForMonth();
+  }
   if (elements.hideDuplicateAttendedToggle) {
     elements.hideDuplicateAttendedToggle.checked = state.hideDuplicateAttendedEvents;
     elements.hideDuplicateAttendedToggle.disabled = !isSignedIn();
@@ -831,46 +850,19 @@ function renderCalendar() {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
     const dateValue = localDateString(date);
-    const searchQuery = state.search.trim().toLowerCase();
-
-    const dayTripPlaces = calendarTripPlacesForDate(dateValue)
-      .filter((place) => {
-        if (!searchQuery) return true;
-        const event = place.eventId ? state.events.find((item) => item.id === place.eventId) : null;
-        const haystack = [
-          place.city,
-          place.country,
-          place.notes,
-          place.trip.label,
-          event?.name,
-          schengenLabel(place)
-        ].join(" ").toLowerCase();
-        return haystack.includes(searchQuery);
-      });
-    const dayEvents = state.events
-      .filter((event) => {
-        const occursOnDate = eventOccursOnDate(event, dateValue);
-        if (!occursOnDate) return false;
-        if (state.attendedOnlyCalendar && isSignedIn()) return false;
-        if (state.hideDuplicateAttendedEvents && attendedPlaceMatchesEventOnDate(event, dateValue)) return false;
-        if (!searchQuery) return true;
-
-        const haystack = [
-          event.name, event.city, event.country, event.venue, event.organizer, 
-          event.djs, event.artists, event.notes, formatStyles(event, state.danceStyles), watchlistLabel(event), schengenLabel(event)
-        ].join(" ").toLowerCase();
-        return haystack.includes(searchQuery);
-      })
-      .sort((a, b) => a.startDate.localeCompare(b.startDate));
-    const dayPtoDays = calendarPtoDaysForDate(dateValue)
-      .filter((ptoDay) => {
-        if (!searchQuery) return true;
-        return [ptoDay.trip.label, ptoDay.notes, holidayForDate(ptoDay.date), "pto"].join(" ").toLowerCase().includes(searchQuery);
-      });
+    const { events: dayEvents, trips: dayTripPlaces, ptoDays: dayPtoDays } = calendarItemsForDate(dateValue);
     const day = document.createElement("section");
     day.className = "calendar-day";
+    if (state.mobileCalendarMonthView) {
+      day.dataset.action = "select-calendar-day";
+      day.dataset.date = dateValue;
+      day.setAttribute("role", "button");
+      day.setAttribute("tabindex", "0");
+      day.setAttribute("aria-label", `Select ${mobileCalendarDayLabel(date)}`);
+    }
     if (date.getMonth() !== month - 1) day.classList.add("is-outside");
     if (dateValue === localDateString(new Date())) day.classList.add("is-today");
+    if (state.mobileCalendarMonthView && dateValue === state.selectedCalendarDate) day.classList.add("is-selected");
     if (!dayEvents.length && !dayTripPlaces.length && !dayPtoDays.length) day.classList.add("is-empty");
     if (date.getMonth() === month - 1 && (dayEvents.length || dayTripPlaces.length || dayPtoDays.length)) {
       hasVisibleAgendaItems = true;
@@ -921,6 +913,95 @@ function renderCalendar() {
   }
 
   elements.calendarGrid.classList.toggle("is-agenda-empty", !hasVisibleAgendaItems);
+  renderSelectedCalendarDay();
+}
+
+function calendarItemsForDate(dateValue) {
+  const searchQuery = state.search.trim().toLowerCase();
+  const trips = calendarTripPlacesForDate(dateValue)
+    .filter((place) => {
+      if (!searchQuery) return true;
+      const event = place.eventId ? state.events.find((item) => item.id === place.eventId) : null;
+      const haystack = [
+        place.city,
+        place.country,
+        place.notes,
+        place.trip.label,
+        event?.name,
+        schengenLabel(place)
+      ].join(" ").toLowerCase();
+      return haystack.includes(searchQuery);
+    });
+  const events = state.events
+    .filter((event) => {
+      const occursOnDate = eventOccursOnDate(event, dateValue);
+      if (!occursOnDate) return false;
+      if (state.attendedOnlyCalendar && isSignedIn()) return false;
+      if (state.hideDuplicateAttendedEvents && attendedPlaceMatchesEventOnDate(event, dateValue)) return false;
+      if (!searchQuery) return true;
+
+      const haystack = [
+        event.name, event.city, event.country, event.venue, event.organizer,
+        event.djs, event.artists, event.notes, formatStyles(event, state.danceStyles), watchlistLabel(event), schengenLabel(event)
+      ].join(" ").toLowerCase();
+      return haystack.includes(searchQuery);
+    })
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const ptoDays = calendarPtoDaysForDate(dateValue)
+    .filter((ptoDay) => {
+      if (!searchQuery) return true;
+      return [ptoDay.trip.label, ptoDay.notes, holidayForDate(ptoDay.date), "pto"].join(" ").toLowerCase().includes(searchQuery);
+    });
+  return { events, trips, ptoDays };
+}
+
+function renderSelectedCalendarDay() {
+  if (!elements.calendarSelectedDay) return;
+  elements.calendarSelectedDay.innerHTML = "";
+  if (!state.mobileCalendarMonthView) return;
+
+  const { events, trips, ptoDays } = calendarItemsForDate(state.selectedCalendarDate);
+  const heading = document.createElement("h3");
+  heading.textContent = formatDate(state.selectedCalendarDate);
+  elements.calendarSelectedDay.append(heading);
+
+  if (!events.length && !trips.length && !ptoDays.length) {
+    elements.calendarSelectedDay.append(emptyState("No items for this day", "Select another day in the month grid."));
+    return;
+  }
+
+  events.forEach((event) => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "calendar-selected-item";
+    const button = document.createElement("button");
+    const visualState = eventVisualState(event);
+    button.className = `calendar-event ${visualState.attending ? "is-attending" : ""} ${visualState.watchlistOnly ? "is-watchlist" : ""}`;
+    button.type = "button";
+    button.dataset.action = "details";
+    button.dataset.id = event.id;
+    button.setAttribute("aria-label", `View details for ${event.name}`);
+    button.innerHTML = calendarEventMarkup(event);
+    wrapper.append(button);
+    elements.calendarSelectedDay.append(wrapper);
+  });
+
+  trips.forEach((place) => {
+    const chip = document.createElement("button");
+    chip.className = `calendar-trip ${place.eventId ? "is-event-linked" : "is-travel"}`;
+    chip.type = "button";
+    chip.disabled = true;
+    chip.innerHTML = calendarTripMarkup(place);
+    elements.calendarSelectedDay.append(chip);
+  });
+
+  ptoDays.forEach((ptoDay) => {
+    const chip = document.createElement("button");
+    chip.className = `calendar-trip calendar-pto ${holidayForDate(ptoDay.date) ? "is-holiday" : ""}`;
+    chip.type = "button";
+    chip.disabled = true;
+    chip.innerHTML = calendarPtoMarkup(ptoDay);
+    elements.calendarSelectedDay.append(chip);
+  });
 }
 
 function calendarTripPlacesForDate(dateValue) {
@@ -1405,7 +1486,11 @@ function handleAction(event) {
     return;
   }
   const { action, id } = target.dataset;
+  if (state.mobileCalendarMonthView && target.closest(".calendar-grid")) {
+    return setSelectedCalendarDate(target.closest(".calendar-day")?.dataset.date);
+  }
   if (action === "details") return openEventDetails(id);
+  if (action === "select-calendar-day") return setSelectedCalendarDate(target.dataset.date);
   if (action === "add-google-calendar") return openGoogleCalendar(id);
   if (action === "download-calendar-file") return downloadCalendarFileForEvent(id);
   if (action === "edit-trip") return;
@@ -1461,6 +1546,14 @@ function bindEvents() {
   elements.authForm?.addEventListener("submit", handleAuthSubmit);
   document.addEventListener("click", handleAuthAction);
   elements.calendarGrid.addEventListener("click", handleAction);
+  elements.calendarGrid.addEventListener("keydown", (event) => {
+    if (!["Enter", " "].includes(event.key)) return;
+    const target = event.target.closest('[data-action="select-calendar-day"]');
+    if (!target) return;
+    event.preventDefault();
+    setSelectedCalendarDate(target.dataset.date);
+  });
+  elements.calendarSelectedDay?.addEventListener("click", handleAction);
   elements.eventList.addEventListener("click", handleAction);
   elements.festivalList.addEventListener("click", handleAction);
   elements.recentlyAddedList.addEventListener("click", handleAction);
