@@ -214,8 +214,10 @@ function isPlausibleEditionRange(startDate, endDate) {
 }
 
 function contextAround(text, index, length) {
-  const start = Math.max(0, index - 180);
-  const end = Math.min(text.length, index + length + 180);
+  // Keep range evidence local so sibling events on organizer pages do not
+  // inherit each other's dates through nearby navigation labels.
+  const start = Math.max(0, index - 80);
+  const end = Math.min(text.length, index + length + 80);
   return text.slice(start, end);
 }
 
