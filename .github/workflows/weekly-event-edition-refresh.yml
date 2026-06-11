@@ -1,8 +1,6 @@
 name: Weekly event edition refresh
 
 on:
-  schedule:
-    - cron: "0 10 * * 0"
   workflow_dispatch:
 
 permissions:
@@ -75,6 +73,7 @@ jobs:
             await ensureLabel("event-audit", "ededed", "Automated event source audit");
             await ensureLabel("next-edition", "bfd4f2", "Missing future edition candidates");
             await ensureLabel("event-refresh", "d4f2bf", "Upcoming event detail refresh");
+            await ensureLabel("near-term-refresh", "f2d4bf", "30-day event detail verification");
 
             await upsertIssue(
               "Weekly next-edition discovery",
@@ -85,4 +84,9 @@ jobs:
               "Upcoming event refresh",
               "audit/upcoming-event-refresh.md",
               ["event-refresh"]
+            );
+            await upsertIssue(
+              "30-day event detail check",
+              "audit/near-term-event-detail-check.md",
+              ["event-refresh", "near-term-refresh"]
             );
