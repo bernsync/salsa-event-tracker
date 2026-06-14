@@ -6,3 +6,6 @@ private-data/
 
 # Xcode user state
 xcuserdata/
+
+# Worktrees
+.worktrees/
