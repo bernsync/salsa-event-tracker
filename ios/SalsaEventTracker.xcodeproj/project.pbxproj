@@ -8,34 +8,36 @@
 
 /* Begin PBXBuildFile section */
 		0499130105CF002B94A7D4DF /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B109F68B9DF4DED52107146 /* CalendarView.swift */; };
-		0A1B2C3D4E5F6A7B8C9D0E1F /* CalendarDayCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F7A8B9C0D1E2F /* CalendarDayCell.swift */; };
+		110C37D60FA2665BE91E1731 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E1B8BBDFF58C73D245CB864 /* AppModelTests.swift */; };
 		117699514445A180ACAE79A6 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9599156F20C0975B6BEB623F /* LoginView.swift */; };
+		16073E50C2CDD82F50E9F16B /* TripCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2010D2A14E8C22C75AD7BE5C /* TripCard.swift */; };
+		1B0113299C401AD93D59B5A6 /* PTODayRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE03BC1487058F18222473CD /* PTODayRow.swift */; };
 		23E5A20CF5BF4A9017286DD7 /* ReviewScoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF99A41B687D5A34843675F /* ReviewScoring.swift */; };
 		252C7D9550835A9C7AD50905 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C662B22E1BCE553B7E3EDF8D /* RootView.swift */; };
-		2A3B4C5D6E7F8A9B0C1D2E3F /* FestivalRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A4B5C6D7E8F9A0B1C2D3E4F /* FestivalRow.swift */; };
-		3B4C5D6E7F8A9B0C1D2E3F4A /* ReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B5C6D7E8F9A0B1C2D3E4F5A /* ReviewCard.swift */; };
 		42451DD3CD4B66CB8B8D416D /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5576F8EA374798199B1E3965 /* EventDetailSheet.swift */; };
 		4A7603B2E090BCEC0050F12E /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 610AF604FA066253843BBACF /* KeychainAccess */; };
-		4C5D6E7F8A9B0C1D2E3F4A5B /* ReviewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C6D7E8F9A0B1C2D3E4F5A6B /* ReviewEditorView.swift */; };
+		4E3B24E89A108F79D45A0E4E /* TripEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC32FF3D1AFF222AC9F0E857 /* TripEditorView.swift */; };
+		52C7B42A2789AD3024FBB670 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 12D21B1E3F7F4D71F35E3200 /* Assets.xcassets */; };
 		55B79A07F475A1A3A694CD87 /* TripsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD7FB22EC61F2D221939A55 /* TripsView.swift */; };
 		5C3A241E2E8BFF76A96D502B /* SchengenCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9323453E67E70F7AADBA2F /* SchengenCalculator.swift */; };
-		5D6E7F8A9B0C1D2E3F4A5B6C /* TripCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D7E8F9A0B1C2D3E4F5A6B7C /* TripCard.swift */; };
-		5E6F7A8B9C0D1E2F3A4B5C6D /* TripEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E7F8A9B0C1D2E3F4A5B6C7D /* TripEditorView.swift */; };
-		5F6A7B8C9D0E1F2A3B4C5D6E /* TripPlaceRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F7A8B9C0D1E2F3A4B5C6D7E /* TripPlaceRow.swift */; };
-		5F7A8B9C0D1E2F3A4B5C6D7F /* PTODayRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F8A9B0C1D2E3F4A5B6C7D8E /* PTODayRow.swift */; };
 		636D3C247873CEAE332B9835 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A892226095756870F56FC7 /* Event.swift */; };
 		66AC164290BC65B9A107A608 /* SupabaseServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E7162126846B0FC40C67AF /* SupabaseServiceProtocol.swift */; };
 		6ABCEBE98931BCEB350104D3 /* ReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BEDA5BE420B7FAB2C7279E5 /* ReviewsView.swift */; };
+		805E246E1701292D1F3082F2 /* ReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B32BD54D2BCD1EF937EC79DC /* ReviewCard.swift */; };
 		821A7B1898E269139A0CBC92 /* SalsaEventTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7A24FFD1AE97E0BCBE0AB7D /* SalsaEventTrackerApp.swift */; };
 		86A070491BBAAF8F58080D58 /* DanceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C0E3562F903890C0C7978E /* DanceStyle.swift */; };
 		978605136A14F165781BB1CE /* AuthServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094FC3326859578B38B90B57 /* AuthServiceProtocol.swift */; };
 		993A431AE645F062EFEAB541 /* DateUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B2BB9E05EFB8E44A49350D1 /* DateUtils.swift */; };
+		A152768595CFAB7E1D2C080E /* FestivalRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DC0D583C80715C22608BFA /* FestivalRow.swift */; };
+		A1BB0E15D30BED08EBE7C238 /* TripPlaceRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B540068BD4C8942A5333884A /* TripPlaceRow.swift */; };
 		A62F888BBF20CD49DAA800C6 /* Trip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB26F8D96FA18F0EFBFE853 /* Trip.swift */; };
 		AC8135D0155A2F2512E22C66 /* Review.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093C8067376B1F23D0F1E6A1 /* Review.swift */; };
 		AF0E1F8CAA96278D25FD68D1 /* TextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02029C056A1B09CB9A09B2D /* TextUtils.swift */; };
 		B128F9D94590967138657C41 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35E0551C108252163DD346D6 /* AuthService.swift */; };
 		B95101C69145A806B769C73D /* FestivalListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9CDEEAC1FE846AB150752D /* FestivalListView.swift */; };
+		C1CE956836D2BDAD507B3D94 /* ReviewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A63B2E4DD8E3DE85BF70EAC /* ReviewEditorView.swift */; };
 		C46E797BC91AC77482446040 /* EventCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50AD84973831C7FD962F2218 /* EventCard.swift */; };
+		CA99D919C68A8EC90F24E297 /* CalendarDayCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07F13F9C5A2C7D428EC11BD3 /* CalendarDayCell.swift */; };
 		D8485425C9F1D14357F60859 /* AppModel+Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94B656CBCCD0549D224FA74 /* AppModel+Types.swift */; };
 		DE5CBE9697C53EF463B8FE0F /* EventListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F65785CAF66DDF79762F8DF /* EventListView.swift */; };
 		DF1F82946ACD7422BAD229D2 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26DC187D92196632FCDD56FE /* AppModel.swift */; };
@@ -43,39 +45,52 @@
 		EFD33AEE6C9F8144634DA59F /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A6880B5E1593EABD7D335F5 /* SupabaseConfig.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		747CBDACBDACB36E4C9221D4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C25FC2AE08E43975A18738FD /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FDD36B97F7B516BB7838A79A;
+			remoteInfo = SalsaEventTracker;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		01A892226095756870F56FC7 /* Event.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
+		07F13F9C5A2C7D428EC11BD3 /* CalendarDayCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDayCell.swift; sourceTree = "<group>"; };
 		093C8067376B1F23D0F1E6A1 /* Review.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Review.swift; sourceTree = "<group>"; };
 		094FC3326859578B38B90B57 /* AuthServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthServiceProtocol.swift; sourceTree = "<group>"; };
 		0AD7FB22EC61F2D221939A55 /* TripsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsView.swift; sourceTree = "<group>"; };
 		0CF99A41B687D5A34843675F /* ReviewScoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewScoring.swift; sourceTree = "<group>"; };
-		1A2B3C4D5E6F7A8B9C0D1E2F /* CalendarDayCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDayCell.swift; sourceTree = "<group>"; };
+		12D21B1E3F7F4D71F35E3200 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1DB26F8D96FA18F0EFBFE853 /* Trip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trip.swift; sourceTree = "<group>"; };
+		1E1B8BBDFF58C73D245CB864 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
+		2010D2A14E8C22C75AD7BE5C /* TripCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripCard.swift; sourceTree = "<group>"; };
 		26DC187D92196632FCDD56FE /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		35E0551C108252163DD346D6 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
-		3A4B5C6D7E8F9A0B1C2D3E4F /* FestivalRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestivalRow.swift; sourceTree = "<group>"; };
 		4A6880B5E1593EABD7D335F5 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
-		4B5C6D7E8F9A0B1C2D3E4F5A /* ReviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCard.swift; sourceTree = "<group>"; };
-		4BABAA0EE2CEE585C9BFE068 /* SalsaEventTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SalsaEventTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4BABAA0EE2CEE585C9BFE068 /* SalsaEventTracker.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SalsaEventTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		50AD84973831C7FD962F2218 /* EventCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventCard.swift; sourceTree = "<group>"; };
 		5576F8EA374798199B1E3965 /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
+		5A63B2E4DD8E3DE85BF70EAC /* ReviewEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewEditorView.swift; sourceTree = "<group>"; };
 		5B109F68B9DF4DED52107146 /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
-		5C6D7E8F9A0B1C2D3E4F5A6B /* ReviewEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewEditorView.swift; sourceTree = "<group>"; };
 		5F65785CAF66DDF79762F8DF /* EventListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventListView.swift; sourceTree = "<group>"; };
-		6D7E8F9A0B1C2D3E4F5A6B7C /* TripCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripCard.swift; sourceTree = "<group>"; };
-		6E7F8A9B0C1D2E3F4A5B6C7D /* TripEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripEditorView.swift; sourceTree = "<group>"; };
-		6F7A8B9C0D1E2F3A4B5C6D7E /* TripPlaceRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPlaceRow.swift; sourceTree = "<group>"; };
-		6F8A9B0C1D2E3F4A5B6C7D8E /* PTODayRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTODayRow.swift; sourceTree = "<group>"; };
 		7BEDA5BE420B7FAB2C7279E5 /* ReviewsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewsView.swift; sourceTree = "<group>"; };
+		842711D191A8C7344ED0CA0D /* SalsaEventTrackerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SalsaEventTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		87E7162126846B0FC40C67AF /* SupabaseServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseServiceProtocol.swift; sourceTree = "<group>"; };
 		9599156F20C0975B6BEB623F /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		9B2BB9E05EFB8E44A49350D1 /* DateUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateUtils.swift; sourceTree = "<group>"; };
 		9E9CDEEAC1FE846AB150752D /* FestivalListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestivalListView.swift; sourceTree = "<group>"; };
 		A02029C056A1B09CB9A09B2D /* TextUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextUtils.swift; sourceTree = "<group>"; };
+		B32BD54D2BCD1EF937EC79DC /* ReviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCard.swift; sourceTree = "<group>"; };
 		B3C0E3562F903890C0C7978E /* DanceStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DanceStyle.swift; sourceTree = "<group>"; };
+		B540068BD4C8942A5333884A /* TripPlaceRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPlaceRow.swift; sourceTree = "<group>"; };
 		B7A24FFD1AE97E0BCBE0AB7D /* SalsaEventTrackerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SalsaEventTrackerApp.swift; sourceTree = "<group>"; };
+		BC32FF3D1AFF222AC9F0E857 /* TripEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripEditorView.swift; sourceTree = "<group>"; };
+		C0DC0D583C80715C22608BFA /* FestivalRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestivalRow.swift; sourceTree = "<group>"; };
 		C662B22E1BCE553B7E3EDF8D /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		C9F9950F0C5E36318614ECBE /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		CE03BC1487058F18222473CD /* PTODayRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTODayRow.swift; sourceTree = "<group>"; };
 		E3AE211076B1D1C8FD764BA2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		F94B656CBCCD0549D224FA74 /* AppModel+Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Types.swift"; sourceTree = "<group>"; };
 		FB9323453E67E70F7AADBA2F /* SchengenCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchengenCalculator.swift; sourceTree = "<group>"; };
@@ -101,6 +116,14 @@
 			path = EventDetail;
 			sourceTree = "<group>";
 		};
+		151D1432B98DDD6A438D7BE9 /* SalsaEventTrackerTests */ = {
+			isa = PBXGroup;
+			children = (
+				1E1B8BBDFF58C73D245CB864 /* AppModelTests.swift */,
+			);
+			path = SalsaEventTrackerTests;
+			sourceTree = "<group>";
+		};
 		260496EC144EA1DEBC347716 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
@@ -113,6 +136,7 @@
 			isa = PBXGroup;
 			children = (
 				D732026CF2E6A415B8E8A666 /* SalsaEventTracker */,
+				151D1432B98DDD6A438D7BE9 /* SalsaEventTrackerTests */,
 				93A693AC97AF63B07BF28E35 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -140,10 +164,10 @@
 		7B41C94B32F8F7DEBFB4FB35 /* Trips */ = {
 			isa = PBXGroup;
 			children = (
-				6F8A9B0C1D2E3F4A5B6C7D8E /* PTODayRow.swift */,
-				6D7E8F9A0B1C2D3E4F5A6B7C /* TripCard.swift */,
-				6E7F8A9B0C1D2E3F4A5B6C7D /* TripEditorView.swift */,
-				6F7A8B9C0D1E2F3A4B5C6D7E /* TripPlaceRow.swift */,
+				CE03BC1487058F18222473CD /* PTODayRow.swift */,
+				2010D2A14E8C22C75AD7BE5C /* TripCard.swift */,
+				BC32FF3D1AFF222AC9F0E857 /* TripEditorView.swift */,
+				B540068BD4C8942A5333884A /* TripPlaceRow.swift */,
 				0AD7FB22EC61F2D221939A55 /* TripsView.swift */,
 			);
 			path = Trips;
@@ -153,6 +177,7 @@
 			isa = PBXGroup;
 			children = (
 				4BABAA0EE2CEE585C9BFE068 /* SalsaEventTracker.app */,
+				842711D191A8C7344ED0CA0D /* SalsaEventTrackerTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -161,7 +186,7 @@
 			isa = PBXGroup;
 			children = (
 				9E9CDEEAC1FE846AB150752D /* FestivalListView.swift */,
-				3A4B5C6D7E8F9A0B1C2D3E4F /* FestivalRow.swift */,
+				C0DC0D583C80715C22608BFA /* FestivalRow.swift */,
 			);
 			path = FestivalList;
 			sourceTree = "<group>";
@@ -180,7 +205,7 @@
 		AF3A81B13C7DD86B2337FF13 /* Calendar */ = {
 			isa = PBXGroup;
 			children = (
-				1A2B3C4D5E6F7A8B9C0D1E2F /* CalendarDayCell.swift */,
+				07F13F9C5A2C7D428EC11BD3 /* CalendarDayCell.swift */,
 				5B109F68B9DF4DED52107146 /* CalendarView.swift */,
 			);
 			path = Calendar;
@@ -203,6 +228,7 @@
 			children = (
 				26DC187D92196632FCDD56FE /* AppModel.swift */,
 				F94B656CBCCD0549D224FA74 /* AppModel+Types.swift */,
+				12D21B1E3F7F4D71F35E3200 /* Assets.xcassets */,
 				E3AE211076B1D1C8FD764BA2 /* Info.plist */,
 				B7A24FFD1AE97E0BCBE0AB7D /* SalsaEventTrackerApp.swift */,
 				AB77965AAD6D7E04CDD9D6E9 /* Models */,
@@ -216,8 +242,8 @@
 		DA4CAF63F0882C7D787DDC6F /* Reviews */ = {
 			isa = PBXGroup;
 			children = (
-				4B5C6D7E8F9A0B1C2D3E4F5A /* ReviewCard.swift */,
-				5C6D7E8F9A0B1C2D3E4F5A6B /* ReviewEditorView.swift */,
+				B32BD54D2BCD1EF937EC79DC /* ReviewCard.swift */,
+				5A63B2E4DD8E3DE85BF70EAC /* ReviewEditorView.swift */,
 				7BEDA5BE420B7FAB2C7279E5 /* ReviewsView.swift */,
 			);
 			path = Reviews;
@@ -241,11 +267,30 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		4E7C5294DD29164F7ED446B0 /* SalsaEventTrackerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B657B0CCC4EFBF552F3C608E /* Build configuration list for PBXNativeTarget "SalsaEventTrackerTests" */;
+			buildPhases = (
+				34E01DE3ACB5441B96F8DB85 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				23431CB66D513C2DFF940719 /* PBXTargetDependency */,
+			);
+			name = SalsaEventTrackerTests;
+			packageProductDependencies = (
+			);
+			productName = SalsaEventTrackerTests;
+			productReference = 842711D191A8C7344ED0CA0D /* SalsaEventTrackerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		FDD36B97F7B516BB7838A79A /* SalsaEventTracker */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9E561A1624B35608F87CC9AA /* Build configuration list for PBXNativeTarget "SalsaEventTracker" */;
 			buildPhases = (
 				814CBE2749F7A18AC1F283E6 /* Sources */,
+				810BA6B945D45CB1D7F129D3 /* Resources */,
 				290126E0F60EA747F609A42E /* Frameworks */,
 			);
 			buildRules = (
@@ -268,6 +313,8 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = 6781F375E98303B1D730D32E /* Build configuration list for PBXProject "SalsaEventTracker" */;
 			developmentRegion = en;
@@ -287,11 +334,31 @@
 			projectRoot = "";
 			targets = (
 				FDD36B97F7B516BB7838A79A /* SalsaEventTracker */,
+				4E7C5294DD29164F7ED446B0 /* SalsaEventTrackerTests */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		810BA6B945D45CB1D7F129D3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				52C7B42A2789AD3024FBB670 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
+		34E01DE3ACB5441B96F8DB85 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				110C37D60FA2665BE91E1731 /* AppModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		814CBE2749F7A18AC1F283E6 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -300,6 +367,7 @@
 				DF1F82946ACD7422BAD229D2 /* AppModel.swift in Sources */,
 				B128F9D94590967138657C41 /* AuthService.swift in Sources */,
 				978605136A14F165781BB1CE /* AuthServiceProtocol.swift in Sources */,
+				CA99D919C68A8EC90F24E297 /* CalendarDayCell.swift in Sources */,
 				0499130105CF002B94A7D4DF /* CalendarView.swift in Sources */,
 				86A070491BBAAF8F58080D58 /* DanceStyle.swift in Sources */,
 				993A431AE645F062EFEAB541 /* DateUtils.swift in Sources */,
@@ -308,8 +376,12 @@
 				42451DD3CD4B66CB8B8D416D /* EventDetailSheet.swift in Sources */,
 				DE5CBE9697C53EF463B8FE0F /* EventListView.swift in Sources */,
 				B95101C69145A806B769C73D /* FestivalListView.swift in Sources */,
+				A152768595CFAB7E1D2C080E /* FestivalRow.swift in Sources */,
 				117699514445A180ACAE79A6 /* LoginView.swift in Sources */,
+				1B0113299C401AD93D59B5A6 /* PTODayRow.swift in Sources */,
 				AC8135D0155A2F2512E22C66 /* Review.swift in Sources */,
+				805E246E1701292D1F3082F2 /* ReviewCard.swift in Sources */,
+				C1CE956836D2BDAD507B3D94 /* ReviewEditorView.swift in Sources */,
 				23E5A20CF5BF4A9017286DD7 /* ReviewScoring.swift in Sources */,
 				6ABCEBE98931BCEB350104D3 /* ReviewsView.swift in Sources */,
 				252C7D9550835A9C7AD50905 /* RootView.swift in Sources */,
@@ -320,21 +392,62 @@
 				66AC164290BC65B9A107A608 /* SupabaseServiceProtocol.swift in Sources */,
 				AF0E1F8CAA96278D25FD68D1 /* TextUtils.swift in Sources */,
 				A62F888BBF20CD49DAA800C6 /* Trip.swift in Sources */,
-				0A1B2C3D4E5F6A7B8C9D0E1F /* CalendarDayCell.swift in Sources */,
-				2A3B4C5D6E7F8A9B0C1D2E3F /* FestivalRow.swift in Sources */,
-				5F7A8B9C0D1E2F3A4B5C6D7F /* PTODayRow.swift in Sources */,
-				3B4C5D6E7F8A9B0C1D2E3F4A /* ReviewCard.swift in Sources */,
-				4C5D6E7F8A9B0C1D2E3F4A5B /* ReviewEditorView.swift in Sources */,
-				5D6E7F8A9B0C1D2E3F4A5B6C /* TripCard.swift in Sources */,
-				5E6F7A8B9C0D1E2F3A4B5C6D /* TripEditorView.swift in Sources */,
-				5F6A7B8C9D0E1F2A3B4C5D6E /* TripPlaceRow.swift in Sources */,
+				16073E50C2CDD82F50E9F16B /* TripCard.swift in Sources */,
+				4E3B24E89A108F79D45A0E4E /* TripEditorView.swift in Sources */,
+				A1BB0E15D30BED08EBE7C238 /* TripPlaceRow.swift in Sources */,
 				55B79A07F475A1A3A694CD87 /* TripsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		23431CB66D513C2DFF940719 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FDD36B97F7B516BB7838A79A /* SalsaEventTracker */;
+			targetProxy = 747CBDACBDACB36E4C9221D4 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		057AD7B8F43D6EF4255EC8BD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.salsaeventtracker.SalsaEventTrackerTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SalsaEventTracker.app/SalsaEventTracker";
+			};
+			name = Release;
+		};
+		332DAE224BB51B063DF2AB0B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.salsaeventtracker.SalsaEventTrackerTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SalsaEventTracker.app/SalsaEventTracker";
+			};
+			name = Debug;
+		};
 		6E977E5F5B7B8CFC669B7A90 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -402,7 +515,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = MG3K52T7N9;
 				INFOPLIST_FILE = SalsaEventTracker/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -476,7 +588,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = MG3K52T7N9;
 				INFOPLIST_FILE = SalsaEventTracker/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -507,6 +618,15 @@
 			buildConfigurations = (
 				9C5646C90E23E4831AE9F5B0 /* Debug */,
 				7D3504361CCCD1E18F2224B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B657B0CCC4EFBF552F3C608E /* Build configuration list for PBXNativeTarget "SalsaEventTrackerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				332DAE224BB51B063DF2AB0B /* Debug */,
+				057AD7B8F43D6EF4255EC8BD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
