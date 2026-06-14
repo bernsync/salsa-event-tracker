@@ -314,6 +314,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					FDD36B97F7B516BB7838A79A = {
+						DevelopmentTeam = MG3K52T7N9;
+					};
 				};
 			};
 			buildConfigurationList = 6781F375E98303B1D730D32E /* Build configuration list for PBXProject "SalsaEventTracker" */;
@@ -516,6 +519,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = MG3K52T7N9;
 				INFOPLIST_FILE = SalsaEventTracker/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -591,6 +595,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 2;
+				DEVELOPMENT_TEAM = MG3K52T7N9;
 				INFOPLIST_FILE = SalsaEventTracker/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (

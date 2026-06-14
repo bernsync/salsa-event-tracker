@@ -4,11 +4,11 @@ Historical record of what each uploaded or upload-ready build ships.
 
 Before any App Store Connect or TestFlight upload, add or update the entry for that build and confirm the local validation commands. Uploads should not happen from undocumented build changes.
 
-## Build 2 - 2026-06-14 - Pending Upload
+## Build 2 - 2026-06-14 - App Store Connect Upload
 
 Branch: `build-2-2026-06-14` (PR #71)
 
-Status: PR open. Not yet uploaded.
+Status: Uploaded to App Store Connect for TestFlight processing.
 
 ### User-Visible Changes
 
@@ -27,9 +27,10 @@ Status: PR open. Not yet uploaded.
 ### Validation
 
 - Build number: `CURRENT_PROJECT_VERSION = 2`, `MARKETING_VERSION = 1.0`.
+- Test suite: `xcodebuild test` — 11 tests, 3 suites, **TEST SUCCEEDED**.
 - Simulator build: `xcodebuild -project ios/SalsaEventTracker.xcodeproj -scheme SalsaEventTracker -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build` — **BUILD SUCCEEDED**.
-- Device archive: pending.
-- App Store Connect upload: pending.
+- Release archive: `xcodebuild -project ios/SalsaEventTracker.xcodeproj -scheme SalsaEventTracker -configuration Release -destination generic/platform=iOS -archivePath /private/tmp/SalsaEventTracker-build2-20260614.xcarchive -allowProvisioningUpdates archive` — **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: `xcodebuild -exportArchive -archivePath /private/tmp/SalsaEventTracker-build2-20260614.xcarchive -exportPath /private/tmp/SalsaEventTracker-build2-20260614-upload -exportOptionsPlist ios/ExportOptions-AppStore.plist -allowProvisioningUpdates` — Upload succeeded. Uploaded SalsaEventTracker. **EXPORT SUCCEEDED**.
 
 ### Known Risks / Follow-Up Testing
 
