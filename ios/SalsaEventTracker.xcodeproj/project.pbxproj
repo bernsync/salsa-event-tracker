@@ -11,6 +11,7 @@
 		117699514445A180ACAE79A6 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9599156F20C0975B6BEB623F /* LoginView.swift */; };
 		23E5A20CF5BF4A9017286DD7 /* ReviewScoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF99A41B687D5A34843675F /* ReviewScoring.swift */; };
 		252C7D9550835A9C7AD50905 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C662B22E1BCE553B7E3EDF8D /* RootView.swift */; };
+		42451DD3CD4B66CB8B8D416D /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5576F8EA374798199B1E3965 /* EventDetailSheet.swift */; };
 		4A7603B2E090BCEC0050F12E /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 610AF604FA066253843BBACF /* KeychainAccess */; };
 		55B79A07F475A1A3A694CD87 /* TripsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD7FB22EC61F2D221939A55 /* TripsView.swift */; };
 		5C3A241E2E8BFF76A96D502B /* SchengenCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9323453E67E70F7AADBA2F /* SchengenCalculator.swift */; };
@@ -26,6 +27,7 @@
 		AF0E1F8CAA96278D25FD68D1 /* TextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02029C056A1B09CB9A09B2D /* TextUtils.swift */; };
 		B128F9D94590967138657C41 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35E0551C108252163DD346D6 /* AuthService.swift */; };
 		B95101C69145A806B769C73D /* FestivalListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9CDEEAC1FE846AB150752D /* FestivalListView.swift */; };
+		C46E797BC91AC77482446040 /* EventCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50AD84973831C7FD962F2218 /* EventCard.swift */; };
 		D8485425C9F1D14357F60859 /* AppModel+Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94B656CBCCD0549D224FA74 /* AppModel+Types.swift */; };
 		DE5CBE9697C53EF463B8FE0F /* EventListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F65785CAF66DDF79762F8DF /* EventListView.swift */; };
 		DF1F82946ACD7422BAD229D2 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26DC187D92196632FCDD56FE /* AppModel.swift */; };
@@ -44,6 +46,8 @@
 		35E0551C108252163DD346D6 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		4A6880B5E1593EABD7D335F5 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
 		4BABAA0EE2CEE585C9BFE068 /* SalsaEventTracker.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SalsaEventTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		50AD84973831C7FD962F2218 /* EventCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventCard.swift; sourceTree = "<group>"; };
+		5576F8EA374798199B1E3965 /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
 		5B109F68B9DF4DED52107146 /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
 		5F65785CAF66DDF79762F8DF /* EventListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventListView.swift; sourceTree = "<group>"; };
 		7BEDA5BE420B7FAB2C7279E5 /* ReviewsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewsView.swift; sourceTree = "<group>"; };
@@ -73,6 +77,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0AAA2AE675421A3884664ADC /* EventDetail */ = {
+			isa = PBXGroup;
+			children = (
+				5576F8EA374798199B1E3965 /* EventDetailSheet.swift */,
+			);
+			path = EventDetail;
+			sourceTree = "<group>";
+		};
 		260496EC144EA1DEBC347716 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
@@ -103,6 +115,7 @@
 		7448A7C165A4E000BE279570 /* EventList */ = {
 			isa = PBXGroup;
 			children = (
+				50AD84973831C7FD962F2218 /* EventCard.swift */,
 				5F65785CAF66DDF79762F8DF /* EventListView.swift */,
 			);
 			path = EventList;
@@ -192,6 +205,7 @@
 				C662B22E1BCE553B7E3EDF8D /* RootView.swift */,
 				260496EC144EA1DEBC347716 /* Auth */,
 				AF3A81B13C7DD86B2337FF13 /* Calendar */,
+				0AAA2AE675421A3884664ADC /* EventDetail */,
 				7448A7C165A4E000BE279570 /* EventList */,
 				9987A9CE3BE9C0B3A752667B /* FestivalList */,
 				DA4CAF63F0882C7D787DDC6F /* Reviews */,
@@ -268,6 +282,8 @@
 				86A070491BBAAF8F58080D58 /* DanceStyle.swift in Sources */,
 				993A431AE645F062EFEAB541 /* DateUtils.swift in Sources */,
 				636D3C247873CEAE332B9835 /* Event.swift in Sources */,
+				C46E797BC91AC77482446040 /* EventCard.swift in Sources */,
+				42451DD3CD4B66CB8B8D416D /* EventDetailSheet.swift in Sources */,
 				DE5CBE9697C53EF463B8FE0F /* EventListView.swift in Sources */,
 				B95101C69145A806B769C73D /* FestivalListView.swift in Sources */,
 				117699514445A180ACAE79A6 /* LoginView.swift in Sources */,
