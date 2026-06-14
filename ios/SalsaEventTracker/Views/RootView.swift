@@ -3,7 +3,6 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
-    @State private var showLogin = false
 
     var body: some View {
         @Bindable var model = model
@@ -33,11 +32,11 @@ struct RootView: View {
                 if model.isSignedIn {
                     Button("Sign Out") { model.signOut() }
                 } else {
-                    Button("Sign In") { showLogin = true }
+                    Button("Sign In") { model.showLogin = true }
                 }
             }
         }
-        .sheet(isPresented: $showLogin) {
+        .sheet(isPresented: $model.showLogin) {
             LoginView()
         }
         .overlay {

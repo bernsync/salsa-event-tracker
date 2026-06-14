@@ -19,9 +19,14 @@ struct ReviewsView: View {
     var body: some View {
         NavigationStack {
             if !model.isSignedIn {
-                ContentUnavailableView("Sign In Required",
-                    systemImage: "lock.fill",
-                    description: Text("Sign in to view and write reviews."))
+                ContentUnavailableView {
+                    Label("Sign In Required", systemImage: "lock.fill")
+                } description: {
+                    Text("Sign in to view and write reviews.")
+                } actions: {
+                    Button("Sign In") { model.showLogin = true }
+                        .buttonStyle(.borderedProminent)
+                }
             } else {
                 List {
                     ForEach(model.reviews.sorted { $0.reviewedAt > $1.reviewedAt }) { review in

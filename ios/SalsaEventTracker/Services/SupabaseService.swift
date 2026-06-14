@@ -25,7 +25,7 @@ actor SupabaseService: SupabaseServiceProtocol {
 
     func fetchDanceStyles() async throws -> [DanceStyle] {
         let url = baseURL.appending(path: "/rest/v1/dance_styles")
-            .appending(queryItems: [URLQueryItem(name: "select", value: "id,name,slug,is_active,sort_order")])
+            .appending(queryItems: [URLQueryItem(name: "select", value: "name,slug,is_active,sort_order")])
         return try await get(url: url, token: nil)
     }
 
