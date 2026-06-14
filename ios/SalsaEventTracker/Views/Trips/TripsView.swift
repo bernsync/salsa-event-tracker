@@ -81,6 +81,7 @@ struct TripsView: View {
                     }
                     .padding(.vertical)
                 }
+                .refreshable { await model.loadPrivateData() }
                 .navigationTitle("Trips")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {

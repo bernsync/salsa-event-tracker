@@ -47,5 +47,14 @@ struct RootView: View {
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
             }
         }
+        .alert("Error", isPresented: Binding(
+            get: { model.appError != nil },
+            set: { if !$0 { model.appError = nil } }
+        )) {
+            Button("Retry") { Task { await model.loadPublicData() } }
+            Button("Dismiss", role: .cancel) { model.appError = nil }
+        } message: {
+            Text(model.appError?.localizedDescription ?? "")
+        }
     }
 }

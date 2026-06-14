@@ -41,6 +41,7 @@ struct ReviewsView: View {
                     }
                 }
                 .listStyle(.plain)
+                .refreshable { await model.loadPrivateData() }
                 .navigationTitle("Reviews")
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {

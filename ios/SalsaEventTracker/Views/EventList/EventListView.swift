@@ -38,6 +38,7 @@ struct EventListView: View {
                 }
                 .padding()
             }
+            .refreshable { await model.loadPublicData() }
             .navigationTitle("Events")
             .searchable(text: $model.searchQuery, prompt: "Search events…")
             .toolbar {
