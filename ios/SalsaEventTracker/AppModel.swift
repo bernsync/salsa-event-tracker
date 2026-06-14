@@ -22,6 +22,7 @@ final class AppModel {
     var searchQuery: String = ""
     var isLoading: Bool = false
     var appError: AppError?          // surfaced to RootView alert; set via setError(_:)
+    var showLogin: Bool = false
 
     func setError(_ error: AppError) {
         appError = error

@@ -30,9 +30,14 @@ struct TripsView: View {
         @Bindable var model = model
         NavigationStack {
             if !model.isSignedIn {
-                ContentUnavailableView("Sign In Required",
-                    systemImage: "lock.fill",
-                    description: Text("Sign in to view and manage your trips."))
+                ContentUnavailableView {
+                    Label("Sign In Required", systemImage: "lock.fill")
+                } description: {
+                    Text("Sign in to view and manage your trips.")
+                } actions: {
+                    Button("Sign In") { model.showLogin = true }
+                        .buttonStyle(.borderedProminent)
+                }
             } else {
                 ScrollView {
                     VStack(spacing: 16) {
