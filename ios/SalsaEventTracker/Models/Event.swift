@@ -51,6 +51,13 @@ struct EventEdition: Identifiable, Decodable {
     var isHistorical: Bool {
         endDate < DateUtils.todayString()
     }
+
+    static let placeholder = EventEdition(
+        id: "", startDate: "", endDate: "", city: "", country: "",
+        venue: nil, tickets: nil, price: nil, currency: nil,
+        djs: nil, artists: nil, eventSize: nil, travel: nil,
+        addedOn: nil, notes: nil, forceShowMonday: false, visibility: "public"
+    )
 }
 
 // Convenience: a flat edition with its parent event attached
