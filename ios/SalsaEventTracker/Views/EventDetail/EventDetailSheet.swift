@@ -6,7 +6,12 @@ struct EventDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        let websiteURL = flat.event.website.flatMap(URL.init)
+        let instagramURL = flat.event.instagram.flatMap(URL.init)
+        let facebookURL = flat.event.facebook.flatMap(URL.init)
+        let ticketsURL = flat.edition.tickets.flatMap(URL.init)
+
+        return NavigationStack {
             List {
                 Section("Date & Location") {
                     LabeledContent("Dates", value: DateUtils.displayDateRange(
@@ -37,18 +42,12 @@ struct EventDetailSheet: View {
                 if let notes = flat.edition.notes {
                     Section("Notes") { Text(notes) }
                 }
-                Section("Links") {
-                    if let url = flat.event.website.flatMap(URL.init) {
-                        Link("Website", destination: url)
-                    }
-                    if let url = flat.event.instagram.flatMap(URL.init) {
-                        Link("Instagram", destination: url)
-                    }
-                    if let url = flat.event.facebook.flatMap(URL.init) {
-                        Link("Facebook", destination: url)
-                    }
-                    if let url = flat.edition.tickets.flatMap(URL.init) {
-                        Link("Tickets", destination: url)
+                if websiteURL != nil || instagramURL != nil || facebookURL != nil || ticketsURL != nil {
+                    Section("Links") {
+                        if let url = websiteURL { Link("Website", destination: url) }
+                        if let url = instagramURL { Link("Instagram", destination: url) }
+                        if let url = facebookURL { Link("Facebook", destination: url) }
+                        if let url = ticketsURL { Link("Tickets", destination: url) }
                     }
                 }
             }
