@@ -1,0 +1,536 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0499130105CF002B94A7D4DF /* CalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B109F68B9DF4DED52107146 /* CalendarView.swift */; };
+		0A1B2C3D4E5F6A7B8C9D0E1F /* CalendarDayCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A2B3C4D5E6F7A8B9C0D1E2F /* CalendarDayCell.swift */; };
+		117699514445A180ACAE79A6 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9599156F20C0975B6BEB623F /* LoginView.swift */; };
+		23E5A20CF5BF4A9017286DD7 /* ReviewScoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF99A41B687D5A34843675F /* ReviewScoring.swift */; };
+		252C7D9550835A9C7AD50905 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C662B22E1BCE553B7E3EDF8D /* RootView.swift */; };
+		2A3B4C5D6E7F8A9B0C1D2E3F /* FestivalRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A4B5C6D7E8F9A0B1C2D3E4F /* FestivalRow.swift */; };
+		3B4C5D6E7F8A9B0C1D2E3F4A /* ReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B5C6D7E8F9A0B1C2D3E4F5A /* ReviewCard.swift */; };
+		42451DD3CD4B66CB8B8D416D /* EventDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5576F8EA374798199B1E3965 /* EventDetailSheet.swift */; };
+		4A7603B2E090BCEC0050F12E /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 610AF604FA066253843BBACF /* KeychainAccess */; };
+		4C5D6E7F8A9B0C1D2E3F4A5B /* ReviewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C6D7E8F9A0B1C2D3E4F5A6B /* ReviewEditorView.swift */; };
+		55B79A07F475A1A3A694CD87 /* TripsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AD7FB22EC61F2D221939A55 /* TripsView.swift */; };
+		5C3A241E2E8BFF76A96D502B /* SchengenCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9323453E67E70F7AADBA2F /* SchengenCalculator.swift */; };
+		5D6E7F8A9B0C1D2E3F4A5B6C /* TripCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D7E8F9A0B1C2D3E4F5A6B7C /* TripCard.swift */; };
+		5E6F7A8B9C0D1E2F3A4B5C6D /* TripEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E7F8A9B0C1D2E3F4A5B6C7D /* TripEditorView.swift */; };
+		5F6A7B8C9D0E1F2A3B4C5D6E /* TripPlaceRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F7A8B9C0D1E2F3A4B5C6D7E /* TripPlaceRow.swift */; };
+		5F7A8B9C0D1E2F3A4B5C6D7F /* PTODayRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F8A9B0C1D2E3F4A5B6C7D8E /* PTODayRow.swift */; };
+		636D3C247873CEAE332B9835 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A892226095756870F56FC7 /* Event.swift */; };
+		66AC164290BC65B9A107A608 /* SupabaseServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E7162126846B0FC40C67AF /* SupabaseServiceProtocol.swift */; };
+		6ABCEBE98931BCEB350104D3 /* ReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BEDA5BE420B7FAB2C7279E5 /* ReviewsView.swift */; };
+		821A7B1898E269139A0CBC92 /* SalsaEventTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7A24FFD1AE97E0BCBE0AB7D /* SalsaEventTrackerApp.swift */; };
+		86A070491BBAAF8F58080D58 /* DanceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C0E3562F903890C0C7978E /* DanceStyle.swift */; };
+		978605136A14F165781BB1CE /* AuthServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094FC3326859578B38B90B57 /* AuthServiceProtocol.swift */; };
+		993A431AE645F062EFEAB541 /* DateUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B2BB9E05EFB8E44A49350D1 /* DateUtils.swift */; };
+		A62F888BBF20CD49DAA800C6 /* Trip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DB26F8D96FA18F0EFBFE853 /* Trip.swift */; };
+		AC8135D0155A2F2512E22C66 /* Review.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093C8067376B1F23D0F1E6A1 /* Review.swift */; };
+		AF0E1F8CAA96278D25FD68D1 /* TextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02029C056A1B09CB9A09B2D /* TextUtils.swift */; };
+		B128F9D94590967138657C41 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35E0551C108252163DD346D6 /* AuthService.swift */; };
+		B95101C69145A806B769C73D /* FestivalListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E9CDEEAC1FE846AB150752D /* FestivalListView.swift */; };
+		C46E797BC91AC77482446040 /* EventCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50AD84973831C7FD962F2218 /* EventCard.swift */; };
+		D8485425C9F1D14357F60859 /* AppModel+Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94B656CBCCD0549D224FA74 /* AppModel+Types.swift */; };
+		DE5CBE9697C53EF463B8FE0F /* EventListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F65785CAF66DDF79762F8DF /* EventListView.swift */; };
+		DF1F82946ACD7422BAD229D2 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26DC187D92196632FCDD56FE /* AppModel.swift */; };
+		E013E0F942A06F8E909388A7 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F9950F0C5E36318614ECBE /* SupabaseService.swift */; };
+		EFD33AEE6C9F8144634DA59F /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A6880B5E1593EABD7D335F5 /* SupabaseConfig.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		01A892226095756870F56FC7 /* Event.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
+		093C8067376B1F23D0F1E6A1 /* Review.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Review.swift; sourceTree = "<group>"; };
+		094FC3326859578B38B90B57 /* AuthServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthServiceProtocol.swift; sourceTree = "<group>"; };
+		0AD7FB22EC61F2D221939A55 /* TripsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripsView.swift; sourceTree = "<group>"; };
+		0CF99A41B687D5A34843675F /* ReviewScoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewScoring.swift; sourceTree = "<group>"; };
+		1A2B3C4D5E6F7A8B9C0D1E2F /* CalendarDayCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDayCell.swift; sourceTree = "<group>"; };
+		1DB26F8D96FA18F0EFBFE853 /* Trip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trip.swift; sourceTree = "<group>"; };
+		26DC187D92196632FCDD56FE /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		35E0551C108252163DD346D6 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		3A4B5C6D7E8F9A0B1C2D3E4F /* FestivalRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestivalRow.swift; sourceTree = "<group>"; };
+		4A6880B5E1593EABD7D335F5 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
+		4B5C6D7E8F9A0B1C2D3E4F5A /* ReviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCard.swift; sourceTree = "<group>"; };
+		4BABAA0EE2CEE585C9BFE068 /* SalsaEventTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SalsaEventTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		50AD84973831C7FD962F2218 /* EventCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventCard.swift; sourceTree = "<group>"; };
+		5576F8EA374798199B1E3965 /* EventDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailSheet.swift; sourceTree = "<group>"; };
+		5B109F68B9DF4DED52107146 /* CalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarView.swift; sourceTree = "<group>"; };
+		5C6D7E8F9A0B1C2D3E4F5A6B /* ReviewEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewEditorView.swift; sourceTree = "<group>"; };
+		5F65785CAF66DDF79762F8DF /* EventListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventListView.swift; sourceTree = "<group>"; };
+		6D7E8F9A0B1C2D3E4F5A6B7C /* TripCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripCard.swift; sourceTree = "<group>"; };
+		6E7F8A9B0C1D2E3F4A5B6C7D /* TripEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripEditorView.swift; sourceTree = "<group>"; };
+		6F7A8B9C0D1E2F3A4B5C6D7E /* TripPlaceRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPlaceRow.swift; sourceTree = "<group>"; };
+		6F8A9B0C1D2E3F4A5B6C7D8E /* PTODayRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PTODayRow.swift; sourceTree = "<group>"; };
+		7BEDA5BE420B7FAB2C7279E5 /* ReviewsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewsView.swift; sourceTree = "<group>"; };
+		87E7162126846B0FC40C67AF /* SupabaseServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseServiceProtocol.swift; sourceTree = "<group>"; };
+		9599156F20C0975B6BEB623F /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		9B2BB9E05EFB8E44A49350D1 /* DateUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateUtils.swift; sourceTree = "<group>"; };
+		9E9CDEEAC1FE846AB150752D /* FestivalListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestivalListView.swift; sourceTree = "<group>"; };
+		A02029C056A1B09CB9A09B2D /* TextUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextUtils.swift; sourceTree = "<group>"; };
+		B3C0E3562F903890C0C7978E /* DanceStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DanceStyle.swift; sourceTree = "<group>"; };
+		B7A24FFD1AE97E0BCBE0AB7D /* SalsaEventTrackerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SalsaEventTrackerApp.swift; sourceTree = "<group>"; };
+		C662B22E1BCE553B7E3EDF8D /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		C9F9950F0C5E36318614ECBE /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		E3AE211076B1D1C8FD764BA2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F94B656CBCCD0549D224FA74 /* AppModel+Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Types.swift"; sourceTree = "<group>"; };
+		FB9323453E67E70F7AADBA2F /* SchengenCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchengenCalculator.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		290126E0F60EA747F609A42E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4A7603B2E090BCEC0050F12E /* KeychainAccess in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0AAA2AE675421A3884664ADC /* EventDetail */ = {
+			isa = PBXGroup;
+			children = (
+				5576F8EA374798199B1E3965 /* EventDetailSheet.swift */,
+			);
+			path = EventDetail;
+			sourceTree = "<group>";
+		};
+		260496EC144EA1DEBC347716 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				9599156F20C0975B6BEB623F /* LoginView.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		46BB8D6C907FE1D16621D968 = {
+			isa = PBXGroup;
+			children = (
+				D732026CF2E6A415B8E8A666 /* SalsaEventTracker */,
+				93A693AC97AF63B07BF28E35 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		51B5341600228027F8FF6C3D /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				9B2BB9E05EFB8E44A49350D1 /* DateUtils.swift */,
+				0CF99A41B687D5A34843675F /* ReviewScoring.swift */,
+				FB9323453E67E70F7AADBA2F /* SchengenCalculator.swift */,
+				A02029C056A1B09CB9A09B2D /* TextUtils.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		7448A7C165A4E000BE279570 /* EventList */ = {
+			isa = PBXGroup;
+			children = (
+				50AD84973831C7FD962F2218 /* EventCard.swift */,
+				5F65785CAF66DDF79762F8DF /* EventListView.swift */,
+			);
+			path = EventList;
+			sourceTree = "<group>";
+		};
+		7B41C94B32F8F7DEBFB4FB35 /* Trips */ = {
+			isa = PBXGroup;
+			children = (
+				6F8A9B0C1D2E3F4A5B6C7D8E /* PTODayRow.swift */,
+				6D7E8F9A0B1C2D3E4F5A6B7C /* TripCard.swift */,
+				6E7F8A9B0C1D2E3F4A5B6C7D /* TripEditorView.swift */,
+				6F7A8B9C0D1E2F3A4B5C6D7E /* TripPlaceRow.swift */,
+				0AD7FB22EC61F2D221939A55 /* TripsView.swift */,
+			);
+			path = Trips;
+			sourceTree = "<group>";
+		};
+		93A693AC97AF63B07BF28E35 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4BABAA0EE2CEE585C9BFE068 /* SalsaEventTracker.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9987A9CE3BE9C0B3A752667B /* FestivalList */ = {
+			isa = PBXGroup;
+			children = (
+				9E9CDEEAC1FE846AB150752D /* FestivalListView.swift */,
+				3A4B5C6D7E8F9A0B1C2D3E4F /* FestivalRow.swift */,
+			);
+			path = FestivalList;
+			sourceTree = "<group>";
+		};
+		AB77965AAD6D7E04CDD9D6E9 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B3C0E3562F903890C0C7978E /* DanceStyle.swift */,
+				01A892226095756870F56FC7 /* Event.swift */,
+				093C8067376B1F23D0F1E6A1 /* Review.swift */,
+				1DB26F8D96FA18F0EFBFE853 /* Trip.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		AF3A81B13C7DD86B2337FF13 /* Calendar */ = {
+			isa = PBXGroup;
+			children = (
+				1A2B3C4D5E6F7A8B9C0D1E2F /* CalendarDayCell.swift */,
+				5B109F68B9DF4DED52107146 /* CalendarView.swift */,
+			);
+			path = Calendar;
+			sourceTree = "<group>";
+		};
+		CAB53567A50356D7755CB8A8 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				35E0551C108252163DD346D6 /* AuthService.swift */,
+				094FC3326859578B38B90B57 /* AuthServiceProtocol.swift */,
+				4A6880B5E1593EABD7D335F5 /* SupabaseConfig.swift */,
+				C9F9950F0C5E36318614ECBE /* SupabaseService.swift */,
+				87E7162126846B0FC40C67AF /* SupabaseServiceProtocol.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		D732026CF2E6A415B8E8A666 /* SalsaEventTracker */ = {
+			isa = PBXGroup;
+			children = (
+				26DC187D92196632FCDD56FE /* AppModel.swift */,
+				F94B656CBCCD0549D224FA74 /* AppModel+Types.swift */,
+				E3AE211076B1D1C8FD764BA2 /* Info.plist */,
+				B7A24FFD1AE97E0BCBE0AB7D /* SalsaEventTrackerApp.swift */,
+				AB77965AAD6D7E04CDD9D6E9 /* Models */,
+				CAB53567A50356D7755CB8A8 /* Services */,
+				51B5341600228027F8FF6C3D /* Utils */,
+				F8B28AA97DD5CE6EE14B2FE0 /* Views */,
+			);
+			path = SalsaEventTracker;
+			sourceTree = "<group>";
+		};
+		DA4CAF63F0882C7D787DDC6F /* Reviews */ = {
+			isa = PBXGroup;
+			children = (
+				4B5C6D7E8F9A0B1C2D3E4F5A /* ReviewCard.swift */,
+				5C6D7E8F9A0B1C2D3E4F5A6B /* ReviewEditorView.swift */,
+				7BEDA5BE420B7FAB2C7279E5 /* ReviewsView.swift */,
+			);
+			path = Reviews;
+			sourceTree = "<group>";
+		};
+		F8B28AA97DD5CE6EE14B2FE0 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				C662B22E1BCE553B7E3EDF8D /* RootView.swift */,
+				260496EC144EA1DEBC347716 /* Auth */,
+				AF3A81B13C7DD86B2337FF13 /* Calendar */,
+				0AAA2AE675421A3884664ADC /* EventDetail */,
+				7448A7C165A4E000BE279570 /* EventList */,
+				9987A9CE3BE9C0B3A752667B /* FestivalList */,
+				DA4CAF63F0882C7D787DDC6F /* Reviews */,
+				7B41C94B32F8F7DEBFB4FB35 /* Trips */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FDD36B97F7B516BB7838A79A /* SalsaEventTracker */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9E561A1624B35608F87CC9AA /* Build configuration list for PBXNativeTarget "SalsaEventTracker" */;
+			buildPhases = (
+				814CBE2749F7A18AC1F283E6 /* Sources */,
+				290126E0F60EA747F609A42E /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SalsaEventTracker;
+			packageProductDependencies = (
+				610AF604FA066253843BBACF /* KeychainAccess */,
+			);
+			productName = SalsaEventTracker;
+			productReference = 4BABAA0EE2CEE585C9BFE068 /* SalsaEventTracker.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C25FC2AE08E43975A18738FD /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+			};
+			buildConfigurationList = 6781F375E98303B1D730D32E /* Build configuration list for PBXProject "SalsaEventTracker" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 46BB8D6C907FE1D16621D968;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				30298CBBD08A3D3007005251 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 93A693AC97AF63B07BF28E35 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FDD36B97F7B516BB7838A79A /* SalsaEventTracker */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		814CBE2749F7A18AC1F283E6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D8485425C9F1D14357F60859 /* AppModel+Types.swift in Sources */,
+				DF1F82946ACD7422BAD229D2 /* AppModel.swift in Sources */,
+				B128F9D94590967138657C41 /* AuthService.swift in Sources */,
+				978605136A14F165781BB1CE /* AuthServiceProtocol.swift in Sources */,
+				0499130105CF002B94A7D4DF /* CalendarView.swift in Sources */,
+				86A070491BBAAF8F58080D58 /* DanceStyle.swift in Sources */,
+				993A431AE645F062EFEAB541 /* DateUtils.swift in Sources */,
+				636D3C247873CEAE332B9835 /* Event.swift in Sources */,
+				C46E797BC91AC77482446040 /* EventCard.swift in Sources */,
+				42451DD3CD4B66CB8B8D416D /* EventDetailSheet.swift in Sources */,
+				DE5CBE9697C53EF463B8FE0F /* EventListView.swift in Sources */,
+				B95101C69145A806B769C73D /* FestivalListView.swift in Sources */,
+				117699514445A180ACAE79A6 /* LoginView.swift in Sources */,
+				AC8135D0155A2F2512E22C66 /* Review.swift in Sources */,
+				23E5A20CF5BF4A9017286DD7 /* ReviewScoring.swift in Sources */,
+				6ABCEBE98931BCEB350104D3 /* ReviewsView.swift in Sources */,
+				252C7D9550835A9C7AD50905 /* RootView.swift in Sources */,
+				821A7B1898E269139A0CBC92 /* SalsaEventTrackerApp.swift in Sources */,
+				5C3A241E2E8BFF76A96D502B /* SchengenCalculator.swift in Sources */,
+				EFD33AEE6C9F8144634DA59F /* SupabaseConfig.swift in Sources */,
+				E013E0F942A06F8E909388A7 /* SupabaseService.swift in Sources */,
+				66AC164290BC65B9A107A608 /* SupabaseServiceProtocol.swift in Sources */,
+				AF0E1F8CAA96278D25FD68D1 /* TextUtils.swift in Sources */,
+				A62F888BBF20CD49DAA800C6 /* Trip.swift in Sources */,
+				0A1B2C3D4E5F6A7B8C9D0E1F /* CalendarDayCell.swift in Sources */,
+				2A3B4C5D6E7F8A9B0C1D2E3F /* FestivalRow.swift in Sources */,
+				5F7A8B9C0D1E2F3A4B5C6D7F /* PTODayRow.swift in Sources */,
+				3B4C5D6E7F8A9B0C1D2E3F4A /* ReviewCard.swift in Sources */,
+				4C5D6E7F8A9B0C1D2E3F4A5B /* ReviewEditorView.swift in Sources */,
+				5D6E7F8A9B0C1D2E3F4A5B6C /* TripCard.swift in Sources */,
+				5E6F7A8B9C0D1E2F3A4B5C6D /* TripEditorView.swift in Sources */,
+				5F6A7B8C9D0E1F2A3B4C5D6E /* TripPlaceRow.swift in Sources */,
+				55B79A07F475A1A3A694CD87 /* TripsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		6E977E5F5B7B8CFC669B7A90 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		7D3504361CCCD1E18F2224B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = MG3K52T7N9;
+				INFOPLIST_FILE = SalsaEventTracker/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.salsaeventtracker.ios;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		88A3E4E4D8A9734EDEF4068A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		9C5646C90E23E4831AE9F5B0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = MG3K52T7N9;
+				INFOPLIST_FILE = SalsaEventTracker/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.salsaeventtracker.ios;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6781F375E98303B1D730D32E /* Build configuration list for PBXProject "SalsaEventTracker" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6E977E5F5B7B8CFC669B7A90 /* Debug */,
+				88A3E4E4D8A9734EDEF4068A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9E561A1624B35608F87CC9AA /* Build configuration list for PBXNativeTarget "SalsaEventTracker" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9C5646C90E23E4831AE9F5B0 /* Debug */,
+				7D3504361CCCD1E18F2224B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		30298CBBD08A3D3007005251 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.2.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		610AF604FA066253843BBACF /* KeychainAccess */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 30298CBBD08A3D3007005251 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
+			productName = KeychainAccess;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = C25FC2AE08E43975A18738FD /* Project object */;
+}

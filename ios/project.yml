@@ -1,0 +1,38 @@
+name: SalsaEventTracker
+options:
+  bundleIdPrefix: com.salsaeventtracker
+  minimumXcodeGenVersion: "2.18.0"
+  createIntermediateGroups: true
+packages:
+  KeychainAccess:
+    url: https://github.com/kishikawakatsumi/KeychainAccess
+    from: "4.2.2"
+targets:
+  SalsaEventTracker:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: SalsaEventTracker
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        PRODUCT_BUNDLE_IDENTIFIER: com.salsaeventtracker.ios
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        INFOPLIST_FILE: SalsaEventTracker/Info.plist
+    dependencies:
+      - package: KeychainAccess
+
+  SalsaEventTrackerTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: SalsaEventTrackerTests
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: SalsaEventTracker
