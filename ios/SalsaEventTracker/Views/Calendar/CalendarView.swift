@@ -3,7 +3,8 @@ import SwiftUI
 
 struct CalendarView: View {
     @Environment(AppModel.self) private var model
-    private let weekdays = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+    // Match web app: Sun–Sat column order
+    private let weekdays = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
 
     private var gridDays: [Date?] {
         DateUtils.calendarGrid(for: model.selectedYearMonth)
@@ -16,38 +17,85 @@ struct CalendarView: View {
         }
     }
 
+    // Months that have at least one event — used for the jump picker
+    private var monthsWithEvents: [String] {
+        var seen = Set<String>()
+        return model.flatEvents.compactMap { flat -> String? in
+            let ym = String(flat.edition.startDate.prefix(7))
+            return seen.insert(ym).inserted ? ym : nil
+        }.sorted()
+    }
+
     var body: some View {
         @Bindable var model = model
         NavigationStack {
             VStack(spacing: 0) {
-                // Month navigation
-                HStack {
+                // ── Month navigation row ───────────────────────────────────
+                HStack(spacing: 12) {
                     Button {
-                        model.selectedYearMonth = previousMonth(model.selectedYearMonth)
-                    } label: { Image(systemName: "chevron.left") }
-                    Spacer()
+                        model.selectedYearMonth = adjustMonth(model.selectedYearMonth, by: -1)
+                    } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+
                     Text(DateUtils.monthLabel(model.selectedYearMonth))
                         .font(.headline)
-                    Spacer()
+                        .frame(maxWidth: .infinity)
+
                     Button {
-                        model.selectedYearMonth = nextMonth(model.selectedYearMonth)
-                    } label: { Image(systemName: "chevron.right") }
+                        model.selectedYearMonth = adjustMonth(model.selectedYearMonth, by: 1)
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
 
-                // Weekday headers
-                HStack {
+                // ── Jump to month picker + filter toggles ──────────────────
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        // Month jump picker
+                        if !monthsWithEvents.isEmpty {
+                            Picker("Jump", selection: $model.selectedYearMonth) {
+                                ForEach(monthsWithEvents, id: \.self) { ym in
+                                    Text(DateUtils.monthLabel(ym)).tag(ym)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .labelsHidden()
+                            .buttonStyle(.bordered)
+                        }
+
+                        Toggle("Attended only", isOn: $model.calendarAttendedOnly)
+                            .toggleStyle(.button)
+                            .font(.subheadline)
+
+                        Toggle("Hide duplicates", isOn: $model.calendarHideDuplicateAttended)
+                            .toggleStyle(.button)
+                            .font(.subheadline)
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.vertical, 6)
+
+                // ── Weekday column headers ─────────────────────────────────
+                HStack(spacing: 0) {
                     ForEach(weekdays, id: \.self) { day in
-                        Text(day).font(.caption).foregroundStyle(.secondary)
+                        Text(day)
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity)
                     }
                 }
                 .padding(.horizontal, 8)
+                .padding(.bottom, 4)
 
-                // Calendar grid
-                let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
-                LazyVGrid(columns: columns, spacing: 4) {
+                // ── Calendar grid ──────────────────────────────────────────
+                let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
+                LazyVGrid(columns: columns, spacing: 2) {
                     ForEach(Array(gridDays.enumerated()), id: \.0) { _, date in
                         if let date {
                             let dateStr = DateUtils.string(from: date)
@@ -67,7 +115,7 @@ struct CalendarView: View {
 
                 Divider().padding(.top, 8)
 
-                // Events on selected day
+                // ── Events on selected day ─────────────────────────────────
                 let dayEvents = eventsOn(DateUtils.date(from: model.selectedCalendarDate) ?? Date())
                 if dayEvents.isEmpty {
                     Spacer()
@@ -97,9 +145,6 @@ struct CalendarView: View {
             }
         }
     }
-
-    private func previousMonth(_ ym: String) -> String { adjustMonth(ym, by: -1) }
-    private func nextMonth(_ ym: String) -> String { adjustMonth(ym, by: 1) }
 
     private func adjustMonth(_ ym: String, by delta: Int) -> String {
         guard let date = DateUtils.date(from: ym + "-01"),

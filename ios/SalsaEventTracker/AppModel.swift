@@ -28,7 +28,7 @@ final class AppModel {
         appError = error
     }
 
-    // Event list filters
+    // Event list (Calendar List tab) filters
     var eventSortOption: EventSortOption = .date
     var showHistoricalEvents: Bool = false
     var filterYear: String = ""
@@ -36,12 +36,21 @@ final class AppModel {
     var filterCountry: String = ""
     var filterSize: String = ""
 
+    // Festival list (Event List tab) filters
+    var festivalFilterYear: String = ""
+    var festivalFilterMonth: String = ""
+    var festivalFilterCountry: String = ""
+    var festivalFilterSize: String = ""
+
     // Calendar
     var selectedYearMonth: String = {
         let today = DateUtils.todayString()
         return String(today.prefix(7))
     }()
     var selectedCalendarDate: String = DateUtils.todayString()
+    // Calendar filters (matching web app toggles)
+    var calendarAttendedOnly: Bool = false
+    var calendarHideDuplicateAttended: Bool = false
 
     // Trips filters
     var showHistoricalTrips: Bool = false
