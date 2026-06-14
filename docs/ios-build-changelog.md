@@ -27,7 +27,7 @@ Status: PR open. Not yet uploaded.
 ### Validation
 
 - Build number: `CURRENT_PROJECT_VERSION = 2`, `MARKETING_VERSION = 1.0`.
-- Simulator build: pending.
+- Simulator build: `xcodebuild -project ios/SalsaEventTracker.xcodeproj -scheme SalsaEventTracker -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build` — **BUILD SUCCEEDED**.
 - Device archive: pending.
 - App Store Connect upload: pending.
 
