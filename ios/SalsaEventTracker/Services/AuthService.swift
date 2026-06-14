@@ -65,17 +65,12 @@ final class AuthService: AuthServiceProtocol {
 
     private func restoreSession() {
         guard
-            let accessTokenOpt = try? keychain.get("accessToken"),
-            let accessToken = accessTokenOpt,
-            let refreshTokenOpt = try? keychain.get("refreshToken"),
-            let refreshToken = refreshTokenOpt,
-            let expiresAtStrOpt = try? keychain.get("expiresAt"),
-            let expiresAtStr = expiresAtStrOpt,
+            let accessToken = try? keychain.get("accessToken"),
+            let refreshToken = try? keychain.get("refreshToken"),
+            let expiresAtStr = try? keychain.get("expiresAt"),
             let expiresAtTs = Double(expiresAtStr),
-            let userIdOpt = try? keychain.get("userId"),
-            let userId = userIdOpt,
-            let emailOpt = try? keychain.get("email"),
-            let email = emailOpt
+            let userId = try? keychain.get("userId"),
+            let email = try? keychain.get("email")
         else { return }
         let expiresAt = Date(timeIntervalSince1970: expiresAtTs)
         guard expiresAt > Date() else { try? keychain.removeAll(); return }

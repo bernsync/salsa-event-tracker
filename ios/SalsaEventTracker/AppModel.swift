@@ -65,9 +65,9 @@ final class AppModel {
     let supabase: any SupabaseServiceProtocol
 
     init(supabase: any SupabaseServiceProtocol = SupabaseService(),
-         authService: any AuthServiceProtocol = AuthService()) {
+         authService: (any AuthServiceProtocol)? = nil) {
         self.supabase = supabase
-        self.authService = authService
+        self.authService = authService ?? AuthService()
     }
 
     // MARK: - Load
