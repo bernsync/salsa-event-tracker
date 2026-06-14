@@ -63,3 +63,51 @@ Rules:
 - [ ] Does any new service skip its protocol counterpart?
 - [ ] Does any new `enum` or support type live inline in `AppModel.swift` instead of `AppModel+Types.swift`?
 - [ ] Does any new view exceed 250 lines without extracting sub-views?
+
+## Pre-launch Supabase security checklist (REQUIRED — do before first real use)
+
+These are one-time manual steps in the Supabase dashboard. None require code changes. **Do not skip.**
+
+### 1. Disable public signups
+Supabase Dashboard → Authentication → Providers → Email → toggle **"Enable Email Signups"** OFF.
+
+Smoke test — must return `{"code":422,...}` or similar error, never `200`:
+```bash
+curl -X POST "https://gikiqligsfldjfrwllsa.supabase.co/auth/v1/signup" \
+  -H "apikey: sb_publishable_cEHlxpSG8Zl0Q2DxGIpwpw_9EdPcHS-" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"test1234"}'
+```
+
+### 2. Disable schema introspection
+Supabase Dashboard → Settings → API → toggle **"Enable Schema Introspection"** (also "Expose schema") OFF.
+
+Verify: `GET /rest/v1/` with only the anon key should return an empty object or 401, not an OpenAPI schema.
+
+### 3. Verify RLS and anon role on private tables
+Run both commands — each must return `[]` (empty array). If either returns rows, RLS is misconfigured and private data is exposed to anyone with the anon key:
+
+```bash
+curl "https://gikiqligsfldjfrwllsa.supabase.co/rest/v1/personal_trips?select=*" \
+  -H "apikey: sb_publishable_cEHlxpSG8Zl0Q2DxGIpwpw_9EdPcHS-"
+
+curl "https://gikiqligsfldjfrwllsa.supabase.co/rest/v1/reviews?select=*" \
+  -H "apikey: sb_publishable_cEHlxpSG8Zl0Q2DxGIpwpw_9EdPcHS-"
+```
+
+If rows are returned: go to Supabase Dashboard → Table Editor → confirm RLS is ON for `personal_trips`, `personal_trip_places`, `personal_pto_days`, and `reviews`. Also run in the SQL editor:
+```sql
+REVOKE ALL ON personal_trips FROM anon;
+REVOKE ALL ON personal_trip_places FROM anon;
+REVOKE ALL ON personal_pto_days FROM anon;
+REVOKE ALL ON reviews FROM anon;
+```
+
+### 4. Set auth rate limits
+Supabase Dashboard → Authentication → Rate Limits:
+- Email sign-ins per hour: **5**
+- Token refresh per hour: **30**
+
+### 5. Enable opaque auth errors
+Supabase Dashboard → Authentication → Settings → enable **"Obscure email-based errors"**.
+This prevents an attacker from enumerating valid email addresses via different error messages.
