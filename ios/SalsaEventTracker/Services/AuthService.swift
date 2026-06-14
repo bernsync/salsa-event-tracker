@@ -65,17 +65,22 @@ final class AuthService: AuthServiceProtocol {
 
     private func restoreSession() {
         guard
-            let accessToken = try? keychain.get("accessToken"),
-            let refreshToken = try? keychain.get("refreshToken"),
-            let expiresAtStr = try? keychain.get("expiresAt"),
-            let expiresAtTs = Double(expiresAtStr ?? ""),
-            let userId = try? keychain.get("userId"),
-            let email = try? keychain.get("email")
+            let accessTokenOpt = try? keychain.get("accessToken"),
+            let accessToken = accessTokenOpt,
+            let refreshTokenOpt = try? keychain.get("refreshToken"),
+            let refreshToken = refreshTokenOpt,
+            let expiresAtStrOpt = try? keychain.get("expiresAt"),
+            let expiresAtStr = expiresAtStrOpt,
+            let expiresAtTs = Double(expiresAtStr),
+            let userIdOpt = try? keychain.get("userId"),
+            let userId = userIdOpt,
+            let emailOpt = try? keychain.get("email"),
+            let email = emailOpt
         else { return }
         let expiresAt = Date(timeIntervalSince1970: expiresAtTs)
         guard expiresAt > Date() else { try? keychain.removeAll(); return }
         session = AuthSession(accessToken: accessToken, refreshToken: refreshToken,
-                              expiresAt: expiresAt, userId: userId ?? "", email: email ?? "")
+                              expiresAt: expiresAt, userId: userId, email: email)
     }
 
     // Minimal JWT decode (base64url payload only — no signature verification needed,
