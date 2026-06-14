@@ -6,7 +6,8 @@ enum DateUtils {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(secondsFromGMT: 0)
+        // Use local timezone so "today" matches the device's calendar date
+        f.timeZone = .current
         return f
     }()
 
@@ -51,14 +52,16 @@ enum DateUtils {
     }
 
     // Returns all calendar days for the month containing `yearMonth` ("YYYY-MM")
-    // Padded with nil for days before Monday-aligned start
+    // Padded with nil for days before Sunday-aligned start (matching web app Sun–Sat grid)
     static func calendarGrid(for yearMonth: String) -> [Date?] {
         guard let firstDay = date(from: yearMonth + "-01") else { return [] }
-        var cal = Calendar.current
-        cal.firstWeekday = 2 // Monday
+        var cal = Calendar(identifier: .gregorian)
+        cal.locale = Locale(identifier: "en_US_POSIX")
+        cal.firstWeekday = 1 // Sunday
         let range = cal.range(of: .day, in: .month, for: firstDay)!
         let firstWeekday = cal.component(.weekday, from: firstDay)
-        let offset = (firstWeekday - cal.firstWeekday + 7) % 7
+        // weekday: 1=Sun … 7=Sat; offset = days before first Sunday column
+        let offset = (firstWeekday - 1 + 7) % 7
         var days: [Date?] = Array(repeating: nil, count: offset)
         for day in 1...range.count {
             var comps = cal.dateComponents([.year, .month], from: firstDay)
