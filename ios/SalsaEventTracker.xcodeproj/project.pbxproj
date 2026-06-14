@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		23E5A20CF5BF4A9017286DD7 /* ReviewScoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF99A41B687D5A34843675F /* ReviewScoring.swift */; };
+		252C7D9550835A9C7AD50905 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C662B22E1BCE553B7E3EDF8D /* RootView.swift */; };
 		4A7603B2E090BCEC0050F12E /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 610AF604FA066253843BBACF /* KeychainAccess */; };
 		5C3A241E2E8BFF76A96D502B /* SchengenCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB9323453E67E70F7AADBA2F /* SchengenCalculator.swift */; };
 		636D3C247873CEAE332B9835 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A892226095756870F56FC7 /* Event.swift */; };
@@ -20,6 +21,8 @@
 		AC8135D0155A2F2512E22C66 /* Review.swift in Sources */ = {isa = PBXBuildFile; fileRef = 093C8067376B1F23D0F1E6A1 /* Review.swift */; };
 		AF0E1F8CAA96278D25FD68D1 /* TextUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02029C056A1B09CB9A09B2D /* TextUtils.swift */; };
 		B128F9D94590967138657C41 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35E0551C108252163DD346D6 /* AuthService.swift */; };
+		D8485425C9F1D14357F60859 /* AppModel+Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = F94B656CBCCD0549D224FA74 /* AppModel+Types.swift */; };
+		DF1F82946ACD7422BAD229D2 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26DC187D92196632FCDD56FE /* AppModel.swift */; };
 		E013E0F942A06F8E909388A7 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9F9950F0C5E36318614ECBE /* SupabaseService.swift */; };
 		EFD33AEE6C9F8144634DA59F /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A6880B5E1593EABD7D335F5 /* SupabaseConfig.swift */; };
 /* End PBXBuildFile section */
@@ -30,6 +33,7 @@
 		094FC3326859578B38B90B57 /* AuthServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthServiceProtocol.swift; sourceTree = "<group>"; };
 		0CF99A41B687D5A34843675F /* ReviewScoring.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewScoring.swift; sourceTree = "<group>"; };
 		1DB26F8D96FA18F0EFBFE853 /* Trip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Trip.swift; sourceTree = "<group>"; };
+		26DC187D92196632FCDD56FE /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		35E0551C108252163DD346D6 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		4A6880B5E1593EABD7D335F5 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
 		4BABAA0EE2CEE585C9BFE068 /* SalsaEventTracker.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SalsaEventTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -38,8 +42,10 @@
 		A02029C056A1B09CB9A09B2D /* TextUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextUtils.swift; sourceTree = "<group>"; };
 		B3C0E3562F903890C0C7978E /* DanceStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DanceStyle.swift; sourceTree = "<group>"; };
 		B7A24FFD1AE97E0BCBE0AB7D /* SalsaEventTrackerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SalsaEventTrackerApp.swift; sourceTree = "<group>"; };
+		C662B22E1BCE553B7E3EDF8D /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		C9F9950F0C5E36318614ECBE /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
 		E3AE211076B1D1C8FD764BA2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		F94B656CBCCD0549D224FA74 /* AppModel+Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Types.swift"; sourceTree = "<group>"; };
 		FB9323453E67E70F7AADBA2F /* SchengenCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SchengenCalculator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -108,13 +114,24 @@
 		D732026CF2E6A415B8E8A666 /* SalsaEventTracker */ = {
 			isa = PBXGroup;
 			children = (
+				26DC187D92196632FCDD56FE /* AppModel.swift */,
+				F94B656CBCCD0549D224FA74 /* AppModel+Types.swift */,
 				E3AE211076B1D1C8FD764BA2 /* Info.plist */,
 				B7A24FFD1AE97E0BCBE0AB7D /* SalsaEventTrackerApp.swift */,
 				AB77965AAD6D7E04CDD9D6E9 /* Models */,
 				CAB53567A50356D7755CB8A8 /* Services */,
 				51B5341600228027F8FF6C3D /* Utils */,
+				F8B28AA97DD5CE6EE14B2FE0 /* Views */,
 			);
 			path = SalsaEventTracker;
+			sourceTree = "<group>";
+		};
+		F8B28AA97DD5CE6EE14B2FE0 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				C662B22E1BCE553B7E3EDF8D /* RootView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -177,6 +194,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D8485425C9F1D14357F60859 /* AppModel+Types.swift in Sources */,
+				DF1F82946ACD7422BAD229D2 /* AppModel.swift in Sources */,
 				B128F9D94590967138657C41 /* AuthService.swift in Sources */,
 				978605136A14F165781BB1CE /* AuthServiceProtocol.swift in Sources */,
 				86A070491BBAAF8F58080D58 /* DanceStyle.swift in Sources */,
@@ -184,6 +203,7 @@
 				636D3C247873CEAE332B9835 /* Event.swift in Sources */,
 				AC8135D0155A2F2512E22C66 /* Review.swift in Sources */,
 				23E5A20CF5BF4A9017286DD7 /* ReviewScoring.swift in Sources */,
+				252C7D9550835A9C7AD50905 /* RootView.swift in Sources */,
 				821A7B1898E269139A0CBC92 /* SalsaEventTrackerApp.swift in Sources */,
 				5C3A241E2E8BFF76A96D502B /* SchengenCalculator.swift in Sources */,
 				EFD33AEE6C9F8144634DA59F /* SupabaseConfig.swift in Sources */,
