@@ -16,8 +16,24 @@ struct FestivalListView: View {
     var body: some View {
         @Bindable var model = model
         NavigationStack {
-            List(filteredEvents) { event in
-                FestivalRow(event: event)
+            List {
+                let sevenDaysAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date())
+                    .map { DateUtils.string(from: $0) } ?? ""
+                let recentFlats = model.flatEvents.filter {
+                    ($0.edition.addedOn ?? "") >= sevenDaysAgo && !$0.edition.isHistorical
+                }
+                if !recentFlats.isEmpty {
+                    Section("Recently Added") {
+                        ForEach(recentFlats.prefix(5)) { flat in
+                            FestivalRow(event: flat.event)
+                        }
+                    }
+                }
+                Section("All Festivals") {
+                    ForEach(filteredEvents) { event in
+                        FestivalRow(event: event)
+                    }
+                }
             }
             .navigationTitle("Festivals")
             .searchable(text: $model.searchQuery, prompt: "Search festivals…")
