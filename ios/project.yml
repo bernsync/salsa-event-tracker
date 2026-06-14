@@ -22,3 +22,17 @@ targets:
         INFOPLIST_FILE: SalsaEventTracker/Info.plist
     dependencies:
       - package: KeychainAccess
+
+  SalsaEventTrackerTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: SalsaEventTrackerTests
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: SalsaEventTracker
