@@ -13,7 +13,7 @@ final class AppModel {
     var reviews: [Review] = []
 
     // MARK: - Auth
-    var authService = AuthService()
+    var authService: any AuthServiceProtocol
     var isSignedIn: Bool { authService.session != nil }
     var currentUserId: String? { authService.session?.userId }
 
@@ -64,8 +64,10 @@ final class AppModel {
     // MARK: - Services
     let supabase: any SupabaseServiceProtocol
 
-    init(supabase: any SupabaseServiceProtocol = SupabaseService()) {
+    init(supabase: any SupabaseServiceProtocol = SupabaseService(),
+         authService: any AuthServiceProtocol = AuthService()) {
         self.supabase = supabase
+        self.authService = authService
     }
 
     // MARK: - Load
@@ -89,19 +91,22 @@ final class AppModel {
 
     func loadPrivateData() async {
         guard let token = authService.session?.accessToken else { return }
+        isLoading = true
+        appError = nil
         do {
             async let tripsTask = supabase.fetchTrips(token: token)
             async let reviewsTask = supabase.fetchReviews(token: token)
             let (fetchedTrips, fetchedReviews) = try await (tripsTask, reviewsTask)
             trips = fetchedTrips
             reviews = fetchedReviews
-        } catch is SupabaseService.AuthError {
+        } catch is ServiceAuthError {
             // Token expired — clear session so sign-in sheet reappears
             setError(.authExpired)
             signOut()
         } catch {
             setError(.loadFailed(error.localizedDescription))
         }
+        isLoading = false
     }
 
     func signIn(email: String, password: String) async throws {

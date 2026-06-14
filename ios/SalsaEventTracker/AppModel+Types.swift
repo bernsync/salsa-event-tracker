@@ -15,6 +15,9 @@ enum EventSortOption: String, CaseIterable {
     case country = "Country"
 }
 
+// Thrown by SupabaseService when the server returns 401; caught by AppModel.loadPrivateData
+enum ServiceAuthError: Error { case tokenExpired }
+
 // Surface errors to the user via AppModel.appError
 enum AppError: LocalizedError, Equatable {
     case loadFailed(String)

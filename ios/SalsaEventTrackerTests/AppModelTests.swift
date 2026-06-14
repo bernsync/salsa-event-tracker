@@ -1,5 +1,6 @@
 // ios/SalsaEventTrackerTests/AppModelTests.swift
 import Foundation
+import Observation
 import Testing
 @testable import SalsaEventTracker
 
@@ -36,6 +37,14 @@ actor MockSupabaseService: SupabaseServiceProtocol {
     func createReview(_ body: [String: Any], token: String) async throws -> Review { fatalError() }
     func updateReview(id: String, body: [String: Any], token: String) async throws {}
     func deleteReview(id: String, token: String) async throws {}
+}
+
+@Observable
+@MainActor
+final class MockAuthService: AuthServiceProtocol {
+    var session: AuthSession? = nil
+    func signIn(email: String, password: String) async throws { }
+    func signOut() { session = nil }
 }
 
 // MARK: - SchengenCalculator tests
@@ -136,12 +145,17 @@ struct AppModelLoadingTests {
         #expect(model.appError != nil)
     }
 
-    @Test("setError(.authExpired) and signOut clear auth state")
+    @Test("loadPrivateData clears auth and sets authExpired error when service returns 401")
     func authExpiryClearsState() async {
-        let mock = MockSupabaseService()
-        let model = AppModel(supabase: mock)
-        model.setError(.authExpired)
-        model.signOut()
+        let supabaseMock = MockSupabaseService()
+        await supabaseMock.setShouldThrow(ServiceAuthError.tokenExpired)
+        let authMock = MockAuthService()
+        authMock.session = AuthSession(
+            accessToken: "tok", refreshToken: "ref",
+            expiresAt: Date().addingTimeInterval(3600),
+            userId: "u1", email: "test@test.com")
+        let model = AppModel(supabase: supabaseMock, authService: authMock)
+        await model.loadPrivateData()
         #expect(model.isSignedIn == false)
         #expect(model.appError == .authExpired)
     }

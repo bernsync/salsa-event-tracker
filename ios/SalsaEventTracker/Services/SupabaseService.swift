@@ -161,14 +161,11 @@ actor SupabaseService: SupabaseServiceProtocol {
         try checkStatus(resp, data: nil)
     }
 
-    // MARK: - Errors
-    enum AuthError: Error { case tokenExpired }
-
     private func checkStatus(_ response: URLResponse, data: Data?) throws {
         guard let http = response as? HTTPURLResponse,
               (200...299).contains(http.statusCode) else {
             if (response as? HTTPURLResponse)?.statusCode == 401 {
-                throw AuthError.tokenExpired
+                throw ServiceAuthError.tokenExpired
             }
             let msg = data.flatMap { String(data: $0, encoding: .utf8) } ?? "Unknown error"
             throw NSError(domain: "SupabaseService", code: (response as? HTTPURLResponse)?.statusCode ?? 0,
