@@ -67,7 +67,7 @@ struct ReviewsView: View {
 
     private func deleteReview(_ review: Review) async {
         guard let token = model.authService.session?.accessToken else { return }
-        try? await SupabaseService().deleteReview(id: review.id, token: token)
+        try? await model.supabase.deleteReview(id: review.id, token: token)
         await model.loadPrivateData()
     }
 }

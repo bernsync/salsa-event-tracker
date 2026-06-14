@@ -3,9 +3,6 @@ import SwiftUI
 
 struct CalendarView: View {
     @Environment(AppModel.self) private var model
-    @State private var selectedFlats: [FlatEvent] = []
-    @State private var showDayEvents = false
-
     private let weekdays = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
 
     private var gridDays: [Date?] {
@@ -60,10 +57,6 @@ struct CalendarView: View {
                             CalendarDayCell(date: date, events: events, isSelected: isSelected, isToday: isToday)
                                 .onTapGesture {
                                     model.selectedCalendarDate = dateStr
-                                    if !events.isEmpty {
-                                        selectedFlats = events
-                                        showDayEvents = true
-                                    }
                                 }
                         } else {
                             Color.clear.frame(height: 44)

@@ -100,7 +100,7 @@ struct TripEditorView: View {
               let email = model.authService.session?.email else { return }
         isSaving = true
         saveError = nil
-        let svc = SupabaseService()
+        let svc = model.supabase
         let tripBody: [String: Any] = [
             "owner_id": userId, "owner_email": email, "label": label,
             "start_date": DateUtils.string(from: startDate),

@@ -62,7 +62,7 @@ final class AppModel {
     }
 
     // MARK: - Services
-    private let supabase: any SupabaseServiceProtocol
+    let supabase: any SupabaseServiceProtocol
 
     init(supabase: any SupabaseServiceProtocol = SupabaseService()) {
         self.supabase = supabase

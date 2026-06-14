@@ -47,7 +47,7 @@ struct SchengenCalculatorTests {
     @Test("no stays → 0 days used")
     func emptyStays() {
         let used = SchengenCalculator.daysUsed(
-            stays: [], checkDate: "2026-06-01", schengenCountries: schengen)
+            stays: [], checkDate: "2026-06-01")
         #expect(used == 0)
     }
 
@@ -55,7 +55,7 @@ struct SchengenCalculatorTests {
     func singleStay() {
         let used = SchengenCalculator.daysUsed(
             stays: [("2026-05-22", "2026-05-31")],
-            checkDate: "2026-06-01", schengenCountries: schengen)
+            checkDate: "2026-06-01")
         #expect(used == 10)
     }
 
@@ -63,7 +63,7 @@ struct SchengenCalculatorTests {
     func outsideWindow() {
         let used = SchengenCalculator.daysUsed(
             stays: [("2025-01-01", "2025-01-30")],
-            checkDate: "2026-06-01", schengenCountries: schengen)
+            checkDate: "2026-06-01")
         #expect(used == 0)
     }
 
@@ -71,7 +71,7 @@ struct SchengenCalculatorTests {
     func capAt90() {
         let used = SchengenCalculator.daysUsed(
             stays: [("2026-03-01", "2026-06-08")],
-            checkDate: "2026-06-01", schengenCountries: schengen)
+            checkDate: "2026-06-01")
         #expect(used == 90)
     }
 }

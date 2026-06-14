@@ -12,8 +12,7 @@ struct TripsView: View {
         let allStays = model.trips.flatMap {
             SchengenCalculator.schengenStays(from: $0.places, schengenCountries: model.schengenCountries)
         }
-        return SchengenCalculator.daysUsed(stays: allStays, checkDate: model.schengenCheckDate,
-                                           schengenCountries: model.schengenCountries)
+        return SchengenCalculator.daysUsed(stays: allStays, checkDate: model.schengenCheckDate)
     }
 
     private var filteredTrips: [Trip] {
@@ -107,8 +106,7 @@ struct TripsView: View {
 
     private func deleteTrip(_ trip: Trip) async {
         guard let token = model.authService.session?.accessToken else { return }
-        let svc = SupabaseService()
-        try? await svc.deleteTrip(id: trip.id, token: token)
+        try? await model.supabase.deleteTrip(id: trip.id, token: token)
         await model.loadPrivateData()
     }
 }

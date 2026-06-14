@@ -112,7 +112,7 @@ struct ReviewEditorView: View {
             "top_reason": topReason, "notes": notes, "visibility": "owner"
         ]
         do {
-            let svc = SupabaseService()
+            let svc = model.supabase
             if let existing = review {
                 try await svc.updateReview(id: existing.id, body: body, token: token)
             } else {

@@ -7,8 +7,7 @@ enum SchengenCalculator {
     // rolling window ending on `checkDate`.
     static func daysUsed(
         stays: [(start: String, end: String)],
-        checkDate: String,
-        schengenCountries: Set<String>
+        checkDate: String
     ) -> Int {
         guard let check = DateUtils.date(from: checkDate) else { return 0 }
         guard let windowStart = Calendar.current.date(byAdding: .day, value: -179, to: check) else { return 0 }
