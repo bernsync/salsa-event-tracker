@@ -8,6 +8,72 @@ Before any App Store Connect or TestFlight upload, add or update the entry for t
 
 ---
 
+## Build 10 - 2026-06-15 - App Store Connect Upload
+
+Branch: `build-10-2026-06-15`
+
+Status: Uploaded to App Store Connect for TestFlight processing. **CONFIRMED.**
+
+### User-Visible Changes
+
+**New features — web app feature parity**
+- **Attending badge**: event cards now show a blue "Attending" pill when a trip place is linked to that event edition.
+- **Watchlist badge**: event cards show an orange "Watchlist" pill for watchlisted events you aren't attending.
+- **Review score badge**: event cards show a score pill (e.g. `7.4★`) computed from your past reviews of that festival. For upcoming editions the score is drawn from prior editions of the same festival.
+- **Event detail — Schengen status**: event detail sheet now shows "Schengen: Yes / No" based on the country.
+- **Event detail — prior edition**: event detail sheet now shows a collapsible prior-edition section (dates, city, venue, size, price, DJs, artists, notes) matching the web modal.
+- **Festival cards — edition history**: festival rows now show edition history blocks (current year + 2 prior years with dates, city, size) instead of plain year pills.
+- **Festival cards — attending/watchlist badges**: festival cards show the same attending/watchlist pills as event cards.
+- **Recently Added tab**: new "Recent" tab showing all festival editions added to the database in the last 7 days (full list, not capped at 5).
+- **Calendar — trip city chips**: when signed in, calendar cells show a city chip for each trip place active on that date. Selected-day agenda also shows trip and PTO rows.
+- **Calendar — PTO chips**: PTO days appear as orange chips on their calendar date.
+- **New app icon**: salsa calendar design (red background, dancers, maracas, flamenco dress).
+
+**Bug fixes**
+- Calendar "Attended only" and "Hide duplicates" toggles now actually filter events (they were bound to state but the filtering logic ignored them).
+- Calendar trip/PTO chips now appear immediately when signing in without needing to navigate away and back.
+- Country pickers in Events and Festivals tabs now only show countries available for the currently active year/historical filter, so selecting a country never produces an empty result.
+- Festivals tab resets the country filter when year is changed (matching web behavior).
+
+### Technical Changes
+
+- `AppModel`: added `isAttending(editionId:)`, `reviewScore(for:)`, `tripPlacesOn(_:)`, `ptoDaysOn(_:)` helpers. Removed `isSignedIn` guard from `tripPlacesOn`/`ptoDaysOn` — the guard read `authService.session` through a non-`@Observable` path and suppressed re-renders on sign-in; trips array is already empty when signed out.
+- `EventCard`: attending, watchlist, score badges; attending state shown as accent border.
+- `EventDetailSheet`: Schengen status row; prior edition section; requires `@Environment(AppModel.self)` for schengen lookup.
+- `FestivalRow`: attending/watchlist badges; `EditionHistoryBlock` subview replacing year pills.
+- `CalendarView`: `eventsOn()` now filters by `calendarAttendedOnly` and `calendarHideDuplicateAttended`; `CalendarTripChip` and `CalendarPTOChip` private views in selected-day agenda; trip/PTO data passed to `CalendarDayCell`.
+- `CalendarDayCell`: accepts `tripPlaces` and `ptoDays` and renders chips below event dots.
+- `RecentlyAddedView`: new view + `Views/RecentlyAdded/` directory; `RecentlyAddedCard` subview.
+- `AppModel+Types`: `Tab.recentlyAdded` case added.
+- `RootView`: `RecentlyAddedView` wired as "Recent" tab (sparkles icon).
+- `EventListView.availableCountries`: scoped to active historical + year filter state.
+- `FestivalListView.availableCountries`: scoped to active year filter; year picker `.onChange` resets `festivalFilterCountry`.
+- App icon: `AppIcon-1024.png` replaced with salsa calendar design, resized to 1024×1024.
+- `project.yml`: `CURRENT_PROJECT_VERSION` bumped 9 → 10.
+
+### Validation
+
+- Build number: `CURRENT_PROJECT_VERSION = 10`, `MARKETING_VERSION = 1.0`.
+- JS test suite: `npm test` — PENDING.
+- iOS test suite: `xcodebuild test` — PENDING.
+- Simulator build: **BUILD SUCCEEDED**.
+- Release archive: PENDING.
+- App Store Connect upload: PENDING.
+
+### Post-Upload Verification
+
+- [ ] Calendar shows trip city and PTO chips after signing in.
+- [ ] "Attended only" and "Hide duplicates" toggles visibly filter events on the calendar.
+- [ ] Event cards show attending/watchlist/score badges where applicable.
+- [ ] Event detail shows Schengen status and prior edition section.
+- [ ] Festival rows show edition history blocks.
+- [ ] Recently Added tab shows recent events.
+- [ ] Events tab country picker only shows countries relevant to the active year/historical setting.
+- [ ] Festivals tab country picker resets when year is changed.
+- [ ] New app icon visible on home screen.
+
+---
+
 ## Build 8 - 2026-06-15 - App Store Connect Upload
 
 Branch: `build-8-2026-06-15`
