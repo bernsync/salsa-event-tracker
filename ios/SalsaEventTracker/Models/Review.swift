@@ -5,7 +5,7 @@ struct Review: Identifiable, Decodable {
     let id: String
     let userId: String
     let eventEditionId: String
-    let reviewedAt: String
+    let reviewedAt: String?
     let musicScore: Int
     let dancingLevelScore: Int
     let stageImpactScore: Int

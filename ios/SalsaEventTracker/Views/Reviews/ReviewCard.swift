@@ -23,7 +23,7 @@ struct ReviewCard: View {
                 Text("/ 10").font(.caption).foregroundStyle(.secondary)
             }
             if let reason = review.topReason { Text(reason).font(.caption).foregroundStyle(.secondary) }
-            Text(DateUtils.displayDate(String(review.reviewedAt.prefix(10)))).font(.caption2).foregroundStyle(.tertiary)
+            Text(DateUtils.displayDate(String((review.reviewedAt ?? "").prefix(10)))).font(.caption2).foregroundStyle(.tertiary)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
