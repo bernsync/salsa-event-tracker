@@ -46,11 +46,11 @@ Additionally, error messages now include `[Public]` or `[Private]` prefix and th
 ### Validation
 
 - Build number: `CURRENT_PROJECT_VERSION = 7`, `MARKETING_VERSION = 1.0`.
-- JS test suite: `npm test` — PENDING.
-- iOS test suite: `xcodebuild test` — PENDING.
-- Simulator build: PENDING.
-- Release archive: PENDING.
-- App Store Connect upload: PENDING.
+- JS test suite: `npm test` — 36 tests, 0 failures, **TEST SUCCEEDED**.
+- iOS test suite: `xcodebuild test` — 11 tests, 3 suites, **TEST SUCCEEDED**.
+- Simulator build: `xcodebuild -configuration Release -destination 'generic/platform=iOS Simulator' build` — **BUILD SUCCEEDED**.
+- Release archive: `xcodebuild -archivePath /private/tmp/SalsaEventTracker-build7-20260615.xcarchive archive` — **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: `xcodebuild -exportArchive …` — Upload succeeded. Uploaded SalsaEventTracker. **EXPORT SUCCEEDED**.
 
 ### Post-Upload Verification (required before declaring done)
 
