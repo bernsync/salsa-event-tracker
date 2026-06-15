@@ -94,7 +94,7 @@ final class AppModel {
             danceStyles = fetchedStyles
             schengenCountries = Set(fetchedSchengen.filter(\.isSchengen).map(\.countryName))
         } catch {
-            setError(.loadFailed("[Public] \(type(of: error)): \(error.localizedDescription)"))
+            setError(.loadFailed("[Public] \(Self.decodeDetail(error))"))
         }
         isLoading = false
     }
@@ -114,9 +114,31 @@ final class AppModel {
             setError(.authExpired)
             signOut()
         } catch {
-            setError(.loadFailed("[Private] \(type(of: error)): \(error.localizedDescription)"))
+            setError(.loadFailed("[Private] \(Self.decodeDetail(error))"))
         }
         isLoading = false
+    }
+
+    private static func decodeDetail(_ error: Error) -> String {
+        guard let de = error as? DecodingError else {
+            return "\(type(of: error)): \(error.localizedDescription)"
+        }
+        switch de {
+        case .keyNotFound(let key, let ctx):
+            let path = ctx.codingPath.map(\.stringValue).joined(separator: ".")
+            return "key '\(key.stringValue)' not found at '\(path)'"
+        case .valueNotFound(_, let ctx):
+            let path = ctx.codingPath.map(\.stringValue).joined(separator: ".")
+            return "null value at '\(path)'"
+        case .typeMismatch(_, let ctx):
+            let path = ctx.codingPath.map(\.stringValue).joined(separator: ".")
+            return "type mismatch at '\(path)'"
+        case .dataCorrupted(let ctx):
+            let path = ctx.codingPath.map(\.stringValue).joined(separator: ".")
+            return "data corrupted at '\(path)'"
+        @unknown default:
+            return de.localizedDescription
+        }
     }
 
     func signIn(email: String, password: String) async throws {
