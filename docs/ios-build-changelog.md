@@ -35,11 +35,11 @@ Build 5 fixed two specific non-optional fields (`Review.reviewedAt`, `Trip.label
 ### Validation
 
 - Build number: `CURRENT_PROJECT_VERSION = 6`, `MARKETING_VERSION = 1.0`.
-- JS test suite: `npm test` — **TEST SUCCEEDED**.
-- iOS test suite: `xcodebuild test` — **TEST SUCCEEDED**.
-- Simulator build: `xcodebuild … Debug … build` — **BUILD SUCCEEDED**.
-- Release archive: `xcodebuild … -archivePath /private/tmp/SalsaEventTracker-build6-20260615.xcarchive … archive` — **ARCHIVE SUCCEEDED**.
-- App Store Connect upload: `xcodebuild -exportArchive …` — **EXPORT SUCCEEDED**.
+- JS test suite: `npm test` — 36 tests, 0 failures, **TEST SUCCEEDED**.
+- iOS test suite: `xcodebuild test` — 11 tests, 3 suites, **TEST SUCCEEDED**.
+- Simulator build: `xcodebuild -scheme SalsaEventTracker -configuration Debug -destination 'generic/platform=iOS Simulator' build` — **BUILD SUCCEEDED**.
+- Release archive: `xcodebuild -project ios/SalsaEventTracker.xcodeproj -scheme SalsaEventTracker -configuration Release -destination generic/platform=iOS -archivePath /private/tmp/SalsaEventTracker-build6-20260615.xcarchive -allowProvisioningUpdates archive` — **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: `xcodebuild -exportArchive -archivePath /private/tmp/SalsaEventTracker-build6-20260615.xcarchive -exportPath /private/tmp/SalsaEventTracker-build6-20260615-upload -exportOptionsPlist ios/ExportOptions-AppStore.plist -allowProvisioningUpdates` — Upload succeeded. Uploaded SalsaEventTracker. **EXPORT SUCCEEDED**.
 
 ### Post-Upload Verification (required before declaring done)
 
