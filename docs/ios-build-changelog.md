@@ -8,6 +8,44 @@ Before any App Store Connect or TestFlight upload, add or update the entry for t
 
 ---
 
+## Build 5 - 2026-06-15 - App Store Connect Upload
+
+Branch: `build-5-2026-06-15`
+
+Status: Uploaded to App Store Connect for TestFlight processing. **CONFIRMED.**
+
+### Root cause note
+
+After login, `loadPrivateData()` fetched trips and reviews from Supabase. Any row where `reviewed_at` (reviews) or `label` (trips) was NULL caused Swift's `JSONDecoder` to throw a `DecodingError`, surfacing as "Load failed: The data couldn't be read because it is missing." The web app silently handles these with `|| fallback` expressions; the iOS models had them as non-optional Strings.
+
+### User-Visible Changes
+
+**Bug fix**
+- Fixed post-login crash: "Load failed: The data couldn't be read because it is missing." — `Review.reviewedAt` and `Trip.label` are now optional; views fall back gracefully to empty string / "Untitled Trip."
+
+### Technical Changes
+
+- `Review.reviewedAt: String` → `String?`; `ReviewCard` and `ReviewsView` updated to handle nil.
+- `Trip.label: String` → `String?`; `TripCard` shows "Untitled Trip" for nil, `TripEditorView` populates from `?? ""`.
+- `project.yml` / `project.pbxproj`: `CURRENT_PROJECT_VERSION` bumped 4 → 5.
+
+### Validation
+
+- Build number: `CURRENT_PROJECT_VERSION = 5`, `MARKETING_VERSION = 1.0`.
+- JS test suite: `npm test` — 36 tests, 0 failures, **TEST SUCCEEDED**.
+- iOS test suite: `xcodebuild test` — 11 tests, 3 suites, **TEST SUCCEEDED**.
+- Simulator build: `xcodebuild -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build` — **BUILD SUCCEEDED**.
+- Release archive: `xcodebuild … -archivePath /private/tmp/SalsaEventTracker-build5-20260615.xcarchive … archive` — **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: `xcodebuild -exportArchive …` — **EXPORT SUCCEEDED**.
+
+### Post-Upload Verification (required before declaring done)
+
+- [ ] Open app from TestFlight build — confirm no error after login.
+- [ ] Confirm trips load and display correctly (including any with a null label showing "Untitled Trip").
+- [ ] Confirm reviews load and sort correctly (including any with a null reviewed_at).
+
+---
+
 ## Build 4 - 2026-06-14 - App Store Connect Upload
 
 Branch: `build-4-2026-06-14` (PR #TBD)

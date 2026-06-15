@@ -3,7 +3,7 @@ import Foundation
 
 struct Trip: Identifiable, Decodable {
     let id: String
-    let label: String
+    let label: String?
     let startDate: String
     let endDate: String
     let notes: String?

@@ -29,7 +29,7 @@ struct ReviewsView: View {
                 }
             } else {
                 List {
-                    ForEach(model.reviews.sorted { $0.reviewedAt > $1.reviewedAt }) { review in
+                    ForEach(model.reviews.sorted { ($0.reviewedAt ?? "") > ($1.reviewedAt ?? "") }) { review in
                         ReviewCard(
                             review: review,
                             eventName: eventName(for: review),

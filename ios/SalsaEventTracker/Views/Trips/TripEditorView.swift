@@ -73,7 +73,7 @@ struct TripEditorView: View {
 
     private func populateFromTrip() {
         guard let t = trip else { return }
-        label = t.label
+        label = t.label ?? ""
         startDate = DateUtils.date(from: t.startDate) ?? Date()
         endDate = DateUtils.date(from: t.endDate) ?? Date()
         notes = t.notes ?? ""

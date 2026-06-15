@@ -10,7 +10,7 @@ struct TripCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(trip.label).font(.headline)
+                Text(trip.label ?? "Untitled Trip").font(.headline)
                 Spacer()
                 Menu {
                     Button("Edit", action: onEdit)
