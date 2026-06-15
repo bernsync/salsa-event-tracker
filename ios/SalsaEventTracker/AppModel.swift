@@ -97,7 +97,8 @@ final class AppModel {
     }
 
     func tripPlacesOn(_ dateStr: String) -> [(place: TripPlace, trip: Trip)] {
-        guard isSignedIn else { return [] }
+        // No isSignedIn guard — trips is empty when signed out, and the computed
+        // property reads non-@Observable authService.session which won't re-trigger renders
         return trips.flatMap { trip in
             trip.places
                 .filter { $0.startDate <= dateStr && $0.endDate >= dateStr }
@@ -106,7 +107,6 @@ final class AppModel {
     }
 
     func ptoDaysOn(_ dateStr: String) -> [(ptoDay: PTODay, trip: Trip)] {
-        guard isSignedIn else { return [] }
         return trips.flatMap { trip in
             trip.ptoDays
                 .filter { $0.ptoDate == dateStr }

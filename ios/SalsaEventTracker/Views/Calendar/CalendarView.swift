@@ -10,8 +10,18 @@ struct CalendarView: View {
     }
 
     private func eventsOn(_ dateStr: String) -> [FlatEvent] {
-        model.flatEvents.filter {
-            $0.edition.startDate <= dateStr && $0.edition.endDate >= dateStr
+        let tripPlacesOnDate = model.tripPlacesOn(dateStr)
+        return model.flatEvents.filter { flat in
+            guard flat.edition.startDate <= dateStr && flat.edition.endDate >= dateStr else { return false }
+            if model.calendarAttendedOnly {
+                guard model.isAttending(editionId: flat.edition.id) else { return false }
+            }
+            if model.calendarHideDuplicateAttended {
+                if tripPlacesOnDate.contains(where: { $0.place.eventEditionId == flat.edition.id }) {
+                    return false
+                }
+            }
+            return true
         }
     }
 
