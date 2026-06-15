@@ -22,7 +22,7 @@ targets:
         INFOPLIST_FILE: SalsaEventTracker/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.0"
-        CURRENT_PROJECT_VERSION: "5"
+        CURRENT_PROJECT_VERSION: "6"
         DEVELOPMENT_TEAM: MG3K52T7N9
     dependencies:
       - package: KeychainAccess

@@ -18,7 +18,9 @@ struct Event: Identifiable, Decodable {
         case createdAt = "created_at"
         case editions = "event_editions"
     }
+}
 
+extension Event {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
