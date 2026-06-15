@@ -76,6 +76,29 @@ struct EventEdition: Identifiable, Decodable {
     )
 }
 
+extension EventEdition {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        startDate = (try? c.decode(String.self, forKey: .startDate)) ?? ""
+        endDate = (try? c.decode(String.self, forKey: .endDate)) ?? ""
+        city = (try? c.decode(String.self, forKey: .city)) ?? ""
+        country = (try? c.decode(String.self, forKey: .country)) ?? ""
+        venue = try c.decodeIfPresent(String.self, forKey: .venue)
+        tickets = try c.decodeIfPresent(String.self, forKey: .tickets)
+        price = try c.decodeIfPresent(String.self, forKey: .price)
+        currency = try c.decodeIfPresent(String.self, forKey: .currency)
+        djs = try c.decodeIfPresent(String.self, forKey: .djs)
+        artists = try c.decodeIfPresent(String.self, forKey: .artists)
+        eventSize = try c.decodeIfPresent(String.self, forKey: .eventSize)
+        travel = try c.decodeIfPresent(String.self, forKey: .travel)
+        addedOn = try c.decodeIfPresent(String.self, forKey: .addedOn)
+        notes = try c.decodeIfPresent(String.self, forKey: .notes)
+        forceShowMonday = try c.decodeIfPresent(Bool.self, forKey: .forceShowMonday)
+        visibility = (try? c.decode(String.self, forKey: .visibility)) ?? "public"
+    }
+}
+
 // Convenience: a flat edition with its parent event attached
 struct FlatEvent: Identifiable {
     let id: String          // edition ID

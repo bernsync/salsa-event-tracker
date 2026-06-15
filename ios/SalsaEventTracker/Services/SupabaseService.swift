@@ -183,3 +183,11 @@ struct SchengenCountryRow: Decodable {
         case isSchengen = "is_schengen"
     }
 }
+
+extension SchengenCountryRow {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        countryName = try c.decode(String.self, forKey: .countryName)
+        isSchengen = (try? c.decode(Bool.self, forKey: .isSchengen)) ?? false
+    }
+}

@@ -14,3 +14,13 @@ struct DanceStyle: Identifiable, Decodable {
         case sortOrder = "sort_order"
     }
 }
+
+extension DanceStyle {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        name = try c.decode(String.self, forKey: .name)
+        slug = try c.decode(String.self, forKey: .slug)
+        isActive = (try? c.decode(Bool.self, forKey: .isActive)) ?? false
+        sortOrder = (try? c.decode(Int.self, forKey: .sortOrder)) ?? 0
+    }
+}

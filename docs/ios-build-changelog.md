@@ -8,6 +8,58 @@ Before any App Store Connect or TestFlight upload, add or update the entry for t
 
 ---
 
+## Build 7 - 2026-06-15 - App Store Connect Upload
+
+Branch: `build-7-2026-06-15`
+
+Status: Uploaded to App Store Connect for TestFlight processing. **CONFIRMED.**
+
+### Root cause note
+
+Build 6 fixed nullable fields in `Review` score columns and `TripPlace.travelRole`/`sequence`. The "Load failed: cancelled" error persisted because additional nullable fields in other models were still non-optional. Any `Decodable` struct with a non-optional field receiving a NULL DB value throws `DecodingError`; in Swift structured concurrency, the sibling `async let` task (still awaiting its URLSession response) receives cancellation and throws `URLError(.cancelled)` — which is what surfaces in the catch block.
+
+Remaining fields fixed in this build (all use `(try? decode) ?? fallback` in extension-scoped custom inits, preserving synthesized memberwise initializers):
+
+- `EventEdition`: `startDate`, `endDate`, `city`, `country` → `?? ""`; `visibility` → `?? "public"`
+- `DanceStyle`: `isActive` → `?? false`; `sortOrder` → `?? 0`
+- `Trip`: `startDate`, `endDate` → `?? ""`; `places`/`ptoDays` arrays → `?? []`
+- `TripPlace`: `startDate`, `endDate`, `city`, `country` → `?? ""`
+- `PTODay`: `ptoDate` → `?? ""`; `amount` → `?? 1.0`
+- `SchengenCountryRow`: `isSchengen` → `?? false`
+
+Additionally, error messages now include `[Public]` or `[Private]` prefix and the Swift error type (e.g., `[Private] DecodingError: …`) to make future failures immediately diagnosable without a second build.
+
+### User-Visible Changes
+
+**Bug fix**
+- Fixed persistent "Load failed: cancelled" error after login. Root cause: additional nullable DB columns in `EventEdition`, `DanceStyle`, `Trip`, `TripPlace`, and `PTODay` were typed as non-optional in the iOS models; any NULL value triggered the same decode-failure → sibling-cancellation pattern fixed partially in Builds 5 and 6.
+
+### Technical Changes
+
+- `Event.swift`: Added `extension EventEdition { init(from:) }` — null-safe decoding for `startDate`, `endDate`, `city`, `country`, `visibility`.
+- `DanceStyle.swift`: Added `extension DanceStyle { init(from:) }` — null-safe decoding for `isActive`, `sortOrder`.
+- `Trip.swift`: Added `extension Trip { init(from:) }`, `extension TripPlace { init(from:) }`, `extension PTODay { init(from:) }` — null-safe decoding for all fields with web-mapper fallbacks (`""`, `1.0`, `[]`).
+- `SupabaseService.swift`: Added `extension SchengenCountryRow { init(from:) }` — null-safe decoding for `isSchengen`.
+- `AppModel.swift`: Error messages now include `[Public]`/`[Private]` source tag and Swift error type for diagnostics.
+- `project.yml` / `project.pbxproj`: `CURRENT_PROJECT_VERSION` bumped 6 → 7.
+
+### Validation
+
+- Build number: `CURRENT_PROJECT_VERSION = 7`, `MARKETING_VERSION = 1.0`.
+- JS test suite: `npm test` — 36 tests, 0 failures, **TEST SUCCEEDED**.
+- iOS test suite: `xcodebuild test` — 11 tests, 3 suites, **TEST SUCCEEDED**.
+- Simulator build: `xcodebuild -configuration Release -destination 'generic/platform=iOS Simulator' build` — **BUILD SUCCEEDED**.
+- Release archive: `xcodebuild -archivePath /private/tmp/SalsaEventTracker-build7-20260615.xcarchive archive` — **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: `xcodebuild -exportArchive …` — Upload succeeded. Uploaded SalsaEventTracker. **EXPORT SUCCEEDED**.
+
+### Post-Upload Verification (required before declaring done)
+
+- [ ] Open app from TestFlight build — confirm no error after login.
+- [ ] Confirm trips and reviews load correctly after login.
+- [ ] Confirm events and calendar load at startup.
+
+---
+
 ## Build 6 - 2026-06-15 - App Store Connect Upload
 
 Branch: `build-6-2026-06-15`
