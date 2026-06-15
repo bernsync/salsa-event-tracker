@@ -77,12 +77,12 @@ struct TripEditorView: View {
         startDate = DateUtils.date(from: t.startDate) ?? Date()
         endDate = DateUtils.date(from: t.endDate) ?? Date()
         notes = t.notes ?? ""
-        places = t.places.sorted { $0.sequence < $1.sequence }.map {
+        places = t.places.sorted { ($0.sequence ?? 0) < ($1.sequence ?? 0) }.map {
             var d = PlaceDraft()
             d.city = $0.city; d.country = $0.country
             d.startDate = DateUtils.date(from: $0.startDate) ?? Date()
             d.endDate = DateUtils.date(from: $0.endDate) ?? Date()
-            d.role = $0.travelRole
+            d.role = $0.travelRole ?? "stay"
             return d
         }
         ptoDays = t.ptoDays.map {

@@ -8,6 +8,47 @@ Before any App Store Connect or TestFlight upload, add or update the entry for t
 
 ---
 
+## Build 6 - 2026-06-15 - App Store Connect Upload
+
+Branch: `build-6-2026-06-15`
+
+Status: Uploaded to App Store Connect for TestFlight processing. **CONFIRMED.**
+
+### Root cause note
+
+Build 5 fixed two specific non-optional fields (`Review.reviewedAt`, `Trip.label`). This exposed a broader pattern: the web app handles every nullable DB column with `|| fallback` expressions; the iOS `Decodable` models had non-optional types for many other columns that can be NULL (score fields added incrementally to the reviews schema, `force_show_monday` on event editions, `styles` arrays on events, `travel_role` and `sequence` on trip places). Any NULL value in a decoded row caused `JSONDecoder` to throw `DecodingError`. In `loadPrivateData()`, with two concurrent `async let` tasks, a decode failure in one task causes Swift's structured concurrency runtime to cancel the sibling — the cancelled sibling throws `URLError(.cancelled)`, which is what the user saw as "Load failed: cancelled."
+
+### User-Visible Changes
+
+**Bug fix**
+- Fixed "Load failed: cancelled" error that appeared after every login. Root cause: nullable DB columns (primarily review score fields) were typed as non-optional in the iOS models, causing a decode failure that triggered Swift structured concurrency task cancellation.
+- Retry button in the error alert now also reloads private data (trips/reviews) when signed in, not just public events/styles/schengen.
+
+### Technical Changes
+
+- `Review`: all 11 score fields (`music_score` … `travel_score`) changed `Int` → `Int?`. `totalScore` computed property and `ReviewScoring.score(for:in:)` use `?? 0` fallback. `ReviewEditorView.populateFromReview()` uses `?? 5` when pre-filling the editor for an existing review with a null score.
+- `Event`: added custom `init(from:)` that decodes `styles` with `[]` fallback (Supabase returns `null` for unset array columns). `EventEdition.forceShowMonday` changed `Bool` → `Bool?` to match web app's `|| false` handling.
+- `TripPlace`: `travelRole` changed `String` → `String?`; `sequence` changed `Int` → `Int?`. `TripEditorView` updated to use `?? "stay"` / `?? 0`.
+- `RootView`: Retry button task now calls `loadPrivateData()` after `loadPublicData()`.
+- `project.yml` / `project.pbxproj`: `CURRENT_PROJECT_VERSION` bumped 5 → 6.
+
+### Validation
+
+- Build number: `CURRENT_PROJECT_VERSION = 6`, `MARKETING_VERSION = 1.0`.
+- JS test suite: `npm test` — 36 tests, 0 failures, **TEST SUCCEEDED**.
+- iOS test suite: `xcodebuild test` — 11 tests, 3 suites, **TEST SUCCEEDED**.
+- Simulator build: `xcodebuild -scheme SalsaEventTracker -configuration Debug -destination 'generic/platform=iOS Simulator' build` — **BUILD SUCCEEDED**.
+- Release archive: `xcodebuild -project ios/SalsaEventTracker.xcodeproj -scheme SalsaEventTracker -configuration Release -destination generic/platform=iOS -archivePath /private/tmp/SalsaEventTracker-build6-20260615.xcarchive -allowProvisioningUpdates archive` — **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: `xcodebuild -exportArchive -archivePath /private/tmp/SalsaEventTracker-build6-20260615.xcarchive -exportPath /private/tmp/SalsaEventTracker-build6-20260615-upload -exportOptionsPlist ios/ExportOptions-AppStore.plist -allowProvisioningUpdates` — Upload succeeded. Uploaded SalsaEventTracker. **EXPORT SUCCEEDED**.
+
+### Post-Upload Verification (required before declaring done)
+
+- [ ] Open app from TestFlight build — confirm no error after login.
+- [ ] Confirm trips and reviews load correctly after login.
+- [ ] Confirm Retry button reloads private data when signed in.
+
+---
+
 ## Build 5 - 2026-06-15 - App Store Connect Upload
 
 Branch: `build-5-2026-06-15`

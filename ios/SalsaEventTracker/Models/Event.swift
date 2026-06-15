@@ -20,6 +20,22 @@ struct Event: Identifiable, Decodable {
     }
 }
 
+extension Event {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        organizer = try c.decodeIfPresent(String.self, forKey: .organizer)
+        website = try c.decodeIfPresent(String.self, forKey: .website)
+        instagram = try c.decodeIfPresent(String.self, forKey: .instagram)
+        facebook = try c.decodeIfPresent(String.self, forKey: .facebook)
+        styles = (try? c.decode([String].self, forKey: .styles)) ?? []
+        watchlist = try c.decodeIfPresent(Bool.self, forKey: .watchlist)
+        createdAt = try c.decode(String.self, forKey: .createdAt)
+        editions = try c.decode([EventEdition].self, forKey: .editions)
+    }
+}
+
 struct EventEdition: Identifiable, Decodable {
     let id: String
     let startDate: String       // "YYYY-MM-DD"
@@ -36,7 +52,7 @@ struct EventEdition: Identifiable, Decodable {
     let travel: String?
     let addedOn: String?
     let notes: String?
-    let forceShowMonday: Bool
+    let forceShowMonday: Bool?
     let visibility: String
 
     enum CodingKeys: String, CodingKey {

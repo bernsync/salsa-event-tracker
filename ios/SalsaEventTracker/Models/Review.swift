@@ -6,17 +6,17 @@ struct Review: Identifiable, Decodable {
     let userId: String
     let eventEditionId: String
     let reviewedAt: String?
-    let musicScore: Int
-    let dancingLevelScore: Int
-    let stageImpactScore: Int
-    let floorScore: Int
-    let vibeScore: Int
-    let eventCostScore: Int
-    let servicesScore: Int
-    let eventHoursScore: Int
-    let hostCityScore: Int
-    let eventSizeScore: Int
-    let travelScore: Int
+    let musicScore: Int?
+    let dancingLevelScore: Int?
+    let stageImpactScore: Int?
+    let floorScore: Int?
+    let vibeScore: Int?
+    let eventCostScore: Int?
+    let servicesScore: Int?
+    let eventHoursScore: Int?
+    let hostCityScore: Int?
+    let eventSizeScore: Int?
+    let travelScore: Int?
     let musicComment: String?
     let dancingLevelComment: String?
     let stageImpactComment: String?
@@ -65,7 +65,7 @@ struct Review: Identifiable, Decodable {
         let scores = [musicScore, dancingLevelScore, stageImpactScore, floorScore,
                       vibeScore, eventCostScore, servicesScore, eventHoursScore,
                       hostCityScore, eventSizeScore, travelScore]
-        return Double(scores.reduce(0, +)) / Double(scores.count)
+        return Double(scores.reduce(0) { $0 + ($1 ?? 0) }) / Double(scores.count)
     }
 }
 

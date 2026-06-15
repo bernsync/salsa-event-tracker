@@ -50,7 +50,12 @@ struct RootView: View {
             get: { model.appError != nil },
             set: { if !$0 { model.appError = nil } }
         )) {
-            Button("Retry") { Task { await model.loadPublicData() } }
+            Button("Retry") {
+                Task {
+                    await model.loadPublicData()
+                    await model.loadPrivateData()
+                }
+            }
             Button("Dismiss", role: .cancel) { model.appError = nil }
         } message: {
             Text(model.appError?.localizedDescription ?? "")

@@ -8,17 +8,17 @@ enum ReviewScoring {
 
     static func score(for category: ReviewCategory, in review: Review) -> Int {
         switch category {
-        case .music: return review.musicScore
-        case .dancingLevel: return review.dancingLevelScore
-        case .stageImpact: return review.stageImpactScore
-        case .floor: return review.floorScore
-        case .vibe: return review.vibeScore
-        case .eventCost: return review.eventCostScore
-        case .services: return review.servicesScore
-        case .eventHours: return review.eventHoursScore
-        case .hostCity: return review.hostCityScore
-        case .eventSize: return review.eventSizeScore
-        case .travel: return review.travelScore
+        case .music: return review.musicScore ?? 0
+        case .dancingLevel: return review.dancingLevelScore ?? 0
+        case .stageImpact: return review.stageImpactScore ?? 0
+        case .floor: return review.floorScore ?? 0
+        case .vibe: return review.vibeScore ?? 0
+        case .eventCost: return review.eventCostScore ?? 0
+        case .services: return review.servicesScore ?? 0
+        case .eventHours: return review.eventHoursScore ?? 0
+        case .hostCity: return review.hostCityScore ?? 0
+        case .eventSize: return review.eventSizeScore ?? 0
+        case .travel: return review.travelScore ?? 0
         }
     }
 
