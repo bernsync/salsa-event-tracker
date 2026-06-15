@@ -49,6 +49,10 @@ struct ReviewsView: View {
                 .refreshable { await model.loadPrivateData() }
                 .navigationTitle("Reviews")
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Sign Out", role: .destructive) { model.signOut() }
+                            .font(.subheadline)
+                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { showPicker = true } label: { Image(systemName: "plus") }
                     }
