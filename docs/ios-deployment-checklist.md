@@ -9,7 +9,7 @@ Current known-good app metadata:
 - bundle id: `com.salsaeventtracker.ios`
 - team id: `MG3K52T7N9`
 - marketing version: `1.0`
-- current build: 2
+- current build: 4
 
 ## Release Files
 
@@ -17,6 +17,59 @@ Current known-good app metadata:
 - project file: `ios/SalsaEventTracker.xcodeproj/project.pbxproj`
 - xcodegen spec: `ios/project.yml`
 - required build history: `docs/ios-build-changelog.md`
+
+## Pre-Upload Gate (MANDATORY — do not skip)
+
+**The Build 2 incident**: the archive was created before the `dance_styles.id` fix was committed. The git history showed the fix; the uploaded binary did not contain it. This gate exists to prevent that from recurring.
+
+Before archiving, verify every item below. If any check fails, do not archive.
+
+### 1. All code changes are committed and on the release branch
+
+```bash
+git branch --show-current          # must be the release branch
+git status --short                  # must be clean (no uncommitted changes)
+git log --oneline -5                # confirm the fix commits are present
+```
+
+### 2. Build changelog entry exists for this build number
+
+```bash
+grep "## Build <N>" docs/ios-build-changelog.md
+```
+
+The entry must exist **before** the archive step. The archive command must come after this check passes.
+
+### 3. project.yml and project.pbxproj are in sync
+
+```bash
+grep "CURRENT_PROJECT_VERSION" ios/project.yml
+grep "CURRENT_PROJECT_VERSION" ios/SalsaEventTracker.xcodeproj/project.pbxproj
+```
+
+Both must show the same build number. If project.yml is stale, bump it and run `xcodegen generate` before archiving.
+
+### 4. Archive is built fresh from current HEAD — never reuse a prior archive
+
+Delete any existing archive at the target path before running `xcodebuild archive`:
+
+```bash
+rm -rf /private/tmp/SalsaEventTracker-build<N>-<date>.xcarchive
+```
+
+Then immediately run the archive. Do not commit anything between the archive and export/upload steps.
+
+### 5. Confirm the fix is in the source at archive time
+
+For any known-sensitive query, grep the source before archiving:
+
+```bash
+# dance_styles must not request the id column
+grep "fetchDanceStyles\|dance_styles" ios/SalsaEventTracker/Services/SupabaseService.swift
+# Expected: select=name,slug,is_active,sort_order  (no 'id')
+```
+
+---
 
 ## Required Shipping Documentation
 
