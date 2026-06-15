@@ -26,10 +26,6 @@ struct RootView: View {
             TripsView()
                 .tabItem { Label("Trips", systemImage: "airplane") }
                 .tag(Tab.trips)
-
-            ReviewsView()
-                .tabItem { Label("Reviews", systemImage: "star.fill") }
-                .tag(Tab.reviews)
         }
         .sheet(isPresented: $model.showLogin) {
             LoginView()

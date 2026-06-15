@@ -16,7 +16,7 @@ struct EventListView: View {
         var seen = Set<String>()
         return model.flatEvents
             .filter { flat in
-                let matchesHistory = model.showHistoricalEvents ? flat.edition.isHistorical : !flat.edition.isHistorical
+                let matchesHistory = model.showHistoricalEvents || !flat.edition.isHistorical
                 let matchesYear = model.filterYear.isEmpty || flat.edition.startDate.hasPrefix(model.filterYear)
                 return matchesHistory && matchesYear
             }

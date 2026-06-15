@@ -27,8 +27,9 @@ struct FestivalListView: View {
     // An event passes if any of its editions matches all active filters
     private var filteredEvents: [Event] {
         model.events.filter { event in
-            guard TextUtils.matches(event: event, edition: event.editions.first ?? EventEdition.placeholder,
-                                    query: model.searchQuery) else { return false }
+            guard model.searchQuery.isEmpty ||
+                  event.editions.contains(where: { TextUtils.matches(event: event, edition: $0, query: model.searchQuery) })
+            else { return false }
             // At least one edition must satisfy all active filters
             return event.editions.contains { ed in
                 if !model.festivalFilterYear.isEmpty && !ed.startDate.hasPrefix(model.festivalFilterYear) { return false }
