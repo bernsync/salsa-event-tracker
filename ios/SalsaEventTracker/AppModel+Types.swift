@@ -7,7 +7,6 @@ enum Tab: String, CaseIterable {
     case festivalList = "Festivals"
     case recentlyAdded = "Recent"
     case trips = "Trips"
-    case reviews = "Reviews"
 }
 
 enum EventSortOption: String, CaseIterable {

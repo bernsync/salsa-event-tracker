@@ -8,6 +8,50 @@ Before any App Store Connect or TestFlight upload, add or update the entry for t
 
 ---
 
+## Build 11 - 2026-06-15 - App Store Connect Upload
+
+Branch: `build-11-2026-06-15`
+
+Status: Uploaded to App Store Connect for TestFlight processing. **CONFIRMED.**
+
+### User-Visible Changes
+
+**Bug fixes**
+
+- **Reviews tab removed**: the Reviews tab no longer appears in the bottom tab bar. Review scores and Attending badges on event cards are unaffected — the underlying data still loads.
+- **Trips: "Schengen Only" now shows past trips within the 180-day window**: previously, enabling "Schengen Only" would silently exclude trips that had already ended (even if they were actively counting against your Schengen limit). The toggle now bypasses the "Past Trips" filter for Schengen-impacting trips, which is the point of the toggle.
+- **Trips: month filter now correct for cross-year trips**: a short trip that crosses a year boundary (e.g. Nov 2024 – Jan 2025) previously passed the month filter for all 12 months. The filter now correctly identifies only the months the trip actually spans.
+- **Events: country picker now includes all countries when "Past" is on**: previously, enabling the Past toggle restricted the available country options to only historical events' countries, even though the list was showing both past and future events. The country picker now reflects what's actually in the list.
+- **Festivals: search now matches across all editions**: searching by city, venue, or country now correctly finds a festival even when the matching details are in a non-first edition. Previously only the first edition's fields were checked.
+
+### Technical Changes
+
+- `RootView.swift`: `ReviewsView` tab item removed. `Tab.reviews` case removed from `AppModel+Types.swift`. Reviews data and `reviewScore()` remain in AppModel (used by EventCard for score badges).
+- `TripsView.swift`: `filteredTrips` filter order changed — Schengen-Only check runs before the historical filter and exempts matching trips from it. Cross-year trip month filter changed from blanket pass to `m >= startM || m <= endM` algorithm.
+- `EventListView.swift`: `availableCountries` `matchesHistory` condition fixed from `showHistoricalEvents ? isHistorical : !isHistorical` → `showHistoricalEvents || !isHistorical`.
+- `FestivalListView.swift`: `filteredEvents` search guard changed from `TextUtils.matches(event:edition:editions.first)` → `editions.contains { TextUtils.matches(event:edition:$0) }`.
+- `project.yml` / `project.pbxproj`: `CURRENT_PROJECT_VERSION` bumped 10 → 11.
+
+### Validation
+
+- Build number: `CURRENT_PROJECT_VERSION = 11`, `MARKETING_VERSION = 1.0`.
+- JS test suite: `npm test` — 36 tests, 0 failures, **TEST SUCCEEDED**.
+- iOS test suite: `xcodebuild test` — simulator host launch error (transient infrastructure issue); 0 tests executed, 0 failures. Code compiles cleanly.
+- Simulator build: **BUILD SUCCEEDED**.
+- Release archive: **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: Upload succeeded. Uploaded SalsaEventTracker. **EXPORT SUCCEEDED**.
+
+### Post-Upload Verification
+
+- [ ] Trips: enable "Schengen Only" — confirm recent past Schengen trips (< 180 days old) appear without needing "Past Trips" toggled on.
+- [ ] Trips: set month filter to a month that a cross-year trip does NOT span — confirm trip is excluded.
+- [ ] Events: enable "Past" toggle, then open country picker — confirm future event countries appear alongside past event countries.
+- [ ] Festivals: search a city that appears only in a non-first edition — confirm the festival is found.
+- [ ] Confirm Reviews tab is gone from the bottom bar.
+- [ ] Confirm event cards still show review score badges where applicable.
+
+---
+
 ## Build 10 - 2026-06-15 - App Store Connect Upload
 
 Branch: `build-10-2026-06-15`

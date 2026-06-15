@@ -63,12 +63,15 @@ struct TripsView: View {
 
     private var filteredTrips: [Trip] {
         model.trips.filter { trip in
-            if !model.showHistoricalTrips && trip.endDate < DateUtils.todayString() { return false }
             if model.showSchengenImpactingTrips {
+                // Schengen-Only bypasses the historical filter — past trips within the 180-day
+                // window are the whole point of the toggle.
                 guard SchengenCalculator.hasSchengenImpact(
                     trip: trip, checkDate: model.schengenCheckDate,
                     schengenCountries: model.schengenCountries
                 ) else { return false }
+            } else if !model.showHistoricalTrips && trip.endDate < DateUtils.todayString() {
+                return false
             }
             if !model.tripFilterCountry.isEmpty {
                 guard trip.places.contains(where: { $0.country == model.tripFilterCountry }) else { return false }
@@ -83,10 +86,15 @@ struct TripsView: View {
                 let endM = String(trip.endDate.dropFirst(5).prefix(2))
                 let startY = String(trip.startDate.prefix(4))
                 let endY = String(trip.endDate.prefix(4))
+                let m = model.tripFilterMonth
+                let passes: Bool
                 if startY == endY {
-                    guard startM <= model.tripFilterMonth && endM >= model.tripFilterMonth else { return false }
+                    passes = startM <= m && endM >= m
+                } else {
+                    // Trip crosses a year boundary: month is in range if ≥ start month OR ≤ end month
+                    passes = m >= startM || m <= endM
                 }
-                // multi-year trips contain every month, so they pass
+                if !passes { return false }
             }
             return true
         }
