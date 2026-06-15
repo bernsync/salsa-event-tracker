@@ -4,6 +4,19 @@ import SwiftUI
 struct EventDetailSheet: View {
     let flat: FlatEvent
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppModel.self) private var model
+
+    private var schengenLabel: String? {
+        guard !model.schengenCountries.isEmpty else { return nil }
+        return model.schengenCountries.contains(flat.edition.country) ? "Yes" : "No"
+    }
+
+    private var priorEdition: EventEdition? {
+        flat.event.editions
+            .filter { $0.startDate < flat.edition.startDate }
+            .sorted { $0.startDate > $1.startDate }
+            .first
+    }
 
     var body: some View {
         let websiteURL = flat.event.website.flatMap(URL.init)
@@ -18,6 +31,9 @@ struct EventDetailSheet: View {
                         start: flat.edition.startDate, end: flat.edition.endDate))
                     LabeledContent("City", value: flat.edition.city)
                     LabeledContent("Country", value: flat.edition.country)
+                    if let schengen = schengenLabel {
+                        LabeledContent("Schengen", value: schengen)
+                    }
                     if let venue = flat.edition.venue { LabeledContent("Venue", value: venue) }
                 }
                 Section("Event") {
@@ -48,6 +64,22 @@ struct EventDetailSheet: View {
                         if let url = instagramURL { Link("Instagram", destination: url) }
                         if let url = facebookURL { Link("Facebook", destination: url) }
                         if let url = ticketsURL { Link("Tickets", destination: url) }
+                    }
+                }
+                if let prior = priorEdition {
+                    Section("\(String(prior.startDate.prefix(4))) Edition (Prior)") {
+                        LabeledContent("Dates", value: DateUtils.displayDateRange(
+                            start: prior.startDate, end: prior.endDate))
+                        LabeledContent("City", value: prior.city)
+                        LabeledContent("Country", value: prior.country)
+                        if let venue = prior.venue { LabeledContent("Venue", value: venue) }
+                        if let size = prior.eventSize { LabeledContent("Size", value: size.capitalized) }
+                        if let price = prior.price {
+                            LabeledContent("Price", value: "\(price) \(prior.currency ?? "")")
+                        }
+                        if let djs = prior.djs { LabeledContent("DJs", value: djs) }
+                        if let artists = prior.artists { LabeledContent("Artists", value: artists) }
+                        if let notes = prior.notes { LabeledContent("Notes", value: notes) }
                     }
                 }
             }

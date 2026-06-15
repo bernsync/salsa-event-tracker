@@ -3,21 +3,28 @@ import SwiftUI
 
 struct CalendarView: View {
     @Environment(AppModel.self) private var model
-    // Match web app: Sun–Sat column order
     private let weekdays = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"]
 
     private var gridDays: [Date?] {
         DateUtils.calendarGrid(for: model.selectedYearMonth)
     }
 
-    private func eventsOn(_ date: Date) -> [FlatEvent] {
-        let dateStr = DateUtils.string(from: date)
-        return model.flatEvents.filter {
-            $0.edition.startDate <= dateStr && $0.edition.endDate >= dateStr
+    private func eventsOn(_ dateStr: String) -> [FlatEvent] {
+        let tripPlacesOnDate = model.tripPlacesOn(dateStr)
+        return model.flatEvents.filter { flat in
+            guard flat.edition.startDate <= dateStr && flat.edition.endDate >= dateStr else { return false }
+            if model.calendarAttendedOnly {
+                guard model.isAttending(editionId: flat.edition.id) else { return false }
+            }
+            if model.calendarHideDuplicateAttended {
+                if tripPlacesOnDate.contains(where: { $0.place.eventEditionId == flat.edition.id }) {
+                    return false
+                }
+            }
+            return true
         }
     }
 
-    // Months that have at least one event — used for the jump picker
     private var monthsWithEvents: [String] {
         var seen = Set<String>()
         return model.flatEvents.compactMap { flat -> String? in
@@ -56,7 +63,6 @@ struct CalendarView: View {
                 // ── Jump to month picker + filter toggles ──────────────────
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
-                        // Month jump picker
                         if !monthsWithEvents.isEmpty {
                             Picker("Jump", selection: $model.selectedYearMonth) {
                                 ForEach(monthsWithEvents, id: \.self) { ym in
@@ -99,13 +105,22 @@ struct CalendarView: View {
                     ForEach(Array(gridDays.enumerated()), id: \.0) { _, date in
                         if let date {
                             let dateStr = DateUtils.string(from: date)
-                            let events = eventsOn(date)
+                            let events = eventsOn(dateStr)
+                            let tripPlaces = model.tripPlacesOn(dateStr)
+                            let ptoDays = model.ptoDaysOn(dateStr)
                             let isToday = dateStr == DateUtils.todayString()
                             let isSelected = dateStr == model.selectedCalendarDate
-                            CalendarDayCell(date: date, events: events, isSelected: isSelected, isToday: isToday)
-                                .onTapGesture {
-                                    model.selectedCalendarDate = dateStr
-                                }
+                            CalendarDayCell(
+                                date: date,
+                                events: events,
+                                tripPlaces: tripPlaces,
+                                ptoDays: ptoDays,
+                                isSelected: isSelected,
+                                isToday: isToday
+                            )
+                            .onTapGesture {
+                                model.selectedCalendarDate = dateStr
+                            }
                         } else {
                             Color.clear.frame(height: 44)
                         }
@@ -115,11 +130,15 @@ struct CalendarView: View {
 
                 Divider().padding(.top, 8)
 
-                // ── Events on selected day ─────────────────────────────────
-                let dayEvents = eventsOn(DateUtils.date(from: model.selectedCalendarDate) ?? Date())
-                if dayEvents.isEmpty {
+                // ── Events + trips on selected day ─────────────────────────
+                let selectedStr = model.selectedCalendarDate
+                let dayEvents = eventsOn(selectedStr)
+                let dayTrips = model.tripPlacesOn(selectedStr)
+                let dayPTO = model.ptoDaysOn(selectedStr)
+
+                if dayEvents.isEmpty && dayTrips.isEmpty && dayPTO.isEmpty {
                     Spacer()
-                    Text("No events on \(DateUtils.displayDate(model.selectedCalendarDate))")
+                    Text("No events on \(DateUtils.displayDate(selectedStr))")
                         .foregroundStyle(.secondary)
                     Spacer()
                 } else {
@@ -127,6 +146,12 @@ struct CalendarView: View {
                         LazyVStack(spacing: 10) {
                             ForEach(dayEvents) { flat in
                                 EventCard(flat: flat)
+                            }
+                            ForEach(dayTrips, id: \.place.id) { item in
+                                CalendarTripChip(place: item.place, trip: item.trip)
+                            }
+                            ForEach(dayPTO, id: \.ptoDay.id) { item in
+                                CalendarPTOChip(ptoDay: item.ptoDay, trip: item.trip)
                             }
                         }
                         .padding()
@@ -151,5 +176,57 @@ struct CalendarView: View {
               let adjusted = Calendar.current.date(byAdding: .month, value: delta, to: date)
         else { return ym }
         return String(DateUtils.string(from: adjusted).prefix(7))
+    }
+}
+
+private struct CalendarTripChip: View {
+    let place: TripPlace
+    let trip: Trip
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "airplane")
+                .font(.caption).foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(Color.indigo, in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text([place.city, place.country].filter { !$0.isEmpty }.joined(separator: ", "))
+                    .font(.subheadline).fontWeight(.medium)
+                if let label = trip.label, !label.isEmpty {
+                    Text(label).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            Text(DateUtils.displayDateRange(start: place.startDate, end: place.endDate))
+                .font(.caption2).foregroundStyle(.secondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.indigo.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+private struct CalendarPTOChip: View {
+    let ptoDay: PTODay
+    let trip: Trip
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sun.max.fill")
+                .font(.caption).foregroundStyle(.white)
+                .frame(width: 28, height: 28)
+                .background(Color.orange, in: Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                Text(ptoDay.amount < 1 ? "Half PTO Day" : "PTO Day")
+                    .font(.subheadline).fontWeight(.medium)
+                if let label = trip.label, !label.isEmpty {
+                    Text(label).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
     }
 }

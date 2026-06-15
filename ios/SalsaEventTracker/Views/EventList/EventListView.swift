@@ -14,10 +14,16 @@ struct EventListView: View {
 
     private var availableCountries: [String] {
         var seen = Set<String>()
-        return model.flatEvents.compactMap { flat -> String? in
-            let c = flat.edition.country
-            return seen.insert(c).inserted ? c : nil
-        }.sorted()
+        return model.flatEvents
+            .filter { flat in
+                let matchesHistory = model.showHistoricalEvents ? flat.edition.isHistorical : !flat.edition.isHistorical
+                let matchesYear = model.filterYear.isEmpty || flat.edition.startDate.hasPrefix(model.filterYear)
+                return matchesHistory && matchesYear
+            }
+            .compactMap { flat -> String? in
+                let c = flat.edition.country
+                return seen.insert(c).inserted ? c : nil
+            }.sorted()
     }
 
     private var filteredFlat: [FlatEvent] {

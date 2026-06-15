@@ -19,6 +19,10 @@ struct RootView: View {
                 .tabItem { Label("Festivals", systemImage: "music.note.list") }
                 .tag(Tab.festivalList)
 
+            RecentlyAddedView()
+                .tabItem { Label("Recent", systemImage: "sparkles") }
+                .tag(Tab.recentlyAdded)
+
             TripsView()
                 .tabItem { Label("Trips", systemImage: "airplane") }
                 .tag(Tab.trips)
@@ -26,15 +30,6 @@ struct RootView: View {
             ReviewsView()
                 .tabItem { Label("Reviews", systemImage: "star.fill") }
                 .tag(Tab.reviews)
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                if model.isSignedIn {
-                    Button("Sign Out") { model.signOut() }
-                } else {
-                    Button("Sign In") { model.showLogin = true }
-                }
-            }
         }
         .sheet(isPresented: $model.showLogin) {
             LoginView()

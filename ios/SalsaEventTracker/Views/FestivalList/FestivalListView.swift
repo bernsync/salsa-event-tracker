@@ -14,10 +14,14 @@ struct FestivalListView: View {
 
     private var availableCountries: [String] {
         var seen = Set<String>()
-        return model.flatEvents.compactMap { flat -> String? in
-            let c = flat.edition.country
-            return seen.insert(c).inserted ? c : nil
-        }.sorted()
+        return model.flatEvents
+            .filter { flat in
+                model.festivalFilterYear.isEmpty || flat.edition.startDate.hasPrefix(model.festivalFilterYear)
+            }
+            .compactMap { flat -> String? in
+                let c = flat.edition.country
+                return seen.insert(c).inserted ? c : nil
+            }.sorted()
     }
 
     // An event passes if any of its editions matches all active filters
@@ -53,6 +57,7 @@ struct FestivalListView: View {
                         }
                         .pickerStyle(.menu)
                         .buttonStyle(.bordered)
+                        .onChange(of: model.festivalFilterYear) { model.festivalFilterCountry = "" }
 
                         Picker("Month", selection: $model.festivalFilterMonth) {
                             Text("All months").tag("")
