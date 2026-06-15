@@ -54,11 +54,11 @@ Status: Uploaded to App Store Connect for TestFlight processing. **CONFIRMED.**
 ### Validation
 
 - Build number: `CURRENT_PROJECT_VERSION = 10`, `MARKETING_VERSION = 1.0`.
-- JS test suite: `npm test` — PENDING.
-- iOS test suite: `xcodebuild test` — PENDING.
+- JS test suite: `npm test` — 36 tests, 0 failures, **TEST SUCCEEDED**.
+- iOS test suite: `xcodebuild test` — All tests passed, **TEST SUCCEEDED**.
 - Simulator build: **BUILD SUCCEEDED**.
-- Release archive: PENDING.
-- App Store Connect upload: PENDING.
+- Release archive: **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: Upload succeeded. Uploaded SalsaEventTracker. **EXPORT SUCCEEDED**.
 
 ### Post-Upload Verification
 
