@@ -94,7 +94,7 @@ final class AppModel {
             danceStyles = fetchedStyles
             schengenCountries = Set(fetchedSchengen.filter(\.isSchengen).map(\.countryName))
         } catch {
-            setError(.loadFailed(error.localizedDescription))
+            setError(.loadFailed("[Public] \(type(of: error)): \(error.localizedDescription)"))
         }
         isLoading = false
     }
@@ -114,7 +114,7 @@ final class AppModel {
             setError(.authExpired)
             signOut()
         } catch {
-            setError(.loadFailed(error.localizedDescription))
+            setError(.loadFailed("[Private] \(type(of: error)): \(error.localizedDescription)"))
         }
         isLoading = false
     }
