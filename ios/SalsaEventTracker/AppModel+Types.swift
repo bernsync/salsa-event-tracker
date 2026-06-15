@@ -5,6 +5,7 @@ enum Tab: String, CaseIterable {
     case calendar = "Calendar"
     case eventList = "Events"
     case festivalList = "Festivals"
+    case recentlyAdded = "Recent"
     case trips = "Trips"
     case reviews = "Reviews"
 }

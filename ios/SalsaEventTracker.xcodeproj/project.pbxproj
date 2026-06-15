@@ -23,6 +23,7 @@
 		636D3C247873CEAE332B9835 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A892226095756870F56FC7 /* Event.swift */; };
 		66AC164290BC65B9A107A608 /* SupabaseServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87E7162126846B0FC40C67AF /* SupabaseServiceProtocol.swift */; };
 		6ABCEBE98931BCEB350104D3 /* ReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BEDA5BE420B7FAB2C7279E5 /* ReviewsView.swift */; };
+		6F8FAD4D3660BD6A532AACF6 /* RecentlyAddedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9610570F8613021EFFAFB0E8 /* RecentlyAddedView.swift */; };
 		805E246E1701292D1F3082F2 /* ReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B32BD54D2BCD1EF937EC79DC /* ReviewCard.swift */; };
 		821A7B1898E269139A0CBC92 /* SalsaEventTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7A24FFD1AE97E0BCBE0AB7D /* SalsaEventTrackerApp.swift */; };
 		86A070491BBAAF8F58080D58 /* DanceStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C0E3562F903890C0C7978E /* DanceStyle.swift */; };
@@ -79,6 +80,7 @@
 		842711D191A8C7344ED0CA0D /* SalsaEventTrackerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = SalsaEventTrackerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		87E7162126846B0FC40C67AF /* SupabaseServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseServiceProtocol.swift; sourceTree = "<group>"; };
 		9599156F20C0975B6BEB623F /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		9610570F8613021EFFAFB0E8 /* RecentlyAddedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentlyAddedView.swift; sourceTree = "<group>"; };
 		9B2BB9E05EFB8E44A49350D1 /* DateUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateUtils.swift; sourceTree = "<group>"; };
 		9E9CDEEAC1FE846AB150752D /* FestivalListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestivalListView.swift; sourceTree = "<group>"; };
 		A02029C056A1B09CB9A09B2D /* TextUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextUtils.swift; sourceTree = "<group>"; };
@@ -223,6 +225,14 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		CCA2991732FF18AC816CF45B /* RecentlyAdded */ = {
+			isa = PBXGroup;
+			children = (
+				9610570F8613021EFFAFB0E8 /* RecentlyAddedView.swift */,
+			);
+			path = RecentlyAdded;
+			sourceTree = "<group>";
+		};
 		D732026CF2E6A415B8E8A666 /* SalsaEventTracker */ = {
 			isa = PBXGroup;
 			children = (
@@ -258,6 +268,7 @@
 				0AAA2AE675421A3884664ADC /* EventDetail */,
 				7448A7C165A4E000BE279570 /* EventList */,
 				9987A9CE3BE9C0B3A752667B /* FestivalList */,
+				CCA2991732FF18AC816CF45B /* RecentlyAdded */,
 				DA4CAF63F0882C7D787DDC6F /* Reviews */,
 				7B41C94B32F8F7DEBFB4FB35 /* Trips */,
 			);
@@ -382,6 +393,7 @@
 				A152768595CFAB7E1D2C080E /* FestivalRow.swift in Sources */,
 				117699514445A180ACAE79A6 /* LoginView.swift in Sources */,
 				1B0113299C401AD93D59B5A6 /* PTODayRow.swift in Sources */,
+				6F8FAD4D3660BD6A532AACF6 /* RecentlyAddedView.swift in Sources */,
 				AC8135D0155A2F2512E22C66 /* Review.swift in Sources */,
 				805E246E1701292D1F3082F2 /* ReviewCard.swift in Sources */,
 				C1CE956836D2BDAD507B3D94 /* ReviewEditorView.swift in Sources */,
@@ -518,7 +530,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = MG3K52T7N9;
 				INFOPLIST_FILE = SalsaEventTracker/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -594,7 +606,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEVELOPMENT_TEAM = MG3K52T7N9;
 				INFOPLIST_FILE = SalsaEventTracker/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

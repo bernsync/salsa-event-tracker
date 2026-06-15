@@ -71,6 +71,49 @@ final class AppModel {
         Set(reviews.map(\.eventEditionId))
     }
 
+    func isAttending(editionId: String) -> Bool {
+        guard isSignedIn else { return false }
+        return trips.contains { $0.places.contains { $0.eventEditionId == editionId } }
+    }
+
+    func reviewScore(for flat: FlatEvent) -> Double? {
+        guard !reviews.isEmpty else { return nil }
+        let relevant: [Review]
+        if flat.edition.isHistorical {
+            relevant = reviews.filter { $0.eventEditionId == flat.edition.id }
+        } else {
+            let normalizedName = flat.event.name.lowercased()
+            let priorIds = Set(
+                events
+                    .filter { $0.name.lowercased() == normalizedName }
+                    .flatMap { $0.editions }
+                    .filter { $0.endDate < flat.edition.startDate }
+                    .map { $0.id }
+            )
+            relevant = reviews.filter { priorIds.contains($0.eventEditionId) }
+        }
+        guard !relevant.isEmpty else { return nil }
+        return relevant.reduce(0.0) { $0 + $1.totalScore } / Double(relevant.count)
+    }
+
+    func tripPlacesOn(_ dateStr: String) -> [(place: TripPlace, trip: Trip)] {
+        guard isSignedIn else { return [] }
+        return trips.flatMap { trip in
+            trip.places
+                .filter { $0.startDate <= dateStr && $0.endDate >= dateStr }
+                .map { (place: $0, trip: trip) }
+        }.sorted { $0.place.sequence ?? 0 < $1.place.sequence ?? 0 }
+    }
+
+    func ptoDaysOn(_ dateStr: String) -> [(ptoDay: PTODay, trip: Trip)] {
+        guard isSignedIn else { return [] }
+        return trips.flatMap { trip in
+            trip.ptoDays
+                .filter { $0.ptoDate == dateStr }
+                .map { (ptoDay: $0, trip: trip) }
+        }
+    }
+
     // MARK: - Services
     let supabase: any SupabaseServiceProtocol
 
