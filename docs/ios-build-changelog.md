@@ -8,6 +8,47 @@ Before any App Store Connect or TestFlight upload, add or update the entry for t
 
 ---
 
+## Build 8 - 2026-06-15 - App Store Connect Upload
+
+Branch: `build-8-2026-06-15`
+
+Status: Uploaded to App Store Connect for TestFlight processing. **CONFIRMED.**
+
+### Root cause note
+
+Build 7's `[Private]` diagnostic prefix confirmed the error is from `loadPrivateData()`. The error message "The data couldn't be read because it is missing" is `DecodingError.keyNotFound` or `DecodingError.valueNotFound`. Build 7 fixed all nullable fields in `Trip`, `TripPlace`, `PTODay`, `EventEdition`, `DanceStyle`, and `SchengenCountryRow`, but `Review` still used the synthesized `Decodable` init with non-optional `userId: String` (decoded from column `user_id`) and `eventEditionId: String`. If the `reviews` table column is named differently than `user_id`, or if `event_edition_id` is null for any review row, the synthesized decode throws `DecodingError.keyNotFound` / `DecodingError.valueNotFound`.
+
+Fix: added `extension Review { init(from:) }` that uses `(try? decode) ?? ""` for `userId` and `eventEditionId`, making Review fully null-safe while preserving the synthesized memberwise initializer.
+
+Also upgraded the AppModel diagnostic: `DecodingError` catch blocks now surface the exact failing key and coding path (e.g. `key 'user_id' not found at 'Index 0'`) instead of just the localized string, eliminating the need for another diagnostic build if further errors occur.
+
+### User-Visible Changes
+
+**Bug fix**
+- Fixed persistent "Load failed: [Private] DecodingError: missing" error after login. Root cause: `Review.userId` and `Review.eventEditionId` were the last non-optional fields without null-safe decoding.
+
+### Technical Changes
+
+- `Review.swift`: Added `extension Review { init(from:) }` — `userId` and `eventEditionId` use `(try? decode) ?? ""`; all other fields use `decodeIfPresent`.
+- `AppModel.swift`: Added `decodeDetail(_:)` helper — DecodingError catch blocks now show the exact failing key and coding path in the error message (e.g. `[Private] key 'user_id' not found at 'Index 0'`).
+- `project.yml` / `project.pbxproj`: `CURRENT_PROJECT_VERSION` bumped 7 → 8.
+
+### Validation
+
+- Build number: `CURRENT_PROJECT_VERSION = 8`, `MARKETING_VERSION = 1.0`.
+- JS test suite: `npm test` — 36 tests, 0 failures, **TEST SUCCEEDED**.
+- iOS test suite: `xcodebuild test` — 11 tests, 3 suites, **TEST SUCCEEDED**.
+- Simulator build: **BUILD SUCCEEDED**.
+- Release archive: **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: Upload succeeded. **EXPORT SUCCEEDED**.
+
+### Post-Upload Verification (required before declaring done)
+
+- [ ] Open app from TestFlight build — confirm no error after login.
+- [ ] Confirm trips and reviews load correctly after login.
+
+---
+
 ## Build 7 - 2026-06-15 - App Store Connect Upload
 
 Branch: `build-7-2026-06-15`

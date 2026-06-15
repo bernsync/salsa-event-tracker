@@ -69,6 +69,40 @@ struct Review: Identifiable, Decodable {
     }
 }
 
+extension Review {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        userId = (try? c.decode(String.self, forKey: .userId)) ?? ""
+        eventEditionId = (try? c.decode(String.self, forKey: .eventEditionId)) ?? ""
+        reviewedAt = try c.decodeIfPresent(String.self, forKey: .reviewedAt)
+        musicScore = try c.decodeIfPresent(Int.self, forKey: .musicScore)
+        dancingLevelScore = try c.decodeIfPresent(Int.self, forKey: .dancingLevelScore)
+        stageImpactScore = try c.decodeIfPresent(Int.self, forKey: .stageImpactScore)
+        floorScore = try c.decodeIfPresent(Int.self, forKey: .floorScore)
+        vibeScore = try c.decodeIfPresent(Int.self, forKey: .vibeScore)
+        eventCostScore = try c.decodeIfPresent(Int.self, forKey: .eventCostScore)
+        servicesScore = try c.decodeIfPresent(Int.self, forKey: .servicesScore)
+        eventHoursScore = try c.decodeIfPresent(Int.self, forKey: .eventHoursScore)
+        hostCityScore = try c.decodeIfPresent(Int.self, forKey: .hostCityScore)
+        eventSizeScore = try c.decodeIfPresent(Int.self, forKey: .eventSizeScore)
+        travelScore = try c.decodeIfPresent(Int.self, forKey: .travelScore)
+        musicComment = try c.decodeIfPresent(String.self, forKey: .musicComment)
+        dancingLevelComment = try c.decodeIfPresent(String.self, forKey: .dancingLevelComment)
+        stageImpactComment = try c.decodeIfPresent(String.self, forKey: .stageImpactComment)
+        floorComment = try c.decodeIfPresent(String.self, forKey: .floorComment)
+        vibeComment = try c.decodeIfPresent(String.self, forKey: .vibeComment)
+        eventCostComment = try c.decodeIfPresent(String.self, forKey: .eventCostComment)
+        servicesComment = try c.decodeIfPresent(String.self, forKey: .servicesComment)
+        eventHoursComment = try c.decodeIfPresent(String.self, forKey: .eventHoursComment)
+        hostCityComment = try c.decodeIfPresent(String.self, forKey: .hostCityComment)
+        eventSizeComment = try c.decodeIfPresent(String.self, forKey: .eventSizeComment)
+        travelComment = try c.decodeIfPresent(String.self, forKey: .travelComment)
+        topReason = try c.decodeIfPresent(String.self, forKey: .topReason)
+        notes = try c.decodeIfPresent(String.self, forKey: .notes)
+    }
+}
+
 enum ReviewCategory: String, CaseIterable {
     case music = "Music"
     case dancingLevel = "Dancing Level"
