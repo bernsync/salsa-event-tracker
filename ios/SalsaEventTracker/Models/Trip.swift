@@ -27,8 +27,8 @@ struct TripPlace: Identifiable, Decodable {
     let endDate: String
     let city: String
     let country: String
-    let travelRole: String   // "stay"|"organizer"|"vendor"
-    let sequence: Int
+    let travelRole: String?
+    let sequence: Int?
     let notes: String?
 
     enum CodingKeys: String, CodingKey {

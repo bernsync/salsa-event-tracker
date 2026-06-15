@@ -63,10 +63,12 @@ struct ReviewEditorView: View {
     private func populateFromReview() {
         guard let r = review else { return }
         scores = [
-            .music: r.musicScore, .dancingLevel: r.dancingLevelScore, .stageImpact: r.stageImpactScore,
-            .floor: r.floorScore, .vibe: r.vibeScore, .eventCost: r.eventCostScore,
-            .services: r.servicesScore, .eventHours: r.eventHoursScore,
-            .hostCity: r.hostCityScore, .eventSize: r.eventSizeScore, .travel: r.travelScore
+            .music: r.musicScore ?? 5, .dancingLevel: r.dancingLevelScore ?? 5,
+            .stageImpact: r.stageImpactScore ?? 5, .floor: r.floorScore ?? 5,
+            .vibe: r.vibeScore ?? 5, .eventCost: r.eventCostScore ?? 5,
+            .services: r.servicesScore ?? 5, .eventHours: r.eventHoursScore ?? 5,
+            .hostCity: r.hostCityScore ?? 5, .eventSize: r.eventSizeScore ?? 5,
+            .travel: r.travelScore ?? 5
         ]
         comments = [
             .music: r.musicComment ?? "", .dancingLevel: r.dancingLevelComment ?? "",
