@@ -8,6 +8,60 @@ Before any App Store Connect or TestFlight upload, add or update the entry for t
 
 ---
 
+## Build 12 - 2026-06-18 - App Store Connect Upload
+
+Branch: `build-12-6.18.26`
+
+Status: Ready for App Store Connect upload. Archive and export/upload must be run from the committed Build 12 HEAD after this entry is present.
+
+### User-Visible Changes
+
+- **Calendar swipe navigation**: swiping left/right on the calendar grid moves to the next/previous month.
+- **Add to Calendar restored on iOS**: event details and festival edition details now include Google Calendar and phone `.ics` calendar-file actions.
+- **Tab names match the web app**: bottom tabs now use `Event Calendar`, `Calendar List`, `Event List`, `Recently Added`, and `Trips`; the Reviews tab remains hidden.
+- **App display name changed**: installed app now displays as `Salsa Events`.
+- **Offline public browsing**: the app caches public event/reference data on launch and falls back to the last cached public data when offline.
+- **Trips read-only in iOS**: visible add/edit/delete affordances were removed; iOS displays Supabase-owned trip data without mutating it.
+- **Trip places sorted by date**: places inside each trip now display chronologically, with sequence as a tie-breaker.
+- **Festival edition details**: tapping a festival now opens tracked edition details for up to three editions.
+- **Filter/sort panels differentiated**: list views visually separate filters from sorting controls.
+
+### Technical Changes
+
+- `CalendarView`: added horizontal drag gesture for month paging.
+- `EventDetailSheet`: added Google Calendar URL generation and `.ics` file sharing via `ShareLink`.
+- `FestivalRow`: opens a festival detail sheet with up to three tracked editions and calendar export actions for each edition.
+- `AppModel`: added `PublicDataCache` for public events, dance styles, and Schengen country lookup only; private trips/reviews remain network-only and in memory.
+- `Event`, `EventEdition`, `DanceStyle`, and `SchengenCountryRow`: made `Codable` for public cache persistence.
+- `TripsView` / `TripCard`: removed add/edit/delete controls and sorted trip places by date/sequence.
+- `RootView` / `AppModel+Types`: web-parity tab names; no Reviews tab.
+- `Info.plist`: `CFBundleDisplayName` and `CFBundleName` set to `Salsa Events`.
+- `docs/security-assessment.md`: documented public-only offline caching and confirmed private data is not cached on disk.
+- `project.yml` / `project.pbxproj`: `CURRENT_PROJECT_VERSION` bumped 11 → 12.
+
+### Validation
+
+- Build number: `CURRENT_PROJECT_VERSION = 12`, `MARKETING_VERSION = 1.0`.
+- JS test suite: `npm test` — 36 tests, 0 failures, **TEST SUCCEEDED**.
+- iOS test suite: `xcodebuild test` on iPhone 17 Pro simulator — 11 tests, 3 suites, **TEST SUCCEEDED**.
+- Simulator build: covered by iOS test build.
+- Release archive: pending.
+- App Store Connect upload: pending.
+
+### Post-Upload Verification
+
+- [ ] Confirm installed app name is `Salsa Events`.
+- [ ] Swipe left/right on Event Calendar and confirm month changes correctly.
+- [ ] Open an event detail and confirm Google Calendar and phone calendar file actions are present.
+- [ ] Open Event List and confirm Filters and Sort are visually distinct.
+- [ ] Open Event List/Festival List/Recently Added/Trips tabs and confirm web-parity tab names with no Reviews tab.
+- [ ] Open a festival and confirm up to three tracked editions are visible.
+- [ ] Open Trips and confirm no add/edit/delete controls appear and places are date-sorted.
+- [ ] Launch once online, relaunch without network, and confirm public event/reference data is still visible.
+- [ ] Confirm private trip/review data does not appear while offline unless already loaded in memory during the current session.
+
+---
+
 ## Build 11 - 2026-06-15 - App Store Connect Upload
 
 Branch: `build-11-2026-06-15`
