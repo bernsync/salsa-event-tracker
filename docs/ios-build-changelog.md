@@ -12,7 +12,7 @@ Before any App Store Connect or TestFlight upload, add or update the entry for t
 
 Branch: `build-12-6.18.26`
 
-Status: Ready for App Store Connect upload. Archive and export/upload must be run from the committed Build 12 HEAD after this entry is present.
+Status: Uploaded to App Store Connect for TestFlight processing. **CONFIRMED.**
 
 ### User-Visible Changes
 
@@ -45,8 +45,8 @@ Status: Ready for App Store Connect upload. Archive and export/upload must be ru
 - JS test suite: `npm test` — 36 tests, 0 failures, **TEST SUCCEEDED**.
 - iOS test suite: `xcodebuild test` on iPhone 17 Pro simulator — 11 tests, 3 suites, **TEST SUCCEEDED**.
 - Simulator build: covered by iOS test build.
-- Release archive: pending.
-- App Store Connect upload: pending.
+- Release archive: `xcodebuild archive` to `/private/tmp/SalsaEventTracker-build12-20260618.xcarchive` — **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: `xcodebuild -exportArchive` to App Store Connect — Upload succeeded. Uploaded SalsaEventTracker. **EXPORT SUCCEEDED**.
 
 ### Post-Upload Verification
 
