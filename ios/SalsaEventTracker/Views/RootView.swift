@@ -8,24 +8,25 @@ struct RootView: View {
         @Bindable var model = model
         TabView(selection: $model.selectedTab) {
             CalendarView()
-                .tabItem { Label("Calendar", systemImage: "calendar") }
+                .tabItem { Label(Tab.calendar.rawValue, systemImage: "calendar") }
                 .tag(Tab.calendar)
 
             EventListView()
-                .tabItem { Label("Events", systemImage: "list.bullet") }
+                .tabItem { Label(Tab.eventList.rawValue, systemImage: "list.bullet") }
                 .tag(Tab.eventList)
 
             FestivalListView()
-                .tabItem { Label("Festivals", systemImage: "music.note.list") }
+                .tabItem { Label(Tab.festivalList.rawValue, systemImage: "music.note.list") }
                 .tag(Tab.festivalList)
 
             RecentlyAddedView()
-                .tabItem { Label("Recent", systemImage: "sparkles") }
+                .tabItem { Label(Tab.recentlyAdded.rawValue, systemImage: "sparkles") }
                 .tag(Tab.recentlyAdded)
 
             TripsView()
-                .tabItem { Label("Trips", systemImage: "airplane") }
+                .tabItem { Label(Tab.trips.rawValue, systemImage: "airplane") }
                 .tag(Tab.trips)
+
         }
         .sheet(isPresented: $model.showLogin) {
             LoginView()
@@ -51,5 +52,36 @@ struct RootView: View {
         } message: {
             Text(model.appError?.localizedDescription ?? "")
         }
+    }
+}
+
+struct ControlPanel<Content: View>: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+    let content: Content
+
+    init(_ title: String, systemImage: String, tint: Color = .accentColor, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.systemImage = systemImage
+        self.tint = tint
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(title, systemImage: systemImage)
+                .font(.caption.bold())
+                .foregroundStyle(tint)
+            content
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(tint.opacity(0.18), lineWidth: 1)
+        )
+        .padding(.horizontal)
     }
 }

@@ -1,7 +1,7 @@
 // ios/SalsaEventTracker/Models/DanceStyle.swift
 import Foundation
 
-struct DanceStyle: Identifiable, Decodable {
+struct DanceStyle: Identifiable, Codable {
     var id: String { slug }
     let name: String
     let slug: String

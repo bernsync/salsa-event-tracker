@@ -97,13 +97,14 @@ final class AppModel {
     }
 
     func tripPlacesOn(_ dateStr: String) -> [(place: TripPlace, trip: Trip)] {
-        // No isSignedIn guard — trips is empty when signed out, and the computed
-        // property reads non-@Observable authService.session which won't re-trigger renders
         return trips.flatMap { trip in
             trip.places
                 .filter { $0.startDate <= dateStr && $0.endDate >= dateStr }
                 .map { (place: $0, trip: trip) }
-        }.sorted { $0.place.sequence ?? 0 < $1.place.sequence ?? 0 }
+        }.sorted {
+            if $0.place.startDate != $1.place.startDate { return $0.place.startDate < $1.place.startDate }
+            return ($0.place.sequence ?? Int.max) < ($1.place.sequence ?? Int.max)
+        }
     }
 
     func ptoDaysOn(_ dateStr: String) -> [(ptoDay: PTODay, trip: Trip)] {
@@ -116,11 +117,14 @@ final class AppModel {
 
     // MARK: - Services
     let supabase: any SupabaseServiceProtocol
+    private let publicDataCache: PublicDataCache?
 
     init(supabase: any SupabaseServiceProtocol = SupabaseService(),
-         authService: (any AuthServiceProtocol)? = nil) {
+         authService: (any AuthServiceProtocol)? = nil,
+         publicDataCache: PublicDataCache? = .shared) {
         self.supabase = supabase
         self.authService = authService ?? AuthService()
+        self.publicDataCache = publicDataCache
     }
 
     // MARK: - Load
@@ -128,18 +132,37 @@ final class AppModel {
     func loadPublicData() async {
         isLoading = true
         appError = nil
+        var loadedFromCache = false
+        if let publicDataCache, let cached = await publicDataCache.load() {
+            applyPublicData(events: cached.events, danceStyles: cached.danceStyles, schengenRows: cached.schengenCountries)
+            loadedFromCache = true
+        }
         do {
             async let eventsTask = supabase.fetchEvents()
             async let stylesTask = supabase.fetchDanceStyles()
             async let schengenTask = supabase.fetchSchengenCountries()
             let (fetchedEvents, fetchedStyles, fetchedSchengen) = try await (eventsTask, stylesTask, schengenTask)
-            events = fetchedEvents
-            danceStyles = fetchedStyles
-            schengenCountries = Set(fetchedSchengen.filter(\.isSchengen).map(\.countryName))
+            applyPublicData(events: fetchedEvents, danceStyles: fetchedStyles, schengenRows: fetchedSchengen)
+            if let publicDataCache {
+                await publicDataCache.save(PublicDataSnapshot(
+                    events: fetchedEvents,
+                    danceStyles: fetchedStyles,
+                    schengenCountries: fetchedSchengen,
+                    savedAt: Date()
+                ))
+            }
         } catch {
-            setError(.loadFailed("[Public] \(Self.decodeDetail(error))"))
+            if !loadedFromCache {
+                setError(.loadFailed("[Public] \(Self.decodeDetail(error))"))
+            }
         }
         isLoading = false
+    }
+
+    private func applyPublicData(events: [Event], danceStyles: [DanceStyle], schengenRows: [SchengenCountryRow]) {
+        self.events = events
+        self.danceStyles = danceStyles
+        self.schengenCountries = Set(schengenRows.filter(\.isSchengen).map(\.countryName))
     }
 
     func loadPrivateData() async {
@@ -193,5 +216,48 @@ final class AppModel {
         authService.signOut()
         trips = []
         reviews = []
+    }
+}
+
+struct PublicDataSnapshot: Codable {
+    let events: [Event]
+    let danceStyles: [DanceStyle]
+    let schengenCountries: [SchengenCountryRow]
+    let savedAt: Date
+}
+
+actor PublicDataCache {
+    static let shared = PublicDataCache()
+
+    private var cacheURL: URL? {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("salsa-events-public-cache.json")
+    }
+
+    func load() -> PublicDataSnapshot? {
+        guard let cacheURL, let data = try? Data(contentsOf: cacheURL) else { return nil }
+        return try? JSONDecoder().decode(PublicDataSnapshot.self, from: data)
+    }
+
+    func save(_ snapshot: PublicDataSnapshot) {
+        guard let cacheURL else { return }
+        do {
+            try FileManager.default.createDirectory(
+                at: cacheURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            let data = try JSONEncoder().encode(snapshot)
+            try data.write(to: cacheURL, options: [.atomic])
+            try? (cacheURL as NSURL).setResourceValue(
+                URLFileProtection.completeUntilFirstUserAuthentication,
+                forKey: .fileProtectionKey
+            )
+            var excludedURL = cacheURL
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try? excludedURL.setResourceValues(values)
+        } catch {
+            // Public cache failures should never block live app data.
+        }
     }
 }

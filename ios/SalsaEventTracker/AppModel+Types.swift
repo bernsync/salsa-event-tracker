@@ -2,10 +2,10 @@
 import Foundation
 
 enum Tab: String, CaseIterable {
-    case calendar = "Calendar"
-    case eventList = "Events"
-    case festivalList = "Festivals"
-    case recentlyAdded = "Recent"
+    case calendar = "Event Calendar"
+    case eventList = "Calendar List"
+    case festivalList = "Event List"
+    case recentlyAdded = "Recently Added"
     case trips = "Trips"
 }
 

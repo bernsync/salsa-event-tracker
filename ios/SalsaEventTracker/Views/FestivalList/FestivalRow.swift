@@ -19,7 +19,6 @@ struct FestivalRow: View {
             .first
     }
 
-    // Show current year + up to 2 prior years, matching web "edition history blocks"
     private var historyEditions: [EventEdition] {
         let anchor = nextEdition ?? latestEdition
         guard let anchor else { return [] }
@@ -72,7 +71,6 @@ struct FestivalRow: View {
                     Text(event.styles.joined(separator: " · "))
                         .font(.caption2).foregroundStyle(.secondary)
                 }
-                // Edition history blocks (current + 2 prior years)
                 if !historyEditions.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(historyEditions, id: \.id) { ed in
@@ -86,10 +84,82 @@ struct FestivalRow: View {
             .contentShape(Rectangle())
         }
         .sheet(isPresented: $showDetail) {
-            if let ed = nextEdition ?? latestEdition {
-                EventDetailSheet(flat: FlatEvent(id: ed.id, event: event, edition: ed))
+            FestivalDetailSheet(event: event)
+        }
+    }
+}
+
+private struct FestivalDetailSheet: View {
+    let event: Event
+    @Environment(\.dismiss) private var dismiss
+
+    private var trackedEditions: [EventEdition] {
+        Array(event.editions.sorted { $0.startDate > $1.startDate }.prefix(3))
+    }
+
+    var body: some View {
+        let websiteURL = event.website.flatMap(URL.init)
+        let instagramURL = event.instagram.flatMap(URL.init)
+        let facebookURL = event.facebook.flatMap(URL.init)
+
+        NavigationStack {
+            List {
+                Section("Festival") {
+                    if let organizer = event.organizer { LabeledContent("Organizer", value: organizer) }
+                    if !event.styles.isEmpty { LabeledContent("Styles", value: event.styles.joined(separator: ", ")) }
+                    if websiteURL != nil || instagramURL != nil || facebookURL != nil {
+                        if let url = websiteURL { Link("Website", destination: url) }
+                        if let url = instagramURL { Link("Instagram", destination: url) }
+                        if let url = facebookURL { Link("Facebook", destination: url) }
+                    }
+                }
+
+                Section("Tracked Editions") {
+                    if trackedEditions.isEmpty {
+                        Text("No tracked editions.").foregroundStyle(.secondary)
+                    } else {
+                        ForEach(trackedEditions) { edition in
+                            DisclosureGroup {
+                                FestivalEditionDetails(event: event, edition: edition)
+                            } label: {
+                                EditionHistoryBlock(edition: edition)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(event.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
             }
         }
+    }
+}
+
+private struct FestivalEditionDetails: View {
+    let event: Event
+    let edition: EventEdition
+
+    var body: some View {
+        let flat = FlatEvent(id: edition.id, event: event, edition: edition)
+        VStack(alignment: .leading, spacing: 8) {
+            LabeledContent("Dates", value: DateUtils.displayDateRange(start: edition.startDate, end: edition.endDate))
+            LabeledContent("City", value: edition.city)
+            LabeledContent("Country", value: edition.country)
+            if let venue = edition.venue { LabeledContent("Venue", value: venue) }
+            if let size = edition.eventSize { LabeledContent("Size", value: size.capitalized) }
+            if let price = edition.price { LabeledContent("Price", value: "\(price) \(edition.currency ?? "")") }
+            if let djs = edition.djs { LabeledContent("DJs", value: djs) }
+            if let artists = edition.artists { LabeledContent("Artists", value: artists) }
+            if let notes = edition.notes { LabeledContent("Notes", value: notes) }
+            if let travel = edition.travel { LabeledContent("Travel", value: travel) }
+            CalendarExportLinks(flat: flat)
+                .padding(.top, 4)
+        }
+        .font(.subheadline)
     }
 }
 

@@ -130,7 +130,7 @@ struct AppModelLoadingTests {
             instagram: nil, facebook: nil, styles: ["salsa"], watchlist: nil,
             createdAt: "2026-01-01", editions: [edition])
         await mock.setEventsToReturn([event])
-        let model = AppModel(supabase: mock)
+        let model = AppModel(supabase: mock, publicDataCache: nil)
         await model.loadPublicData()
         #expect(model.events.isEmpty == false)
         #expect(model.appError == nil)
@@ -140,7 +140,7 @@ struct AppModelLoadingTests {
     func publicDataFailure() async {
         let mock = MockSupabaseService()
         await mock.setShouldThrow(NSError(domain: "test", code: 0))
-        let model = AppModel(supabase: mock)
+        let model = AppModel(supabase: mock, publicDataCache: nil)
         await model.loadPublicData()
         #expect(model.appError != nil)
     }
@@ -154,7 +154,7 @@ struct AppModelLoadingTests {
             accessToken: "tok", refreshToken: "ref",
             expiresAt: Date().addingTimeInterval(3600),
             userId: "u1", email: "test@test.com")
-        let model = AppModel(supabase: supabaseMock, authService: authMock)
+        let model = AppModel(supabase: supabaseMock, authService: authMock, publicDataCache: nil)
         await model.loadPrivateData()
         #expect(model.isSignedIn == false)
         #expect(model.appError == .authExpired)
