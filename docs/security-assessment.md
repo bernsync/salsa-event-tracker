@@ -174,19 +174,125 @@ This is not just a product task; it is a release gate for any monetized version.
 
 ---
 
-## 11. Near-Term Security Checklist
+
+## 11. Canonical Security Audit & Hardening Checklist
+
+This is the release-blocking checklist for Salsa Event Tracker. Status reflects source review on 2026-06-18; Supabase dashboard policy review, cross-user testing, and deployed-header verification still require manual execution against the live project.
+
+### Priority 1 — Verify data access controls
+
+**Supabase RLS must be reviewed for every table.** Current repo docs classify these known tables: `events`, `event_editions`, `dance_styles`, `schengen_countries`, `reviews`, `personal_trips`, `personal_trip_places`, `personal_pto_days`, `app_user_roles`, and legacy/current `trips`. Public reference tables may be readable by anonymous users; owner/private tables must require RLS ownership or explicit `owner`/`admin` app roles.
+
+**Tables and feature areas from the full checklist:**
+
+- `users` / `profiles`: no custom profile table is present in the repo. Supabase `auth.users` must remain inaccessible from anon/client queries; any future profile table needs RLS before launch.
+- `reviews`: present and owner-scoped. Verify create/update/delete policies prevent cross-user edits and deletes.
+- `favorites`: not present today. If added, treat as owner data unless explicitly made public.
+- RSVPs / attendance: private attendance is currently inferred from trip places. The sharing plan requires a narrow `shared_event_attendance` table before exposing attendance to other users.
+- photos / uploads: not present today. If added, storage buckets need RLS/storage policies, file type validation, object ownership, size limits, and abuse controls.
+- moderation / admin tables: no custom admin UI route exists. `app_user_roles` must be audited so only authorized owner/admin users can grant or use privileged access.
+- notifications: not present today. If added, tokens/preferences are private owner data and must not be readable by other users.
+- future user-generated content tables: default to owner-scoped or explicitly moderated access until a separate RLS review says otherwise.
+
+**Cross-user authorization tests are required before launch or any auth/RLS change.** Test while logged out, as User A, and as User B. Verify one user cannot edit/delete another user's review, modify another user's profile or private trip data, upload content for another user, read private data, or perform admin actions without an admin role.
+
+### Priority 2 — Review API security
+
+There are no app-owned `/api/*` routes in the current source. The live API surface is Supabase Auth plus Supabase PostgREST calls from `web/api.js` and the iOS `SupabaseService`.
+
+For the current architecture, API review means verifying Supabase RLS, app-role checks, and service-role workflows. If Supabase Edge Functions or custom `/api/*` endpoints are added later, each endpoint must enforce authentication, derive user identity server-side, verify ownership/admin permissions server-side, and reject expired or missing credentials. Frontend checks must only control UI visibility, never authorization.
+
+Unauthenticated/expired/different-user API calls must be tested against every private read/write operation. Expected result: unauthorized requests are rejected and do not leak private rows or policy details.
+
+### Priority 3 — Secrets and environment variables
+
+Only publishable Supabase keys may appear in browser or iOS client code. Current expected public locations are `web/supabase-config.js` and `ios/SalsaEventTracker/Services/SupabaseConfig.swift`.
+
+Service-role keys must remain server-side only. Current GitHub workflows reference `SUPABASE_SERVICE_ROLE_KEY` through GitHub Actions secrets for reviewed data update jobs; the literal key must never appear in repository files, frontend bundles, browser network responses, iOS build artifacts, uploaded audit artifacts, or logs.
+
+Before release, run a secret scan for at least: `key`, `secret`, `token`, `apikey`, `service_role`, `sk_`, and JWT-looking `eyJ` values. Rotate any accidentally exposed credential immediately.
+
+### Priority 4 — Session security
+
+The web app currently stores Supabase access/refresh tokens in `localStorage` through `web/auth-session.js`. That is simple, but it is weaker than secure HTTP-only cookies because any XSS can read localStorage. For the current owner/helper static app model, this risk must be explicitly accepted and controlled through CSP, minimal dependencies, no inline script expansion, and short-lived sessions.
+
+If the product expands to public users or higher-risk private data, move browser sessions behind a backend or Supabase-supported flow that can use secure HTTP-only cookies. Logout must continue to clear local browser state. The iOS app stores tokens in Keychain and still needs an explicit accessibility class as noted in Section 9.
+
+### Priority 5 — Rate limiting and abuse prevention
+
+Supabase Auth rate limits must cover login, signup, token refresh, password reset, and magic links if enabled. Public signup is expected to remain disabled for the current model.
+
+User-action rate limits are required before adding public/community writes: review creation, review editing, photo uploads, RSVPs/attendance updates, comments, and search endpoints. Prefer user-based limits for signed-in actions, IP-based limits for anonymous endpoints, and CAPTCHA or step-up verification for suspicious activity.
+
+### Priority 6 — Security headers
+
+`web/index.html` currently includes a strong CSP meta tag. Deployed response headers still need verification for `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, and `Strict-Transport-Security`.
+
+GitHub Pages has limited custom-header support, so the Cloudflare Pages migration should define these as deployment headers or rules. HSTS should only be enabled after the production domain, redirects, Supabase auth redirects, and rollback plan are stable.
+
+### Priority 7 — Frontend trust validation
+
+UI controls are not security controls. Patterns such as hiding a delete button for non-admin users are acceptable only as convenience. Backend enforcement must come from Supabase RLS/app-role policies or future server-side endpoint checks.
+
+Review any use of `user.isAdmin`, app roles, or owner checks to confirm the same permission is enforced at the data/API layer. This is especially important for reviews, private trips, shared attendance, role management, and any future moderation/admin workflow.
+
+### Priority 8 — Public data exposure review
+
+While logged out, browse the app, inspect browser network traffic, and inspect Supabase responses. Public responses must not expose emails, private user IDs beyond unavoidable row ownership where explicitly intended, user metadata, admin fields, hidden moderation fields, private trip details, PTO/visa calculations, or review data.
+
+Public event/reference data is expected to remain visible. Any field added to public tables should be reviewed before it is shipped because anonymous users can read those rows by design.
+
+### Priority 9 — Automated security checks
+
+Current CI runs syntax checks and unit tests only. Dedicated security scanning is not yet added.
+
+Add CI/CD coverage for:
+
+- Secret scanning: Gitleaks or TruffleHog.
+- Dependency vulnerability scanning: Dependabot and/or npm audit review.
+- Basic security linting: CodeQL or equivalent JavaScript analysis.
+- Periodic endpoint/RLS smoke testing against a safe Supabase test project or controlled live test users.
+
+Recommended GitHub tooling: TruffleHog, Gitleaks, Dependabot, and CodeQL. Treat security scanner failures as release blockers unless reviewed and explicitly waived.
+
+---
+
+## 12. Definition of Done
+
+The Salsa security checklist is done only when all of the following are true:
+
+- All Supabase tables have RLS enabled unless they are intentionally public read-only reference tables.
+- All private/user-generated tables have read/write policies for every operation they support.
+- Cross-user authorization testing is complete for logged-out, User A, User B, and admin/non-admin cases.
+- Authorization is verified server-side through RLS, app-role policies, or future backend endpoint checks.
+- No service-role key, database password, helper password, Stripe key, or long-lived auth token is exposed in repo files, frontend bundles, browser responses, iOS artifacts, logs, or uploaded artifacts.
+- Unauthenticated requests cannot read private data or perform private writes.
+- Rate limiting is enabled for auth flows and any public/community write actions.
+- Security headers are configured and verified in the deployed environment.
+- Frontend-only permission checks have matching backend/RLS enforcement.
+- Logged-out network inspection shows only intentionally public event/reference data.
+- Automated secret, dependency, lint, and endpoint/RLS checks are added to CI/CD or tracked as explicit release blockers.
+
+---
+
+## 13. Near-Term Security Checklist
 
 Before the next production/security review, verify:
 
 - Supabase public signups are disabled unless intentionally launching public accounts.
-- Login, sign-up, token refresh, and password reset rate limits are configured.
+- Login, sign-up, token refresh, password reset, and magic-link rate limits are configured.
 - Opaque auth errors are enabled.
-- RLS smoke tests pass for all private tables.
+- RLS smoke tests pass for public, owner, private, and app-role tables.
+- Cross-user tests pass for logged-out, User A, User B, and admin/non-admin scenarios.
+- Direct Supabase/PostgREST calls reject anonymous, expired-token, and wrong-user attempts on private operations.
 - GitHub Pages/Cloudflare Pages serve HTTPS only.
 - Cloudflare production uses TLS 1.2 minimum or higher.
+- Deployed response headers include CSP, frame protection, content-type protection, referrer policy, and HSTS when the domain is ready.
 - CSP still matches the exact external services in use.
 - Service worker cache does not include auth-gated API responses.
+- Browser session-token storage risk is accepted for the static owner/helper model or replaced with secure HTTP-only cookies before public-user expansion.
 - iOS Keychain token storage uses an explicit accessibility class.
 - iOS still has no ATS exceptions, private on-disk cache, or sensitive logging.
-- No service-role key, database password, helper password, or long-lived auth token exists in repo files.
+- Secret scanning confirms no service-role key, database password, helper password, Stripe key, or long-lived auth token exists in repo files or artifacts.
+- Dedicated security automation is added: Gitleaks or TruffleHog, Dependabot/dependency review, CodeQL or equivalent, and endpoint/RLS smoke tests.
 - Any custom domain has documented SPF/DKIM/DMARC and DNSSEC decisions.
