@@ -132,7 +132,35 @@ Default stance: cache public festival/reference data only; do not persist auth-g
 
 ---
 
-## 9. Payments, Taxes, and Business Operations
+## 9. iOS Client Security
+
+The iOS app has a separate security posture from the browser app because it stores auth state locally and talks directly to Supabase. A targeted code pass covered `SupabaseConfig.swift`, `AuthService.swift`, `SupabaseService.swift`, `AppModel.swift`, `Info.plist`, `ios/project.yml`, and the resolved Swift package pins.
+
+### Current posture
+
+- The Supabase URL and publishable anon key are hardcoded in `SupabaseConfig.swift`. This is acceptable because the key is public by design; RLS must remain the real authorization boundary.
+- Access and refresh tokens are stored with KeychainAccess, not `UserDefaults`, files, or SQLite.
+- Signing out clears the Keychain and in-memory private trips/reviews.
+- Private trip/review data appears to live in memory only. No `UserDefaults`, `FileManager`, or on-disk cache usage was found in the iOS app source.
+- No `print`, `NSLog`, or `Logger` usage was found in the iOS app source, so tokens and private data are not currently being written to device logs.
+- `Info.plist` has no `NSAppTransportSecurity` exceptions, so App Transport Security remains enabled. Supabase is called over HTTPS.
+- The only third-party iOS package is KeychainAccess 4.2.2, pinned in `Package.resolved`.
+
+### Required follow-up
+
+1. **Set explicit Keychain accessibility.** `AuthService` uses the KeychainAccess default accessibility. Before broad TestFlight or App Store use, set and document the intended class explicitly, preferably a device-local option such as `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` unless background auth refresh requires a different class. Priority: **medium**.
+
+2. **Decide whether refresh tokens should be used or removed.** The app stores the refresh token but currently treats expired access tokens by clearing the session and forcing sign-in. That is safe but may be confusing. Either implement Supabase token refresh with the same Keychain protections or stop storing unused refresh tokens. Priority: **low/medium**.
+
+3. **Keep private data out of offline caches.** If offline iOS support is added later, private trips, PTO days, reviews, and Schengen calculations need a separate storage/security review, including file protection, backup exclusion, and user-visible data reset. Priority: **required before offline private-data caching**.
+
+4. **Use generic production errors for private API failures.** `SupabaseService` currently includes response bodies in thrown errors, and `AppModel` can surface those details in load errors. That is useful during development but should be mapped to generic user-facing messages in production so database/policy details are not exposed unnecessarily. Priority: **low/medium**.
+
+5. **Preserve ATS defaults.** Do not add `NSAppTransportSecurity` exceptions to work around networking problems. If an exception is ever proposed, treat it as a security review item. Priority: **required for every iOS release**.
+
+---
+
+## 10. Payments, Taxes, and Business Operations
 
 There is no Stripe or payment integration in the current app. Before adding paid features, subscriptions, ticket affiliate revenue, or international payments, create an operations plan covering:
 
@@ -146,7 +174,7 @@ This is not just a product task; it is a release gate for any monetized version.
 
 ---
 
-## 10. Near-Term Security Checklist
+## 11. Near-Term Security Checklist
 
 Before the next production/security review, verify:
 
@@ -158,5 +186,7 @@ Before the next production/security review, verify:
 - Cloudflare production uses TLS 1.2 minimum or higher.
 - CSP still matches the exact external services in use.
 - Service worker cache does not include auth-gated API responses.
+- iOS Keychain token storage uses an explicit accessibility class.
+- iOS still has no ATS exceptions, private on-disk cache, or sensitive logging.
 - No service-role key, database password, helper password, or long-lived auth token exists in repo files.
 - Any custom domain has documented SPF/DKIM/DMARC and DNSSEC decisions.
