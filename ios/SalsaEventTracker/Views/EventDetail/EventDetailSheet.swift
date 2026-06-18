@@ -46,6 +46,9 @@ struct EventDetailSheet: View {
                         LabeledContent("Styles", value: flat.event.styles.joined(separator: ", "))
                     }
                 }
+                Section("Add to Calendar") {
+                    CalendarExportLinks(flat: flat)
+                }
                 if let djs = flat.edition.djs {
                     Section("DJs") { Text(djs) }
                 }
@@ -91,5 +94,131 @@ struct EventDetailSheet: View {
                 }
             }
         }
+    }
+}
+
+struct CalendarExportLinks: View {
+    let flat: FlatEvent
+    @State private var calendarFileURL: URL?
+
+    var body: some View {
+        Group {
+            Link(destination: CalendarExportService.googleCalendarURL(for: flat)) {
+                Label("Google Calendar", systemImage: "calendar.badge.plus")
+            }
+            if let calendarFileURL {
+                ShareLink(item: calendarFileURL) {
+                    Label("Phone calendar file", systemImage: "square.and.arrow.up")
+                }
+            } else {
+                Label("Preparing phone calendar file", systemImage: "hourglass")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .task(id: flat.id) {
+            calendarFileURL = try? CalendarExportService.writeCalendarFile(for: flat)
+        }
+    }
+}
+
+enum CalendarExportService {
+    static func googleCalendarURL(for flat: FlatEvent) -> URL {
+        var components = URLComponents(string: "https://calendar.google.com/calendar/render")!
+        components.queryItems = [
+            URLQueryItem(name: "action", value: "TEMPLATE"),
+            URLQueryItem(name: "text", value: flat.event.name),
+            URLQueryItem(name: "dates", value: "\(dateToken(flat.edition.startDate))/\(dateToken(exclusiveEndDate(flat.edition.endDate)))"),
+            URLQueryItem(name: "details", value: calendarDescription(for: flat)),
+            URLQueryItem(name: "location", value: [flat.edition.venue, flat.edition.city, flat.edition.country]
+                .compactMap { $0 }
+                .filter { !$0.isEmpty }
+                .joined(separator: ", "))
+        ]
+        return components.url!
+    }
+
+    static func writeCalendarFile(for flat: FlatEvent) throws -> URL {
+        let filename = calendarFilename(for: flat)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        try calendarFileContent(for: flat).write(to: url, atomically: true, encoding: .utf8)
+        return url
+    }
+
+    private static func calendarDescription(for flat: FlatEvent) -> String {
+        [
+            DateUtils.displayDateRange(start: flat.edition.startDate, end: flat.edition.endDate),
+            flat.edition.venue.map { "Venue: \($0)" },
+            flat.event.organizer.map { "Organizer: \($0)" },
+            flat.event.website.map { "Website: \($0)" },
+            flat.edition.tickets.map { "Tickets: \($0)" },
+            flat.edition.notes.map { "Notes: \($0)" }
+        ]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty }
+        .joined(separator: "\n")
+    }
+
+    private static func calendarFilename(for flat: FlatEvent) -> String {
+        let slug = flat.event.name
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
+        return "\(flat.edition.startDate)-\(slug.isEmpty ? "event" : slug).ics"
+    }
+
+    private static func calendarFileContent(for flat: FlatEvent, now: Date = Date()) -> String {
+        let lines = [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "PRODID:-//Salsa Events//EN",
+            "CALSCALE:GREGORIAN",
+            "METHOD:PUBLISH",
+            "BEGIN:VEVENT",
+            "UID:\(flat.edition.id)@salsa-events",
+            "DTSTAMP:\(timestamp(now))",
+            "DTSTART;VALUE=DATE:\(dateToken(flat.edition.startDate))",
+            "DTEND;VALUE=DATE:\(dateToken(exclusiveEndDate(flat.edition.endDate)))",
+            "SUMMARY:\(icsEscape(flat.event.name))",
+            "LOCATION:\(icsEscape([flat.edition.venue, flat.edition.city, flat.edition.country].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: ", ")))",
+            "DESCRIPTION:\(icsEscape(calendarDescription(for: flat)))",
+            "END:VEVENT",
+            "END:VCALENDAR"
+        ]
+        return lines.joined(separator: "\r\n") + "\r\n"
+    }
+
+    private static func exclusiveEndDate(_ isoDate: String) -> String {
+        guard let date = DateUtils.date(from: isoDate),
+              let next = Calendar.current.date(byAdding: .day, value: 1, to: date)
+        else { return isoDate }
+        return DateUtils.string(from: next)
+    }
+
+    private static func dateToken(_ isoDate: String) -> String {
+        isoDate.replacingOccurrences(of: "-", with: "")
+    }
+
+    private static func timestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyyMMdd'T'HHmmss'Z'"
+        return formatter.string(from: date)
+    }
+
+    private static func icsEscape(_ value: String) -> String {
+        value
+            .filter { character in
+                guard let scalar = character.unicodeScalars.first else { return false }
+                let value = scalar.value
+                return value == 9 || value == 10 || value == 13 || value >= 32
+            }
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+            .replacingOccurrences(of: "\n", with: "\\n")
+            .replacingOccurrences(of: ";", with: "\\;")
+            .replacingOccurrences(of: ",", with: "\\,")
     }
 }

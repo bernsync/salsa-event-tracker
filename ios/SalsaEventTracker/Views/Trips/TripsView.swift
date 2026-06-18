@@ -17,10 +17,6 @@ private let monthOptions: [MonthOption] = [
 
 struct TripsView: View {
     @Environment(AppModel.self) private var model
-    @State private var showEditor = false
-    @State private var editingTrip: Trip?
-    @State private var showDeleteConfirm = false
-    @State private var tripToDelete: Trip?
 
     private var currentYear: String {
         String(Calendar.current.component(.year, from: Date()))
@@ -64,8 +60,6 @@ struct TripsView: View {
     private var filteredTrips: [Trip] {
         model.trips.filter { trip in
             if model.showSchengenImpactingTrips {
-                // Schengen-Only bypasses the historical filter — past trips within the 180-day
-                // window are the whole point of the toggle.
                 guard SchengenCalculator.hasSchengenImpact(
                     trip: trip, checkDate: model.schengenCheckDate,
                     schengenCountries: model.schengenCountries
@@ -91,7 +85,6 @@ struct TripsView: View {
                 if startY == endY {
                     passes = startM <= m && endM >= m
                 } else {
-                    // Trip crosses a year boundary: month is in range if ≥ start month OR ≤ end month
                     passes = m >= startM || m <= endM
                 }
                 if !passes { return false }
@@ -108,7 +101,7 @@ struct TripsView: View {
                 ContentUnavailableView {
                     Label("Sign In Required", systemImage: "lock.fill")
                 } description: {
-                    Text("Sign in to view and manage your trips.")
+                    Text("Sign in to view your trips.")
                 } actions: {
                     Button("Sign In") { model.showLogin = true }
                         .buttonStyle(.borderedProminent)
@@ -116,7 +109,6 @@ struct TripsView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Schengen counter
                         VStack(spacing: 4) {
                             HStack {
                                 Text("Schengen Days Used")
@@ -143,7 +135,6 @@ struct TripsView: View {
                         .background(.background.secondary, in: RoundedRectangle(cornerRadius: 12))
                         .padding(.horizontal)
 
-                        // PTO year summary
                         let pto = currentYearPTO
                         if pto.total > 0 {
                             VStack(alignment: .leading, spacing: 6) {
@@ -174,69 +165,69 @@ struct TripsView: View {
                             .padding(.horizontal)
                         }
 
-                        // Filters
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(spacing: 10) {
-                                Toggle("Past Trips", isOn: $model.showHistoricalTrips)
-                                    .toggleStyle(.button)
-                                    .font(.caption)
-                                Toggle("Schengen Only", isOn: $model.showSchengenImpactingTrips)
-                                    .toggleStyle(.button)
-                                    .font(.caption)
-                                Spacer()
-                            }
-                            HStack(spacing: 8) {
-                                Menu {
-                                    Button("All Years") { model.tripFilterYear = "" }
-                                    ForEach(availableYears, id: \.self) { year in
-                                        Button(year) { model.tripFilterYear = year }
-                                    }
-                                } label: {
-                                    Label(model.tripFilterYear.isEmpty ? "Year" : model.tripFilterYear, systemImage: "calendar")
+                        ControlPanel("Filters", systemImage: "line.3.horizontal.decrease.circle", tint: .blue) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack(spacing: 10) {
+                                    Toggle("Past Trips", isOn: $model.showHistoricalTrips)
+                                        .toggleStyle(.button)
                                         .font(.caption)
-                                        .padding(.horizontal, 8).padding(.vertical, 5)
-                                        .background(model.tripFilterYear.isEmpty ? .clear : .accentColor.opacity(0.15),
-                                                    in: RoundedRectangle(cornerRadius: 7))
-                                }
-                                Menu {
-                                    Button("All Months") { model.tripFilterMonth = "" }
-                                    ForEach(monthOptions) { m in
-                                        Button(m.name) { model.tripFilterMonth = m.id }
-                                    }
-                                } label: {
-                                    let monthName = monthOptions.first(where: { $0.id == model.tripFilterMonth })?.name
-                                    Label(monthName ?? "Month", systemImage: "calendar.badge.clock")
+                                    Toggle("Schengen Only", isOn: $model.showSchengenImpactingTrips)
+                                        .toggleStyle(.button)
                                         .font(.caption)
-                                        .padding(.horizontal, 8).padding(.vertical, 5)
-                                        .background(model.tripFilterMonth.isEmpty ? .clear : .accentColor.opacity(0.15),
-                                                    in: RoundedRectangle(cornerRadius: 7))
+                                    Spacer()
                                 }
-                                if !availableCountries.isEmpty {
-                                    Menu {
-                                        Button("All Countries") { model.tripFilterCountry = "" }
-                                        ForEach(availableCountries, id: \.self) { country in
-                                            Button(country) { model.tripFilterCountry = country }
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        Menu {
+                                            Button("All Years") { model.tripFilterYear = "" }
+                                            ForEach(availableYears, id: \.self) { year in
+                                                Button(year) { model.tripFilterYear = year }
+                                            }
+                                        } label: {
+                                            Label(model.tripFilterYear.isEmpty ? "Year" : model.tripFilterYear, systemImage: "calendar")
+                                                .font(.caption)
+                                                .padding(.horizontal, 8).padding(.vertical, 5)
+                                                .background(model.tripFilterYear.isEmpty ? .clear : .accentColor.opacity(0.15),
+                                                            in: RoundedRectangle(cornerRadius: 7))
                                         }
-                                    } label: {
-                                        Label(model.tripFilterCountry.isEmpty ? "Country" : model.tripFilterCountry, systemImage: "globe")
-                                            .font(.caption)
-                                            .padding(.horizontal, 8).padding(.vertical, 5)
-                                            .background(model.tripFilterCountry.isEmpty ? .clear : .accentColor.opacity(0.15),
-                                                        in: RoundedRectangle(cornerRadius: 7))
+                                        Menu {
+                                            Button("All Months") { model.tripFilterMonth = "" }
+                                            ForEach(monthOptions) { m in
+                                                Button(m.name) { model.tripFilterMonth = m.id }
+                                            }
+                                        } label: {
+                                            let monthName = monthOptions.first(where: { $0.id == model.tripFilterMonth })?.name
+                                            Label(monthName ?? "Month", systemImage: "calendar.badge.clock")
+                                                .font(.caption)
+                                                .padding(.horizontal, 8).padding(.vertical, 5)
+                                                .background(model.tripFilterMonth.isEmpty ? .clear : .accentColor.opacity(0.15),
+                                                            in: RoundedRectangle(cornerRadius: 7))
+                                        }
+                                        if !availableCountries.isEmpty {
+                                            Menu {
+                                                Button("All Countries") { model.tripFilterCountry = "" }
+                                                ForEach(availableCountries, id: \.self) { country in
+                                                    Button(country) { model.tripFilterCountry = country }
+                                                }
+                                            } label: {
+                                                Label(model.tripFilterCountry.isEmpty ? "Country" : model.tripFilterCountry, systemImage: "globe")
+                                                    .font(.caption)
+                                                    .padding(.horizontal, 8).padding(.vertical, 5)
+                                                    .background(model.tripFilterCountry.isEmpty ? .clear : .accentColor.opacity(0.15),
+                                                                in: RoundedRectangle(cornerRadius: 7))
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
-                        .padding(.horizontal)
 
                         LazyVStack(spacing: 10) {
                             ForEach(filteredTrips) { trip in
                                 TripCard(
                                     trip: trip,
                                     schengenCountries: model.schengenCountries,
-                                    allTrips: model.trips,
-                                    onEdit: { editingTrip = trip; showEditor = true },
-                                    onDelete: { tripToDelete = trip; showDeleteConfirm = true }
+                                    allTrips: model.trips
                                 )
                             }
                         }
@@ -245,36 +236,15 @@ struct TripsView: View {
                     .padding(.vertical)
                 }
                 .refreshable { await model.loadPrivateData() }
-                .navigationTitle("Trips")
+                .navigationTitle(Tab.trips.rawValue)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Sign Out", role: .destructive) { model.signOut() }
                             .font(.subheadline)
                     }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { editingTrip = nil; showEditor = true } label: {
-                            Image(systemName: "plus")
-                        }
-                    }
-                }
-                .sheet(isPresented: $showEditor) {
-                    TripEditorView(trip: editingTrip)
-                }
-                .confirmationDialog("Delete Trip?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
-                    Button("Delete", role: .destructive) {
-                        if let trip = tripToDelete {
-                            Task { await deleteTrip(trip) }
-                        }
-                    }
                 }
                 .task { await model.loadPrivateData() }
             }
         }
-    }
-
-    private func deleteTrip(_ trip: Trip) async {
-        guard let token = model.authService.session?.accessToken else { return }
-        try? await model.supabase.deleteTrip(id: trip.id, token: token)
-        await model.loadPrivateData()
     }
 }

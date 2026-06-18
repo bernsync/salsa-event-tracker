@@ -27,8 +27,13 @@ extension Trip {
         startDate = (try? c.decode(String.self, forKey: .startDate)) ?? ""
         endDate = (try? c.decode(String.self, forKey: .endDate)) ?? ""
         notes = try c.decodeIfPresent(String.self, forKey: .notes)
-        places = (try? c.decode([TripPlace].self, forKey: .places)) ?? []
-        ptoDays = (try? c.decode([PTODay].self, forKey: .ptoDays)) ?? []
+        places = ((try? c.decode([TripPlace].self, forKey: .places)) ?? [])
+            .sorted {
+                if $0.startDate != $1.startDate { return $0.startDate < $1.startDate }
+                return ($0.sequence ?? Int.max) < ($1.sequence ?? Int.max)
+            }
+        ptoDays = ((try? c.decode([PTODay].self, forKey: .ptoDays)) ?? [])
+            .sorted { $0.ptoDate < $1.ptoDate }
     }
 }
 

@@ -1,7 +1,7 @@
 // ios/SalsaEventTracker/Models/Event.swift
 import Foundation
 
-struct Event: Identifiable, Decodable {
+struct Event: Identifiable, Codable {
     let id: String
     let name: String
     let organizer: String?
@@ -36,7 +36,7 @@ extension Event {
     }
 }
 
-struct EventEdition: Identifiable, Decodable {
+struct EventEdition: Identifiable, Codable {
     let id: String
     let startDate: String       // "YYYY-MM-DD"
     let endDate: String

@@ -24,13 +24,11 @@ struct FestivalListView: View {
             }.sorted()
     }
 
-    // An event passes if any of its editions matches all active filters
     private var filteredEvents: [Event] {
         model.events.filter { event in
             guard model.searchQuery.isEmpty ||
                   event.editions.contains(where: { TextUtils.matches(event: event, edition: $0, query: model.searchQuery) })
             else { return false }
-            // At least one edition must satisfy all active filters
             return event.editions.contains { ed in
                 if !model.festivalFilterYear.isEmpty && !ed.startDate.hasPrefix(model.festivalFilterYear) { return false }
                 if !model.festivalFilterMonth.isEmpty {
@@ -49,43 +47,43 @@ struct FestivalListView: View {
         @Bindable var model = model
         NavigationStack {
             VStack(spacing: 0) {
-                // ── Filter bar ──────────────────────────────────────────────
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        Picker("Year", selection: $model.festivalFilterYear) {
-                            Text("All years").tag("")
-                            ForEach(availableYears, id: \.self) { y in Text(y).tag(y) }
-                        }
-                        .pickerStyle(.menu)
-                        .buttonStyle(.bordered)
-                        .onChange(of: model.festivalFilterYear) { model.festivalFilterCountry = "" }
-
-                        Picker("Month", selection: $model.festivalFilterMonth) {
-                            Text("All months").tag("")
-                            ForEach(Array(zip(monthNumbers, monthNames)), id: \.0) { num, name in
-                                Text(name).tag(num)
+                ControlPanel("Filters", systemImage: "line.3.horizontal.decrease.circle", tint: .blue) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 10) {
+                            Picker("Year", selection: $model.festivalFilterYear) {
+                                Text("All years").tag("")
+                                ForEach(availableYears, id: \.self) { y in Text(y).tag(y) }
                             }
-                        }
-                        .pickerStyle(.menu)
-                        .buttonStyle(.bordered)
+                            .pickerStyle(.menu)
+                            .buttonStyle(.bordered)
+                            .onChange(of: model.festivalFilterYear) { model.festivalFilterCountry = "" }
 
-                        Picker("Country", selection: $model.festivalFilterCountry) {
-                            Text("All countries").tag("")
-                            ForEach(availableCountries, id: \.self) { c in Text(c).tag(c) }
-                        }
-                        .pickerStyle(.menu)
-                        .buttonStyle(.bordered)
+                            Picker("Month", selection: $model.festivalFilterMonth) {
+                                Text("All months").tag("")
+                                ForEach(Array(zip(monthNumbers, monthNames)), id: \.0) { num, name in
+                                    Text(name).tag(num)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .buttonStyle(.bordered)
 
-                        Picker("Size", selection: $model.festivalFilterSize) {
-                            Text("All sizes").tag("")
-                            ForEach(eventSizes, id: \.self) { s in Text(s.capitalized).tag(s) }
+                            Picker("Country", selection: $model.festivalFilterCountry) {
+                                Text("All countries").tag("")
+                                ForEach(availableCountries, id: \.self) { c in Text(c).tag(c) }
+                            }
+                            .pickerStyle(.menu)
+                            .buttonStyle(.bordered)
+
+                            Picker("Size", selection: $model.festivalFilterSize) {
+                                Text("All sizes").tag("")
+                                ForEach(eventSizes, id: \.self) { s in Text(s.capitalized).tag(s) }
+                            }
+                            .pickerStyle(.menu)
+                            .buttonStyle(.bordered)
                         }
-                        .pickerStyle(.menu)
-                        .buttonStyle(.bordered)
                     }
-                    .padding(.horizontal)
                 }
-                .padding(.vertical, 6)
+                .padding(.vertical, 8)
 
                 Divider()
 
@@ -114,7 +112,7 @@ struct FestivalListView: View {
                 }
                 .refreshable { await model.loadPublicData() }
             }
-            .navigationTitle("Festivals")
+            .navigationTitle(Tab.festivalList.rawValue)
             .searchable(text: $model.searchQuery, prompt: "Search festivals…")
         }
     }

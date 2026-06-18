@@ -4,19 +4,10 @@ import SwiftUI
 struct ReviewCard: View {
     let review: Review
     let eventName: String
-    var onEdit: () -> Void
-    var onDelete: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(eventName).font(.headline)
-                Spacer()
-                Menu {
-                    Button("Edit", action: onEdit)
-                    Button("Delete", role: .destructive, action: onDelete)
-                } label: { Image(systemName: "ellipsis.circle") }
-            }
+            Text(eventName).font(.headline)
             HStack {
                 Image(systemName: "star.fill").foregroundStyle(.yellow)
                 Text(String(format: "%.1f", review.totalScore)).font(.subheadline.bold())

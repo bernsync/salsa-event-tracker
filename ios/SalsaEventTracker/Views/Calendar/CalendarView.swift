@@ -37,11 +37,8 @@ struct CalendarView: View {
         @Bindable var model = model
         NavigationStack {
             VStack(spacing: 0) {
-                // ── Month navigation row ───────────────────────────────────
                 HStack(spacing: 12) {
-                    Button {
-                        model.selectedYearMonth = adjustMonth(model.selectedYearMonth, by: -1)
-                    } label: {
+                    Button { shiftMonth(by: -1) } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
                     }
@@ -50,9 +47,7 @@ struct CalendarView: View {
                         .font(.headline)
                         .frame(maxWidth: .infinity)
 
-                    Button {
-                        model.selectedYearMonth = adjustMonth(model.selectedYearMonth, by: 1)
-                    } label: {
+                    Button { shiftMonth(by: 1) } label: {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 16, weight: .semibold))
                     }
@@ -60,33 +55,32 @@ struct CalendarView: View {
                 .padding(.horizontal)
                 .padding(.vertical, 8)
 
-                // ── Jump to month picker + filter toggles ──────────────────
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        if !monthsWithEvents.isEmpty {
-                            Picker("Jump", selection: $model.selectedYearMonth) {
-                                ForEach(monthsWithEvents, id: \.self) { ym in
-                                    Text(DateUtils.monthLabel(ym)).tag(ym)
+                ControlPanel("Month & Filters", systemImage: "line.3.horizontal.decrease.circle", tint: .blue) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            if !monthsWithEvents.isEmpty {
+                                Picker("Jump", selection: $model.selectedYearMonth) {
+                                    ForEach(monthsWithEvents, id: \.self) { ym in
+                                        Text(DateUtils.monthLabel(ym)).tag(ym)
+                                    }
                                 }
+                                .pickerStyle(.menu)
+                                .labelsHidden()
+                                .buttonStyle(.bordered)
                             }
-                            .pickerStyle(.menu)
-                            .labelsHidden()
-                            .buttonStyle(.bordered)
+
+                            Toggle("Attended only", isOn: $model.calendarAttendedOnly)
+                                .toggleStyle(.button)
+                                .font(.subheadline)
+
+                            Toggle("Hide duplicates", isOn: $model.calendarHideDuplicateAttended)
+                                .toggleStyle(.button)
+                                .font(.subheadline)
                         }
-
-                        Toggle("Attended only", isOn: $model.calendarAttendedOnly)
-                            .toggleStyle(.button)
-                            .font(.subheadline)
-
-                        Toggle("Hide duplicates", isOn: $model.calendarHideDuplicateAttended)
-                            .toggleStyle(.button)
-                            .font(.subheadline)
                     }
-                    .padding(.horizontal)
                 }
                 .padding(.vertical, 6)
 
-                // ── Weekday column headers ─────────────────────────────────
                 HStack(spacing: 0) {
                     ForEach(weekdays, id: \.self) { day in
                         Text(day)
@@ -99,7 +93,6 @@ struct CalendarView: View {
                 .padding(.horizontal, 8)
                 .padding(.bottom, 4)
 
-                // ── Calendar grid ──────────────────────────────────────────
                 let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 7)
                 LazyVGrid(columns: columns, spacing: 2) {
                     ForEach(Array(gridDays.enumerated()), id: \.0) { _, date in
@@ -118,19 +111,25 @@ struct CalendarView: View {
                                 isSelected: isSelected,
                                 isToday: isToday
                             )
-                            .onTapGesture {
-                                model.selectedCalendarDate = dateStr
-                            }
+                            .onTapGesture { model.selectedCalendarDate = dateStr }
                         } else {
                             Color.clear.frame(height: 44)
                         }
                     }
                 }
                 .padding(.horizontal, 8)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 35).onEnded { value in
+                        let horizontal = value.translation.width
+                        let vertical = value.translation.height
+                        guard abs(horizontal) > 50, abs(horizontal) > abs(vertical) * 1.4 else { return }
+                        shiftMonth(by: horizontal < 0 ? 1 : -1)
+                    }
+                )
 
                 Divider().padding(.top, 8)
 
-                // ── Events + trips on selected day ─────────────────────────
                 let selectedStr = model.selectedCalendarDate
                 let dayEvents = eventsOn(selectedStr)
                 let dayTrips = model.tripPlacesOn(selectedStr)
@@ -158,7 +157,7 @@ struct CalendarView: View {
                     }
                 }
             }
-            .navigationTitle("Calendar")
+            .navigationTitle(Tab.calendar.rawValue)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Today") {
@@ -171,11 +170,15 @@ struct CalendarView: View {
         }
     }
 
-    private func adjustMonth(_ ym: String, by delta: Int) -> String {
-        guard let date = DateUtils.date(from: ym + "-01"),
-              let adjusted = Calendar.current.date(byAdding: .month, value: delta, to: date)
-        else { return ym }
-        return String(DateUtils.string(from: adjusted).prefix(7))
+    private func shiftMonth(by delta: Int) {
+        let selectedInVisibleMonth = model.selectedCalendarDate.hasPrefix(model.selectedYearMonth)
+        let anchorString = selectedInVisibleMonth ? model.selectedCalendarDate : model.selectedYearMonth + "-01"
+        guard let anchor = DateUtils.date(from: anchorString),
+              let adjusted = Calendar.current.date(byAdding: .month, value: delta, to: anchor)
+        else { return }
+        let adjustedString = DateUtils.string(from: adjusted)
+        model.selectedYearMonth = String(adjustedString.prefix(7))
+        model.selectedCalendarDate = adjustedString
     }
 }
 

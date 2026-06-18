@@ -5,8 +5,6 @@ struct TripCard: View {
     let trip: Trip
     let schengenCountries: Set<String>
     let allTrips: [Trip]
-    var onEdit: () -> Void
-    var onDelete: () -> Void
 
     @State private var isExpanded = false
 
@@ -16,6 +14,13 @@ struct TripCard: View {
 
     private var ptoTotal: Double {
         trip.ptoDays.reduce(0.0) { $0 + $1.amount }
+    }
+
+    private var sortedPlaces: [TripPlace] {
+        trip.places.sorted {
+            if $0.startDate != $1.startDate { return $0.startDate < $1.startDate }
+            return ($0.sequence ?? Int.max) < ($1.sequence ?? Int.max)
+        }
     }
 
     var body: some View {
@@ -30,18 +35,12 @@ struct TripCard: View {
                         .foregroundStyle(.blue)
                 }
                 Spacer()
-                Menu {
-                    Button("Edit", action: onEdit)
-                    Button("Delete", role: .destructive, action: onDelete)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
             }
 
             Text(DateUtils.displayDateRange(start: trip.startDate, end: trip.endDate))
                 .font(.subheadline).foregroundStyle(.secondary)
 
-            ForEach(trip.places) { place in
+            ForEach(sortedPlaces) { place in
                 HStack(alignment: .top) {
                     Image(systemName: "mappin")
                         .foregroundStyle(schengenCountries.contains(place.country) ? .blue : .secondary)

@@ -53,59 +53,57 @@ struct EventListView: View {
         @Bindable var model = model
         NavigationStack {
             VStack(spacing: 0) {
-                // ── Filter bar ──────────────────────────────────────────────
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        // Year picker
-                        Picker("Year", selection: $model.filterYear) {
-                            Text("All years").tag("")
-                            ForEach(availableYears, id: \.self) { y in Text(y).tag(y) }
-                        }
-                        .pickerStyle(.menu)
-                        .buttonStyle(.bordered)
+                VStack(spacing: 8) {
+                    ControlPanel("Filters", systemImage: "line.3.horizontal.decrease.circle", tint: .blue) {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 10) {
+                                Picker("Year", selection: $model.filterYear) {
+                                    Text("All years").tag("")
+                                    ForEach(availableYears, id: \.self) { y in Text(y).tag(y) }
+                                }
+                                .pickerStyle(.menu)
+                                .buttonStyle(.bordered)
 
-                        // Month picker
-                        Picker("Month", selection: $model.filterMonth) {
-                            Text("All months").tag("")
-                            ForEach(Array(zip(monthNumbers, monthNames)), id: \.0) { num, name in
-                                Text(name).tag(num)
+                                Picker("Month", selection: $model.filterMonth) {
+                                    Text("All months").tag("")
+                                    ForEach(Array(zip(monthNumbers, monthNames)), id: \.0) { num, name in
+                                        Text(name).tag(num)
+                                    }
+                                }
+                                .pickerStyle(.menu)
+                                .buttonStyle(.bordered)
+
+                                Picker("Country", selection: $model.filterCountry) {
+                                    Text("All countries").tag("")
+                                    ForEach(availableCountries, id: \.self) { c in Text(c).tag(c) }
+                                }
+                                .pickerStyle(.menu)
+                                .buttonStyle(.bordered)
+
+                                Picker("Size", selection: $model.filterSize) {
+                                    Text("All sizes").tag("")
+                                    ForEach(eventSizes, id: \.self) { s in Text(s.capitalized).tag(s) }
+                                }
+                                .pickerStyle(.menu)
+                                .buttonStyle(.bordered)
+
+                                Toggle("Show past", isOn: $model.showHistoricalEvents)
+                                    .toggleStyle(.button)
+                                    .font(.subheadline)
                             }
                         }
-                        .pickerStyle(.menu)
-                        .buttonStyle(.bordered)
+                    }
 
-                        // Country picker
-                        Picker("Country", selection: $model.filterCountry) {
-                            Text("All countries").tag("")
-                            ForEach(availableCountries, id: \.self) { c in Text(c).tag(c) }
-                        }
-                        .pickerStyle(.menu)
-                        .buttonStyle(.bordered)
-
-                        // Size picker
-                        Picker("Size", selection: $model.filterSize) {
-                            Text("All sizes").tag("")
-                            ForEach(eventSizes, id: \.self) { s in Text(s.capitalized).tag(s) }
-                        }
-                        .pickerStyle(.menu)
-                        .buttonStyle(.bordered)
-
-                        // Sort picker
+                    ControlPanel("Sort", systemImage: "arrow.up.arrow.down.circle", tint: .purple) {
                         Picker("Sort", selection: $model.eventSortOption) {
                             ForEach(EventSortOption.allCases, id: \.self) { opt in
                                 Text(opt.rawValue).tag(opt)
                             }
                         }
-                        .pickerStyle(.menu)
-                        .buttonStyle(.bordered)
-
-                        Toggle("Past", isOn: $model.showHistoricalEvents)
-                            .toggleStyle(.button)
-                            .font(.subheadline)
+                        .pickerStyle(.segmented)
                     }
-                    .padding(.horizontal)
                 }
-                .padding(.vertical, 6)
+                .padding(.vertical, 8)
 
                 Divider()
 
@@ -119,7 +117,7 @@ struct EventListView: View {
                 }
                 .refreshable { await model.loadPublicData() }
             }
-            .navigationTitle("Events")
+            .navigationTitle(Tab.eventList.rawValue)
             .searchable(text: $model.searchQuery, prompt: "Search events…")
         }
     }

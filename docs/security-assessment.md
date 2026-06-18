@@ -121,6 +121,8 @@ If the Mini PC/self-hosted runner plan or any app-managed host goes live, the fo
 
 The service worker should cache only same-origin static app assets. It must not cache Supabase API responses that include private trips, reviews, PTO, auth responses, access tokens, refresh tokens, or user-specific derived data.
 
+The iOS app now keeps a device-local cache of public/reference data only: events, event editions, dance styles, and Schengen country lookup. The cache is written under Application Support, excluded from device backups, and protected with `completeUntilFirstUserAuthentication`. This is low risk because the cached data is intentionally public; private trips and reviews are still not cached on disk.
+
 Before expanding offline support, document:
 
 - Which public resources are cacheable.
@@ -141,7 +143,8 @@ The iOS app has a separate security posture from the browser app because it stor
 - The Supabase URL and publishable anon key are hardcoded in `SupabaseConfig.swift`. This is acceptable because the key is public by design; RLS must remain the real authorization boundary.
 - Access and refresh tokens are stored with KeychainAccess, not `UserDefaults`, files, or SQLite.
 - Signing out clears the Keychain and in-memory private trips/reviews.
-- Private trip/review data appears to live in memory only. No `UserDefaults`, `FileManager`, or on-disk cache usage was found in the iOS app source.
+- Public event/reference data is cached on disk for offline browsing and refreshes on launch when the network is available.
+- Private trip/review data appears to live in memory only. No private `UserDefaults`, `FileManager`, or on-disk cache usage was found in the iOS app source.
 - No `print`, `NSLog`, or `Logger` usage was found in the iOS app source, so tokens and private data are not currently being written to device logs.
 - `Info.plist` has no `NSAppTransportSecurity` exceptions, so App Transport Security remains enabled. Supabase is called over HTTPS.
 - The only third-party iOS package is KeychainAccess 4.2.2, pinned in `Package.resolved`.
@@ -152,7 +155,7 @@ The iOS app has a separate security posture from the browser app because it stor
 
 2. **Decide whether refresh tokens should be used or removed.** The app stores the refresh token but currently treats expired access tokens by clearing the session and forcing sign-in. That is safe but may be confusing. Either implement Supabase token refresh with the same Keychain protections or stop storing unused refresh tokens. Priority: **low/medium**.
 
-3. **Keep private data out of offline caches.** If offline iOS support is added later, private trips, PTO days, reviews, and Schengen calculations need a separate storage/security review, including file protection, backup exclusion, and user-visible data reset. Priority: **required before offline private-data caching**.
+3. **Keep private data out of offline caches.** Offline support currently covers public/reference data only. If private iOS offline support is added later, private trips, PTO days, reviews, and Schengen calculations need a separate storage/security review, including file protection, backup exclusion, and user-visible data reset. Priority: **required before offline private-data caching**.
 
 4. **Use generic production errors for private API failures.** `SupabaseService` currently includes response bodies in thrown errors, and `AppModel` can surface those details in load errors. That is useful during development but should be mapped to generic user-facing messages in production so database/policy details are not exposed unnecessarily. Priority: **low/medium**.
 
@@ -290,6 +293,7 @@ Before the next production/security review, verify:
 - Deployed response headers include CSP, frame protection, content-type protection, referrer policy, and HSTS when the domain is ready.
 - CSP still matches the exact external services in use.
 - Service worker cache does not include auth-gated API responses.
+- iOS public-data cache contains only intentionally public/reference rows and remains excluded from backup.
 - Browser session-token storage risk is accepted for the static owner/helper model or replaced with secure HTTP-only cookies before public-user expansion.
 - iOS Keychain token storage uses an explicit accessibility class.
 - iOS still has no ATS exceptions, private on-disk cache, or sensitive logging.

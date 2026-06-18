@@ -175,7 +175,7 @@ actor SupabaseService: SupabaseServiceProtocol {
 }
 
 // Helper row type (not a full model — only used inside SupabaseService → AppModel)
-struct SchengenCountryRow: Decodable {
+struct SchengenCountryRow: Codable {
     let countryName: String
     let isSchengen: Bool
     enum CodingKeys: String, CodingKey {
