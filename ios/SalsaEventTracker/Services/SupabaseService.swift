@@ -45,12 +45,6 @@ actor SupabaseService: SupabaseServiceProtocol {
         return try await get(url: url, token: token)
     }
 
-    func fetchReviews(token: String) async throws -> [Review] {
-        let url = baseURL.appending(path: "/rest/v1/reviews")
-            .appending(queryItems: [URLQueryItem(name: "select", value: "*")])
-        return try await get(url: url, token: token)
-    }
-
     func createTrip(_ body: [String: Any], token: String) async throws -> Trip {
         let url = baseURL.appending(path: "/rest/v1/personal_trips")
         return try await post(url: url, body: body, token: token)
@@ -86,23 +80,6 @@ actor SupabaseService: SupabaseServiceProtocol {
             let insURL = baseURL.appending(path: "/rest/v1/personal_pto_days")
             try await postMany(url: insURL, body: ptoDays, token: token)
         }
-    }
-
-    func createReview(_ body: [String: Any], token: String) async throws -> Review {
-        let url = baseURL.appending(path: "/rest/v1/reviews")
-        return try await post(url: url, body: body, token: token)
-    }
-
-    func updateReview(id: String, body: [String: Any], token: String) async throws {
-        let url = baseURL.appending(path: "/rest/v1/reviews")
-            .appending(queryItems: [URLQueryItem(name: "id", value: "eq.\(id)")])
-        try await patch(url: url, body: body, token: token)
-    }
-
-    func deleteReview(id: String, token: String) async throws {
-        let url = baseURL.appending(path: "/rest/v1/reviews")
-            .appending(queryItems: [URLQueryItem(name: "id", value: "eq.\(id)")])
-        try await delete(url: url, token: token)
     }
 
     // MARK: - Private helpers

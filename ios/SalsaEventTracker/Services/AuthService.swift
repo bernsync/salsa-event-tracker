@@ -16,7 +16,10 @@ struct AuthSession {
 final class AuthService: AuthServiceProtocol {
     private(set) var session: AuthSession?
 
+    // Tokens stay on this device only and are readable only while it is unlocked;
+    // this prevents them migrating to a new device via an encrypted backup.
     private let keychain = Keychain(service: "com.salsaeventtracker.ios")
+        .accessibility(.whenUnlockedThisDeviceOnly)
     private let baseURL: URL
     private let anonKey: String
 
@@ -51,16 +54,56 @@ final class AuthService: AuthServiceProtocol {
             email: decoded.email ?? email
         )
         session = newSession
-        try? keychain.set(raw.accessToken, key: "accessToken")
-        try? keychain.set(raw.refreshToken, key: "refreshToken")
-        try? keychain.set(String(newSession.expiresAt.timeIntervalSince1970), key: "expiresAt")
-        try? keychain.set(decoded.sub, key: "userId")
-        try? keychain.set(decoded.email ?? email, key: "email")
+        persist(newSession)
     }
 
     func signOut() {
         session = nil
         try? keychain.removeAll()
+    }
+
+    /// Returns a valid access token, refreshing it first when it is within 60s of
+    /// (or past) expiry. A failed refresh throws `ServiceAuthError.tokenExpired`.
+    func validAccessToken() async throws -> String {
+        guard let current = session else { throw ServiceAuthError.tokenExpired }
+        if current.expiresAt.timeIntervalSinceNow > 60 { return current.accessToken }
+        return try await refresh(using: current.refreshToken, email: current.email)
+    }
+
+    private func refresh(using refreshToken: String, email: String) async throws -> String {
+        let url = baseURL.appending(path: "/auth/v1/token")
+            .appending(queryItems: [URLQueryItem(name: "grant_type", value: "refresh_token")])
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue(anonKey, forHTTPHeaderField: "apikey")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["refresh_token": refreshToken])
+
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            // Refresh token revoked/expired — caller will sign out.
+            throw ServiceAuthError.tokenExpired
+        }
+        let raw = try JSONDecoder().decode(RawAuthResponse.self, from: data)
+        let decoded = try decodeJWT(raw.accessToken)
+        let newSession = AuthSession(
+            accessToken: raw.accessToken,
+            refreshToken: raw.refreshToken,
+            expiresAt: Date().addingTimeInterval(Double(raw.expiresIn)),
+            userId: decoded.sub,
+            email: decoded.email ?? email
+        )
+        session = newSession
+        persist(newSession)
+        return newSession.accessToken
+    }
+
+    private func persist(_ session: AuthSession) {
+        try? keychain.set(session.accessToken, key: "accessToken")
+        try? keychain.set(session.refreshToken, key: "refreshToken")
+        try? keychain.set(String(session.expiresAt.timeIntervalSince1970), key: "expiresAt")
+        try? keychain.set(session.userId, key: "userId")
+        try? keychain.set(session.email, key: "email")
     }
 
     private func restoreSession() {
@@ -72,10 +115,12 @@ final class AuthService: AuthServiceProtocol {
             let userId = try? keychain.get("userId"),
             let email = try? keychain.get("email")
         else { return }
-        let expiresAt = Date(timeIntervalSince1970: expiresAtTs)
-        guard expiresAt > Date() else { try? keychain.removeAll(); return }
+        // Keep the session even if the access token is already expired —
+        // `validAccessToken()` refreshes it on demand via the refresh token.
+        // Only a missing refresh token (handled by the guard above) is fatal.
         session = AuthSession(accessToken: accessToken, refreshToken: refreshToken,
-                              expiresAt: expiresAt, userId: userId, email: email)
+                              expiresAt: Date(timeIntervalSince1970: expiresAtTs),
+                              userId: userId, email: email)
     }
 
     // Minimal JWT decode (base64url payload only — no signature verification needed,

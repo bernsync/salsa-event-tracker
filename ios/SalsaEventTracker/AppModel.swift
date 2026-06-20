@@ -10,7 +10,6 @@ final class AppModel {
     var danceStyles: [DanceStyle] = []
     var schengenCountries: Set<String> = []
     var trips: [Trip] = []
-    var reviews: [Review] = []
 
     // MARK: - Auth
     var authService: any AuthServiceProtocol
@@ -60,41 +59,62 @@ final class AppModel {
     var tripFilterMonth: String = ""
     var schengenCheckDate: String = DateUtils.todayString()
 
-    // MARK: - Derived
+    // MARK: - Derived (memoized)
+    //
+    // `flatEvents` and `attendingEditionIds` are read many times per render (each
+    // list view recomputes several filter/option properties off them). They are
+    // memoized against a token that is bumped only when `events` / `trips` change,
+    // so repeated reads in one render pass are O(1). The getters still read the
+    // backing stored property so SwiftUI observation continues to track changes.
+
+    @ObservationIgnored private var flatEventsCache: [FlatEvent]?
+    @ObservationIgnored private var flatEventsToken = 0
+    @ObservationIgnored private var flatEventsCachedToken = -1
+
     var flatEvents: [FlatEvent] {
-        events.flatMap { event in
+        let snapshot = events  // read to register the observation dependency
+        if let cache = flatEventsCache, flatEventsCachedToken == flatEventsToken {
+            return cache
+        }
+        let computed = snapshot.flatMap { event in
             event.editions.map { FlatEvent(id: $0.id, event: event, edition: $0) }
         }
+        flatEventsCache = computed
+        flatEventsCachedToken = flatEventsToken
+        return computed
     }
 
-    var reviewedEditionIds: Set<String> {
-        Set(reviews.map(\.eventEditionId))
+    @ObservationIgnored private var attendingCache: Set<String>?
+    @ObservationIgnored private var attendingToken = 0
+    @ObservationIgnored private var attendingCachedToken = -1
+
+    /// Edition IDs the user has a trip place for. Built once per `trips` change.
+    var attendingEditionIds: Set<String> {
+        let snapshot = trips  // read to register the observation dependency
+        if let cache = attendingCache, attendingCachedToken == attendingToken {
+            return cache
+        }
+        var ids = Set<String>()
+        for trip in snapshot {
+            for place in trip.places {
+                if let editionId = place.eventEditionId { ids.insert(editionId) }
+            }
+        }
+        attendingCache = ids
+        attendingCachedToken = attendingToken
+        return ids
     }
 
     func isAttending(editionId: String) -> Bool {
         guard isSignedIn else { return false }
-        return trips.contains { $0.places.contains { $0.eventEditionId == editionId } }
+        return attendingEditionIds.contains(editionId)
     }
 
-    func reviewScore(for flat: FlatEvent) -> Double? {
-        guard !reviews.isEmpty else { return nil }
-        let relevant: [Review]
-        if flat.edition.isHistorical {
-            relevant = reviews.filter { $0.eventEditionId == flat.edition.id }
-        } else {
-            let normalizedName = flat.event.name.lowercased()
-            let priorIds = Set(
-                events
-                    .filter { $0.name.lowercased() == normalizedName }
-                    .flatMap { $0.editions }
-                    .filter { $0.endDate < flat.edition.startDate }
-                    .map { $0.id }
-            )
-            relevant = reviews.filter { priorIds.contains($0.eventEditionId) }
-        }
-        guard !relevant.isEmpty else { return nil }
-        return relevant.reduce(0.0) { $0 + $1.totalScore } / Double(relevant.count)
-    }
+    /// Call whenever `events` is replaced so `flatEvents` recomputes.
+    private func invalidateFlatEvents() { flatEventsToken &+= 1 }
+
+    /// Call whenever `trips` is replaced so `attendingEditionIds` recomputes.
+    private func invalidateAttending() { attendingToken &+= 1 }
 
     func tripPlacesOn(_ dateStr: String) -> [(place: TripPlace, trip: Trip)] {
         return trips.flatMap { trip in
@@ -129,9 +149,25 @@ final class AppModel {
 
     // MARK: - Load
 
-    func loadPublicData() async {
+    // Reference-counted so concurrent loads (e.g. launch public load + a Trips
+    // pull-to-refresh) don't flip `isLoading` off early or clobber each other's
+    // error. `appError` is cleared only when the first concurrent load begins.
+    @ObservationIgnored private var loadingCount = 0
+
+    private func beginLoading() {
+        if loadingCount == 0 { appError = nil }
+        loadingCount += 1
         isLoading = true
-        appError = nil
+    }
+
+    private func endLoading() {
+        loadingCount = max(0, loadingCount - 1)
+        if loadingCount == 0 { isLoading = false }
+    }
+
+    func loadPublicData() async {
+        beginLoading()
+        defer { endLoading() }
         var loadedFromCache = false
         if let publicDataCache, let cached = await publicDataCache.load() {
             applyPublicData(events: cached.events, danceStyles: cached.danceStyles, schengenRows: cached.schengenCountries)
@@ -156,33 +192,31 @@ final class AppModel {
                 setError(.loadFailed("[Public] \(Self.decodeDetail(error))"))
             }
         }
-        isLoading = false
     }
 
     private func applyPublicData(events: [Event], danceStyles: [DanceStyle], schengenRows: [SchengenCountryRow]) {
         self.events = events
         self.danceStyles = danceStyles
         self.schengenCountries = Set(schengenRows.filter(\.isSchengen).map(\.countryName))
+        invalidateFlatEvents()
     }
 
     func loadPrivateData() async {
-        guard let token = authService.session?.accessToken else { return }
-        isLoading = true
-        appError = nil
+        guard authService.session != nil else { return }
+        beginLoading()
+        defer { endLoading() }
         do {
-            async let tripsTask = supabase.fetchTrips(token: token)
-            async let reviewsTask = supabase.fetchReviews(token: token)
-            let (fetchedTrips, fetchedReviews) = try await (tripsTask, reviewsTask)
-            trips = fetchedTrips
-            reviews = fetchedReviews
+            // Refreshes the access token transparently if it has expired.
+            let token = try await authService.validAccessToken()
+            trips = try await supabase.fetchTrips(token: token)
+            invalidateAttending()
         } catch is ServiceAuthError {
-            // Token expired — clear session so sign-in sheet reappears
+            // No valid session / refresh failed — clear session so sign-in reappears
             setError(.authExpired)
             signOut()
         } catch {
             setError(.loadFailed("[Private] \(Self.decodeDetail(error))"))
         }
-        isLoading = false
     }
 
     private static func decodeDetail(_ error: Error) -> String {
@@ -215,7 +249,7 @@ final class AppModel {
     func signOut() {
         authService.signOut()
         trips = []
-        reviews = []
+        invalidateAttending()
     }
 }
 
@@ -247,9 +281,11 @@ actor PublicDataCache {
                 withIntermediateDirectories: true
             )
             let data = try JSONEncoder().encode(snapshot)
-            try data.write(to: cacheURL, options: [.atomic])
+            // `.complete`: the cache is only ever read in the foreground, so it can
+            // stay encrypted-at-rest whenever the device is locked.
+            try data.write(to: cacheURL, options: [.atomic, .completeFileProtection])
             try? (cacheURL as NSURL).setResourceValue(
-                URLFileProtection.completeUntilFirstUserAuthentication,
+                URLFileProtection.complete,
                 forKey: .fileProtectionKey
             )
             var excludedURL = cacheURL

@@ -7,6 +7,19 @@ enum Tab: String, CaseIterable {
     case festivalList = "Event List"
     case recentlyAdded = "Recently Added"
     case trips = "Trips"
+
+    /// Short label for the bottom tab bar. The full `rawValue` is reused as each
+    /// screen's navigation title, but two-word labels overflow a 5-tab bar and
+    /// overlap/truncate, so the bar uses these single-word forms instead.
+    var tabTitle: String {
+        switch self {
+        case .calendar: return "Calendar"
+        case .eventList: return "List"
+        case .festivalList: return "Events"
+        case .recentlyAdded: return "Recent"
+        case .trips: return "Trips"
+        }
+    }
 }
 
 enum EventSortOption: String, CaseIterable {
