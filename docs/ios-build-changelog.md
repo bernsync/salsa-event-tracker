@@ -8,11 +8,11 @@ Before any App Store Connect or TestFlight upload, add or update the entry for t
 
 ---
 
-## Build 13 - 2026-06-19 - Upload-ready (not yet uploaded)
+## Build 13 - 2026-06-19 - App Store Connect Upload
 
 Branch: `build-13-6.19.26`
 
-Status: **Upload-ready, NOT uploaded.** Awaiting explicit upload authorization. Per the critical rule above, the `.xcarchive` must be built fresh from the committed HEAD of this branch immediately before export — these changes are not yet committed, so do not reuse any pre-existing archive.
+Status: Uploaded to App Store Connect for TestFlight processing. **CONFIRMED.** Archived fresh from committed HEAD (`/private/tmp/SalsaEventTracker-build13-20260619.xcarchive`) and exported with `Upload succeeded. Uploaded SalsaEventTracker. ** EXPORT SUCCEEDED **`.
 
 ### User-Visible Changes
 
@@ -41,7 +41,8 @@ Status: **Upload-ready, NOT uploaded.** Awaiting explicit upload authorization. 
 - iOS test suite: `xcodebuild test` on iPhone 17 Pro simulator — 13 tests, 3 suites, **TEST SUCCEEDED** (added `refreshFailureSignsOut` and `refreshSuccessLoadsTrips`).
 - Release build: `xcodebuild -configuration Release -destination 'generic/platform=iOS Simulator' build` — **BUILD SUCCEEDED**.
 - Manual sim check: tab bar renders 5 non-overlapping labels; Calendar List screen renders event cards with no review badge.
-- Release archive: **not yet created** — must be built from committed HEAD immediately before upload (see Pre-Upload Gate).
+- Release archive: `xcodebuild archive` to `/private/tmp/SalsaEventTracker-build13-20260619.xcarchive` — **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: `xcodebuild -exportArchive` — `Upload succeeded. Uploaded SalsaEventTracker.` **EXPORT SUCCEEDED**.
 
 ### Post-Upload Verification
 
