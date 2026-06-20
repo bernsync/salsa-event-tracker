@@ -8,23 +8,23 @@ struct RootView: View {
         @Bindable var model = model
         TabView(selection: $model.selectedTab) {
             CalendarView()
-                .tabItem { Label(Tab.calendar.rawValue, systemImage: "calendar") }
+                .tabItem { Label(Tab.calendar.tabTitle, systemImage: "calendar") }
                 .tag(Tab.calendar)
 
             EventListView()
-                .tabItem { Label(Tab.eventList.rawValue, systemImage: "list.bullet") }
+                .tabItem { Label(Tab.eventList.tabTitle, systemImage: "list.bullet") }
                 .tag(Tab.eventList)
 
             FestivalListView()
-                .tabItem { Label(Tab.festivalList.rawValue, systemImage: "music.note.list") }
+                .tabItem { Label(Tab.festivalList.tabTitle, systemImage: "music.note.list") }
                 .tag(Tab.festivalList)
 
             RecentlyAddedView()
-                .tabItem { Label(Tab.recentlyAdded.rawValue, systemImage: "sparkles") }
+                .tabItem { Label(Tab.recentlyAdded.tabTitle, systemImage: "sparkles") }
                 .tag(Tab.recentlyAdded)
 
             TripsView()
-                .tabItem { Label(Tab.trips.rawValue, systemImage: "airplane") }
+                .tabItem { Label(Tab.trips.tabTitle, systemImage: "airplane") }
                 .tag(Tab.trips)
 
         }

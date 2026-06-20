@@ -9,7 +9,7 @@ Current known-good app metadata:
 - bundle id: `com.salsaeventtracker.ios`
 - team id: `MG3K52T7N9`
 - marketing version: `1.0`
-- current build: 12
+- current build: 13
 
 ## Release Files
 

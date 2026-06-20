@@ -22,8 +22,8 @@ Post-MVP ideas. Do not build during initial implementation.
 ---
 
 ## Token auto-refresh
-**Status: Known limitation**
-Access tokens expire after 1 hour. Current plan signs user out on 401. Seamless refresh requires `POST /auth/v1/token?grant_type=refresh_token` and a retry loop.
+**Status: In app (Build 13)**
+Access tokens expire after 1 hour. `AuthService.validAccessToken()` now refreshes seamlessly via `POST /auth/v1/token?grant_type=refresh_token` when the token is within 60s of expiry, persisting the rotated tokens to the Keychain; `loadPrivateData` routes through it. A failed refresh (revoked/expired refresh token) clears the session and surfaces `authExpired`. Restored sessions are kept even when the access token has expired, so returning users no longer get signed out on launch.
 
 ## Push notifications for event reminders
 **Status: Backlog**

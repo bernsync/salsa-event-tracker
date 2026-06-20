@@ -9,10 +9,10 @@ import Testing
 actor MockSupabaseService: SupabaseServiceProtocol {
     var eventsToReturn: [Event] = []
     var tripsToReturn: [Trip] = []
-    var reviewsToReturn: [Review] = []
     var shouldThrow: Error? = nil
 
     func setEventsToReturn(_ events: [Event]) { eventsToReturn = events }
+    func setTripsToReturn(_ trips: [Trip]) { tripsToReturn = trips }
     func setShouldThrow(_ error: Error?) { shouldThrow = error }
 
     func fetchEvents() async throws -> [Event] {
@@ -25,26 +25,21 @@ actor MockSupabaseService: SupabaseServiceProtocol {
         if let e = shouldThrow { throw e }
         return tripsToReturn
     }
-    func fetchReviews(token: String) async throws -> [Review] {
-        if let e = shouldThrow { throw e }
-        return reviewsToReturn
-    }
-    func createTrip(_ body: [String: Any], token: String) async throws -> Trip { fatalError() }
-    func updateTrip(id: String, body: [String: Any], token: String) async throws {}
-    func deleteTrip(id: String, token: String) async throws {}
-    func replaceTripPlaces(tripId: String, places: [[String: Any]], token: String) async throws {}
-    func replacePTODays(tripId: String, ptoDays: [[String: Any]], token: String) async throws {}
-    func createReview(_ body: [String: Any], token: String) async throws -> Review { fatalError() }
-    func updateReview(id: String, body: [String: Any], token: String) async throws {}
-    func deleteReview(id: String, token: String) async throws {}
 }
 
 @Observable
 @MainActor
 final class MockAuthService: AuthServiceProtocol {
     var session: AuthSession? = nil
+    /// When set, `validAccessToken()` throws this (simulates a failed refresh).
+    var validTokenError: Error? = nil
     func signIn(email: String, password: String) async throws { }
     func signOut() { session = nil }
+    func validAccessToken() async throws -> String {
+        if let e = validTokenError { throw e }
+        guard let token = session?.accessToken else { throw ServiceAuthError.tokenExpired }
+        return token
+    }
 }
 
 // MARK: - SchengenCalculator tests
@@ -158,5 +153,39 @@ struct AppModelLoadingTests {
         await model.loadPrivateData()
         #expect(model.isSignedIn == false)
         #expect(model.appError == .authExpired)
+    }
+
+    @Test("loadPrivateData signs out when token refresh fails")
+    func refreshFailureSignsOut() async {
+        let supabaseMock = MockSupabaseService()
+        let authMock = MockAuthService()
+        // Access token already expired; refresh fails.
+        authMock.session = AuthSession(
+            accessToken: "tok", refreshToken: "ref",
+            expiresAt: Date().addingTimeInterval(-10),
+            userId: "u1", email: "test@test.com")
+        authMock.validTokenError = ServiceAuthError.tokenExpired
+        let model = AppModel(supabase: supabaseMock, authService: authMock, publicDataCache: nil)
+        await model.loadPrivateData()
+        #expect(model.isSignedIn == false)
+        #expect(model.appError == .authExpired)
+    }
+
+    @Test("loadPrivateData loads trips when token refresh succeeds")
+    func refreshSuccessLoadsTrips() async {
+        let supabaseMock = MockSupabaseService()
+        let trip = Trip(id: "t1", label: "Trip", startDate: "2026-08-01",
+                        endDate: "2026-08-04", notes: nil, places: [], ptoDays: [])
+        await supabaseMock.setTripsToReturn([trip])
+        let authMock = MockAuthService()
+        // Access token expired, but the mock refresh succeeds (validTokenError nil).
+        authMock.session = AuthSession(
+            accessToken: "tok", refreshToken: "ref",
+            expiresAt: Date().addingTimeInterval(-10),
+            userId: "u1", email: "test@test.com")
+        let model = AppModel(supabase: supabaseMock, authService: authMock, publicDataCache: nil)
+        await model.loadPrivateData()
+        #expect(model.trips.count == 1)
+        #expect(model.appError == nil)
     }
 }

@@ -8,6 +8,51 @@ Before any App Store Connect or TestFlight upload, add or update the entry for t
 
 ---
 
+## Build 13 - 2026-06-19 - App Store Connect Upload
+
+Branch: `build-13-6.19.26`
+
+Status: Uploaded to App Store Connect for TestFlight processing. **CONFIRMED.** Archived fresh from committed HEAD (`/private/tmp/SalsaEventTracker-build13-20260619.xcarchive`) and exported with `Upload succeeded. Uploaded SalsaEventTracker. ** EXPORT SUCCEEDED **`.
+
+### User-Visible Changes
+
+- **Tab names no longer overlap**: the bottom tab bar now uses short single-word labels (`Calendar`, `List`, `Events`, `Recent`, `Trips`). The full names (`Event Calendar`, `Calendar List`, `Event List`, `Recently Added`, `Trips`) still appear as each screen's large navigation title. Build 12's full two-word bar labels truncated/overlapped on a 5-tab bar.
+- **Reviews fully removed from iOS**: the orphaned Reviews views and the review-score (★) badge on event cards are gone. Reviews are a web-only feature (the tab was hidden in Build 11; the code is now deleted). No user-facing review surface remains on iOS.
+- **Returning signed-in users see their trips immediately**: trip/attendance data now loads at launch when a session is restored, instead of only after opening the Trips tab.
+- **Sessions survive access-token expiry**: the app now refreshes the access token seamlessly instead of signing the user out after ~1 hour. Sign-out only happens if the refresh token itself is revoked/expired.
+
+### Technical Changes
+
+- `AppModel+Types` / `RootView`: added `Tab.tabTitle` (short bar labels); `rawValue` still drives navigation titles.
+- **Reviews removal**: deleted `Views/Reviews/` (ReviewsView, ReviewEditorView, ReviewCard), `Models/Review.swift`, `Utils/ReviewScoring.swift`. Removed `reviews`, `reviewedEditionIds`, `reviewScore(...)`, and the review fetch from `AppModel`; removed the score badge from `EventCard`; removed the 4 review methods from `SupabaseService` and `SupabaseServiceProtocol`; cleaned the test mock. Project regenerated via XcodeGen (0 review references remain).
+- **Token auto-refresh**: `AuthServiceProtocol.validAccessToken()` added; `AuthService` refreshes via `POST /auth/v1/token?grant_type=refresh_token` within 60s of expiry, persisting rotated tokens to the Keychain. `restoreSession` no longer discards a session whose access token has expired. `AppModel.loadPrivateData` routes through `validAccessToken()`; a failed refresh clears the session and surfaces `authExpired`.
+- **Security hardening**: Keychain pinned to `.whenUnlockedThisDeviceOnly` (on-device, unlocked-only); public-data cache file protection raised from `completeUntilFirstUserAuthentication` to `complete`.
+- **Performance**: `AppModel.flatEvents` and a new `attendingEditionIds` set are memoized against change-tokens (bumped only when `events`/`trips` change), so list views stop recomputing them several times per render; `isAttending` is now O(1).
+- **Wiring**: `isLoading`/`appError` are reference-counted across concurrent loads so overlapping public/private loads don't flip the spinner off early or clobber each other's error.
+- **Dead-code cleanup → read-only client**: removed the orphaned trip editor (`TripEditorView`) and its now-unused row components (`TripPlaceRow`, `PTODayRow`), all of which had no presentation site since Build 12 made iOS trips read-only. Pruned the resulting dead trip-write methods (`createTrip`/`updateTrip`/`deleteTrip`/`replaceTripPlaces`/`replacePTODays`) from `SupabaseService` and `SupabaseServiceProtocol`, plus the now-unused private HTTP helpers (`post`/`postMany`/`patch`/`delete`). `SupabaseService` is now a fetch-only client; writes remain a web-app concern.
+- `SalsaEventTrackerApp`: launch task now also loads private data when `isSignedIn`.
+- `project.yml` / `project.pbxproj`: `CURRENT_PROJECT_VERSION` bumped 12 → 13.
+- Docs: `ios/docs/product-decisions.md` (no Reviews in iOS), `ios/docs/feature-backlog.md` (token refresh shipped), `docs/security-assessment.md` (Keychain class + cache protection + refresh resolved).
+
+### Validation
+
+- Build number: `CURRENT_PROJECT_VERSION = 13`, `MARKETING_VERSION = 1.0`.
+- JS test suite: `npm test` — 36 pass, 0 fail.
+- iOS test suite: `xcodebuild test` on iPhone 17 Pro simulator — 13 tests, 3 suites, **TEST SUCCEEDED** (added `refreshFailureSignsOut` and `refreshSuccessLoadsTrips`).
+- Release build: `xcodebuild -configuration Release -destination 'generic/platform=iOS Simulator' build` — **BUILD SUCCEEDED**.
+- Manual sim check: tab bar renders 5 non-overlapping labels; Calendar List screen renders event cards with no review badge.
+- Release archive: `xcodebuild archive` to `/private/tmp/SalsaEventTracker-build13-20260619.xcarchive` — **ARCHIVE SUCCEEDED**.
+- App Store Connect upload: `xcodebuild -exportArchive` — `Upload succeeded. Uploaded SalsaEventTracker.` **EXPORT SUCCEEDED**.
+
+### Post-Upload Verification
+
+- [ ] Confirm bottom tab labels read `Calendar / List / Events / Recent / Trips` with no overlap or truncation.
+- [ ] Confirm no review score (★) badges appear on event cards and there is no Reviews surface anywhere.
+- [ ] Sign in, force-quit, relaunch, and confirm Trips/attendance appear without opening the Trips tab.
+- [ ] Leave the app signed in past access-token expiry (~1h) and confirm private data still loads without a forced sign-in.
+
+---
+
 ## Build 12 - 2026-06-18 - App Store Connect Upload
 
 Branch: `build-12-6.18.26`
