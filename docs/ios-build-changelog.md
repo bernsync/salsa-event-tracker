@@ -29,13 +29,10 @@ Status: **Upload-ready, NOT uploaded.** Awaiting explicit upload authorization. 
 - **Security hardening**: Keychain pinned to `.whenUnlockedThisDeviceOnly` (on-device, unlocked-only); public-data cache file protection raised from `completeUntilFirstUserAuthentication` to `complete`.
 - **Performance**: `AppModel.flatEvents` and a new `attendingEditionIds` set are memoized against change-tokens (bumped only when `events`/`trips` change), so list views stop recomputing them several times per render; `isAttending` is now O(1).
 - **Wiring**: `isLoading`/`appError` are reference-counted across concurrent loads so overlapping public/private loads don't flip the spinner off early or clobber each other's error.
+- **Dead-code cleanup → read-only client**: removed the orphaned trip editor (`TripEditorView`) and its now-unused row components (`TripPlaceRow`, `PTODayRow`), all of which had no presentation site since Build 12 made iOS trips read-only. Pruned the resulting dead trip-write methods (`createTrip`/`updateTrip`/`deleteTrip`/`replaceTripPlaces`/`replacePTODays`) from `SupabaseService` and `SupabaseServiceProtocol`, plus the now-unused private HTTP helpers (`post`/`postMany`/`patch`/`delete`). `SupabaseService` is now a fetch-only client; writes remain a web-app concern.
 - `SalsaEventTrackerApp`: launch task now also loads private data when `isSignedIn`.
 - `project.yml` / `project.pbxproj`: `CURRENT_PROJECT_VERSION` bumped 12 → 13.
 - Docs: `ios/docs/product-decisions.md` (no Reviews in iOS), `ios/docs/feature-backlog.md` (token refresh shipped), `docs/security-assessment.md` (Keychain class + cache protection + refresh resolved).
-
-### Known leftover (not addressed this build)
-
-- `Views/Trips/TripEditorView.swift` is orphaned dead code (no presentation site since Build 12 made iOS trips read-only). Left in place; safe to delete in a future cleanup.
 
 ### Validation
 

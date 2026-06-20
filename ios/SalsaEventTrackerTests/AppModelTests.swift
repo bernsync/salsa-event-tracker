@@ -25,11 +25,6 @@ actor MockSupabaseService: SupabaseServiceProtocol {
         if let e = shouldThrow { throw e }
         return tripsToReturn
     }
-    func createTrip(_ body: [String: Any], token: String) async throws -> Trip { fatalError() }
-    func updateTrip(id: String, body: [String: Any], token: String) async throws {}
-    func deleteTrip(id: String, token: String) async throws {}
-    func replaceTripPlaces(tripId: String, places: [[String: Any]], token: String) async throws {}
-    func replacePTODays(tripId: String, ptoDays: [[String: Any]], token: String) async throws {}
 }
 
 @Observable
