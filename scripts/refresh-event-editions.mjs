@@ -5,7 +5,9 @@ import { mapSupabaseEvents } from "../web/supabase-mappers.js";
 const root = process.cwd();
 const outputDir = process.env.OUTPUT_DIR || path.join(root, "audit");
 const today = process.env.AUDIT_TODAY ? new Date(`${process.env.AUDIT_TODAY}T00:00:00Z`) : new Date();
-const currentYearStart = new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
+const recentWindowStart = process.env.AUDIT_WINDOW_START
+  ? new Date(`${process.env.AUDIT_WINDOW_START}T00:00:00Z`)
+  : new Date(Date.UTC(today.getUTCFullYear(), 0, 1));
 const upcomingUntil = new Date(today);
 upcomingUntil.setUTCMonth(upcomingUntil.getUTCMonth() + 3);
 const nearTermUntil = new Date(today);
@@ -13,6 +15,7 @@ nearTermUntil.setUTCDate(nearTermUntil.getUTCDate() + 30);
 
 const sourceTimeoutMs = Number(process.env.SOURCE_TIMEOUT_MS || 12000);
 const maxSourcesPerEvent = Number(process.env.MAX_SOURCES_PER_EVENT || 4);
+const dateRangeSeparator = String.raw`\s*(?:-|\u2013|\u2014|to)\s*`;
 
 const supabaseUrl = process.env.SUPABASE_URL || "";
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "";
@@ -97,6 +100,8 @@ function stripHtml(html) {
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ")
+    .replace(/&ndash;|&#8211;|&#x2013;/gi, "-")
+    .replace(/&mdash;|&#8212;|&#x2014;/gi, "-")
     .replace(/&amp;/g, "&")
     .replace(/\s+/g, " ")
     .trim();
@@ -223,9 +228,9 @@ function contextAround(text, index, length) {
   return text.slice(start, end);
 }
 
-function addRange(ranges, startDate, endDate, context = "") {
+function addRange(ranges, startDate, endDate, context = "", index = -1) {
   if (!startDate || !endDate || !isPlausibleEditionRange(startDate, endDate)) return;
-  ranges.set(`${startDate}|${endDate}`, { startDate, endDate, context });
+  ranges.set(`${startDate}|${endDate}`, { startDate, endDate, context, index });
 }
 
 function extractDateCandidates(text) {
@@ -282,6 +287,73 @@ function extractDateCandidates(text) {
   };
 }
 
+function extractDateCandidatesV2(text) {
+  const found = new Set();
+  const ranges = new Map();
+  const currentYear = today.getUTCFullYear();
+  const monthPattern = Object.keys(monthNames).join("|");
+
+  function rememberRange(match, startDate, endDate) {
+    found.add(startDate);
+    found.add(endDate);
+    addRange(ranges, startDate, endDate, contextAround(text, match.index, match[0].length), match.index);
+  }
+
+  for (const match of text.matchAll(/\b(20\d{2})[-/.](0?[1-9]|1[0-2])[-/.](0?[1-9]|[12]\d|3[01])\b/g)) {
+    found.add(makeDate(match[1], match[2], match[3]));
+  }
+
+  for (const match of text.matchAll(/\b(0?[1-9]|[12]\d|3[01])[-/.](0?[1-9]|1[0-2])[-/.](20\d{2})\b/g)) {
+    found.add(makeDate(match[3], match[2], match[1]));
+  }
+
+  const monthDay = new RegExp(`\\b(${monthPattern})\\s+(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?(?:${dateRangeSeparator}(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?)?,?\\s*(20\\d{2})\\b`, "gi");
+  for (const match of text.matchAll(monthDay)) {
+    const month = monthNames[match[1].toLowerCase()];
+    const startDate = makeDate(match[4], month, match[2]);
+    found.add(startDate);
+    if (match[3]) rememberRange(match, startDate, rangeEndDate(startDate, match[3]));
+  }
+
+  const dayMonthRange = new RegExp(`\\b(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?${dateRangeSeparator}(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?\\s+(${monthPattern})\\s+(20\\d{2})\\b`, "gi");
+  for (const match of text.matchAll(dayMonthRange)) {
+    const startDate = makeDate(match[4], monthNames[match[3].toLowerCase()], match[1]);
+    rememberRange(match, startDate, rangeEndDate(startDate, match[2]));
+  }
+
+  const crossMonthDayRange = new RegExp(`\\b(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?\\s+(${monthPattern})${dateRangeSeparator}(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?\\s+(${monthPattern})\\s+(20\\d{2})\\b`, "gi");
+  for (const match of text.matchAll(crossMonthDayRange)) {
+    const startDate = makeDate(match[5], monthNames[match[2].toLowerCase()], match[1]);
+    const endDate = makeDate(match[5], monthNames[match[4].toLowerCase()], match[3]);
+    rememberRange(match, startDate, endDate);
+  }
+
+  const crossMonthNameRange = new RegExp(`\\b(${monthPattern})\\s+(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?${dateRangeSeparator}(${monthPattern})\\s+(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?,?\\s*(20\\d{2})\\b`, "gi");
+  for (const match of text.matchAll(crossMonthNameRange)) {
+    const startDate = makeDate(match[5], monthNames[match[1].toLowerCase()], match[2]);
+    const endDate = makeDate(match[5], monthNames[match[3].toLowerCase()], match[4]);
+    rememberRange(match, startDate, endDate);
+  }
+
+  const dayMonth = new RegExp(`\\b(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?\\s+(${monthPattern})\\s+(20\\d{2})\\b`, "gi");
+  for (const match of text.matchAll(dayMonth)) {
+    found.add(makeDate(match[3], monthNames[match[2].toLowerCase()], match[1]));
+  }
+
+  const shortDayMonth = new RegExp(`\\b(0?[1-9]|[12]\\d|3[01])(?:st|nd|rd|th)?\\s+(${monthPattern})\\b`, "gi");
+  for (const match of text.matchAll(shortDayMonth)) {
+    const candidate = makeDate(currentYear, monthNames[match[2].toLowerCase()], match[1]);
+    if (candidate && toDate(candidate) > today) found.add(candidate);
+    const nextYearCandidate = makeDate(currentYear + 1, monthNames[match[2].toLowerCase()], match[1]);
+    if (nextYearCandidate && toDate(nextYearCandidate) > today) found.add(nextYearCandidate);
+  }
+
+  return {
+    dateHits: [...found].filter(Boolean).sort(),
+    ranges: [...ranges.values()].sort((a, b) => a.startDate.localeCompare(b.startDate))
+  };
+}
+
 function hasExistingFutureEdition(events, event) {
   return events
     .filter((candidate) => eventFamilyKey(candidate) === eventFamilyKey(event))
@@ -314,7 +386,7 @@ function recentEvents(events) {
   return events
     .filter((event) => {
       const end = toDate(event.endDate);
-      return end >= currentYearStart && end <= today;
+      return end >= recentWindowStart && end <= today;
     })
     .sort((a, b) => a.endDate.localeCompare(b.endDate));
 }
@@ -340,6 +412,10 @@ function nearTermEvents(events) {
 function eventAliasGroups(event) {
   const name = normalize(event.name);
 
+  if (name.includes("croatia summer salsa festival") || name.includes("croatian summer salsa festival")) {
+    return [["croatiasummersalsafestival", "croatiansummersalsafestival", "crosalsafestival", "cssf"]];
+  }
+
   if (name.startsWith("live 2 mambo")) {
     if (name.includes("novotel")) return [["live2mambo"], ["novotel"]];
     if (name.includes("carnival")) return [["live2mambo"], ["carnivaldays", "carnival"]];
@@ -362,6 +438,33 @@ function rangeMatchesEvent(events, event, range) {
   return true;
 }
 
+function sameHostname(left, right) {
+  try {
+    const leftHost = new URL(left).hostname.replace(/^www\./, "");
+    const rightHost = new URL(right).hostname.replace(/^www\./, "");
+    return leftHost === rightHost;
+  } catch {
+    return false;
+  }
+}
+
+function sourceOpeningMatchesEvent(event, sourceUrl, sourceText) {
+  const opening = compact(sourceText.slice(0, 5000));
+  const compactUrl = compact(sourceUrl);
+  const exactName = compact(event.name);
+  if (opening.includes(exactName)) return true;
+
+  return eventAliasGroups(event).every((group) => (
+    group.some((alias) => opening.includes(alias) || compactUrl.includes(alias))
+  ));
+}
+
+function rangeMatchesDedicatedPageIntro(event, sourceUrl, sourceText, range) {
+  if (!event.website || !sameHostname(sourceUrl, event.website)) return false;
+  if (!Number.isFinite(range.index) || range.index < 0 || range.index > 1200) return false;
+  return sourceOpeningMatchesEvent(event, sourceUrl, sourceText);
+}
+
 async function auditEvent(events, event) {
   const sources = sourceLinksFor(event);
   const fetched = [];
@@ -378,14 +481,17 @@ async function auditEvent(events, event) {
       error: result.error
     });
     if (!result.ok) continue;
-    const candidates = extractDateCandidates(result.text);
+    const candidates = extractDateCandidatesV2(result.text);
     candidates.dateHits
       .filter((date) => toDate(date) > today)
       .forEach((date) => dateHits.add(date));
     if (candidates.ranges.some((range) => range.startDate === event.startDate && range.endDate === event.endDate)) {
       exactCurrentRangeSeen = true;
     }
-    candidates.ranges.filter((range) => rangeMatchesEvent(events, event, range)).forEach((range) => {
+    candidates.ranges.filter((range) => (
+      rangeMatchesEvent(events, event, range) ||
+      rangeMatchesDedicatedPageIntro(event, result.url, result.text, range)
+    )).forEach((range) => {
       rangeHits.set(`${range.startDate}|${range.endDate}`, range);
     });
   }
@@ -494,7 +600,7 @@ function renderNextEditionMarkdown(results, source, schengenAudit) {
   lines.push("");
   lines.push(`Run date: ${isoDate(today)}`);
   lines.push(`Data source: ${source}.`);
-  lines.push(`Reviewing events that ended from ${isoDate(currentYearStart)} through ${isoDate(today)}.`);
+  lines.push(`Reviewing events that ended from ${isoDate(recentWindowStart)} through ${isoDate(today)}.`);
   lines.push("");
   lines.push("This report is intentionally conservative. It does not edit Supabase automatically; verify official sources before inserting or updating rows.");
   lines.push("Only actionable findings are shown here. Events with no verified non-duplicate date range are counted, not listed.");
@@ -670,7 +776,7 @@ const schengenAudit = await auditSchengenCountries(schengenCountries);
 const summary = {
   runDate: isoDate(today),
   dataSource: source,
-  windowStart: isoDate(currentYearStart),
+  windowStart: isoDate(recentWindowStart),
   upcomingWindowEnd: isoDate(upcomingUntil),
   nearTermWindowEnd: isoDate(nearTermUntil),
   recentEventCount: results.length,
